@@ -21,10 +21,13 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
     Page<Patient> findByLastNameContainingIgnoreCase(String lastName, Pageable pageable);
 
     @Query("SELECT p FROM Patient p WHERE " +
-           "LOWER(p.lastName) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-           "LOWER(p.firstName) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-           "p.mrn LIKE CONCAT('%', :searchTerm, '%')")
+           "LOWER(p.lastName) LIKE LOWER(CONCAT(:searchTerm, '%')) OR " +
+           "LOWER(p.firstName) LIKE LOWER(CONCAT(:searchTerm, '%')) OR " +
+           "p.mrn LIKE CONCAT(:searchTerm, '%')")
     Page<Patient> searchPatients(String searchTerm, Pageable pageable);
+
+    @Query("SELECT p FROM Patient p WHERE p.active = true ORDER BY p.lastName, p.firstName")
+    Page<Patient> findAllActive(Pageable pageable);
 
     List<Patient> findByDateOfBirth(LocalDate dateOfBirth);
 
