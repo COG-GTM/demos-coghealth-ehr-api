@@ -4,8 +4,25 @@ spring:
     username: ${NEON_DB_USERNAME}
     password: ${NEON_DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      minimum-idle: 2
+      maximum-pool-size: 10
+      idle-timeout: 30000
+      connection-timeout: 20000
+      max-lifetime: 1800000
+      keepalive-time: 60000
+
+  flyway:
+    enabled: false
 
   jpa:
+    hibernate:
+      ddl-auto: update
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_batch_fetch_size: 16
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
