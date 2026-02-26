@@ -36,3 +36,5 @@ src/main/java/com/medchart/ehr/
 ## Security
 
 Authentication is disabled for development. CORS allows `localhost:5173`, `localhost:5178`, `localhost:3000`.
+
+<!-- Dummy change for testing PR workflow -->
