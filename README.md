@@ -12,7 +12,7 @@ Spring Boot REST API for the CogHealth EHR system.
 
 ## Tech Stack
 
-- Java 17
+- Java 21
 - Spring Boot 2.7.x
 - PostgreSQL
 - Redis
