@@ -2,7 +2,7 @@
 
 ## Overview
 
-CogHealth EHR is a healthcare Electronic Health Record system. This codebase contains intentional HIPAA compliance gaps for training/demo purposes.
+CogHealth EHR is a healthcare Electronic Health Record system. This codebase contains intentional HIPAA compliance gaps.
 
 ## Repository Structure
 
@@ -18,7 +18,7 @@ CogHealth EHR is a healthcare Electronic Health Record system. This codebase con
 3. Never log SSN, full identifiers, or sensitive data
 4. Update `HIPAA_COMPLIANCE.md` checklist if adding new data access
 
-## Known HIPAA Issues (Demo Purposes)
+## Known HIPAA Issues
 
 These are intentionally planted for HIPAA audit demo:
 
