@@ -1,5 +1,7 @@
 package com.medchart.ehr.legacy;
 
+import com.medchart.ehr.audit.AuditAccess;
+import com.medchart.ehr.audit.AuditAction;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,8 +24,9 @@ public class ReportGenerator {
 
     private static final String TEMP_DIR = System.getProperty("java.io.tmpdir");
 
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Patient", description = "Generate patient roster report")
     public String generatePatientRoster() {
-        String sql = "SELECT p.id, p.mrn, p.ssn, p.first_name, p.last_name, p.date_of_birth, " +
+        String sql = "SELECT p.id, p.mrn, p.first_name, p.last_name, p.date_of_birth, " +
                      "p.phone_home, p.phone_mobile, p.email, " +
                      "p.street1, p.city, p.state, p.zip_code, " +
                      "ic.payer_name, ic.member_id " +
@@ -39,7 +42,7 @@ public class ReportGenerator {
         String filePath = TEMP_DIR + File.separator + filename;
         
         try (PrintWriter writer = new PrintWriter(new FileWriter(filePath))) {
-            writer.println("ID,MRN,SSN,FirstName,LastName,DOB,PhoneHome,PhoneMobile,Email,Address,City,State,Zip,Insurance,MemberID");
+            writer.println("ID,MRN,FirstName,LastName,DOB,PhoneHome,PhoneMobile,Email,Address,City,State,Zip,Insurance,MemberID");
             for (Object[] row : results) {
                 StringBuilder line = new StringBuilder();
                 for (int i = 0; i < row.length; i++) {
@@ -53,13 +56,14 @@ public class ReportGenerator {
             throw new RuntimeException("Report generation failed", e);
         }
         
-        log.info("Generated patient roster at: {}", filePath);
+        log.info("Generated patient roster report with {} records", results.size());
         return filePath;
     }
 
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Encounter", description = "Generate encounter summary report")
     public String generateEncounterSummary(LocalDateTime startDate, LocalDateTime endDate) {
         String sql = "SELECT e.id, e.encounter_number, e.encounter_date_time, e.encounter_type, e.status, " +
-                     "p.mrn, p.first_name, p.last_name, p.ssn, p.date_of_birth, " +
+                     "p.mrn, p.first_name, p.last_name, p.date_of_birth, " +
                      "pr.first_name as provider_first, pr.last_name as provider_last " +
                      "FROM encounters e " +
                      "JOIN patients p ON e.patient_id = p.id " +
@@ -97,10 +101,11 @@ public class ReportGenerator {
             throw new RuntimeException("Report generation failed", e);
         }
         
-        log.info("Generated encounter summary at: {}", filePath);
+        log.info("Generated encounter summary report with {} records", results.size());
         return filePath;
     }
 
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Patient", description = "Generate daily report")
     public byte[] generateDailyReport() {
         String tempFile = generatePatientRoster();
         try {
@@ -109,6 +114,17 @@ public class ReportGenerator {
         } catch (IOException e) {
             log.error("Failed to read temp file", e);
             throw new RuntimeException(e);
+        } finally {
+            cleanupTempFile(tempFile);
+        }
+    }
+
+    private void cleanupTempFile(String filePath) {
+        try {
+            Files.deleteIfExists(Path.of(filePath));
+            log.debug("Cleaned up temp file: {}", filePath);
+        } catch (IOException e) {
+            log.warn("Failed to clean up temp file containing PHI: {}", filePath);
         }
     }
 }
