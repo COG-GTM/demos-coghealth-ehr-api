@@ -119,7 +119,7 @@ public class ReportGenerator {
         }
     }
 
-    private void cleanupTempFile(String filePath) {
+    public void cleanupTempFile(String filePath) {
         try {
             Files.deleteIfExists(Path.of(filePath));
             log.debug("Cleaned up temp file: {}", filePath);
