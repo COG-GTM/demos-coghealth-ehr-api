@@ -49,8 +49,8 @@ public class InsuranceCache {
     }
 
     private boolean isExpired(CachedEligibility cached) {
-        return cached.cachedAt != null 
-            && Duration.between(cached.cachedAt, LocalDateTime.now()).compareTo(CACHE_TTL) > 0;
+        return cached.cachedAt == null 
+            || Duration.between(cached.cachedAt, LocalDateTime.now()).compareTo(CACHE_TTL) > 0;
     }
 
     public void clearPatientCache(String patientMrn) {
