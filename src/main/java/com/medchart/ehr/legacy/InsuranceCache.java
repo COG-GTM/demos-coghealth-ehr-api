@@ -40,7 +40,7 @@ public class InsuranceCache {
         if (cached != null) {
             if (isExpired(cached)) {
                 log.debug("Cache entry expired for patient {} with payer {}", patientMrn, payerId);
-                eligibilityCache.remove(cacheKey);
+                eligibilityCache.remove(cacheKey, cached);
                 return null;
             }
             log.debug("Cache hit for patient {} with payer {}", patientMrn, payerId);
