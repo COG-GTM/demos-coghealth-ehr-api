@@ -51,6 +51,8 @@ CREATE TABLE medication_adherence (
 );
 
 CREATE INDEX idx_med_adherence_patient ON medication_adherence(patient_id);
+CREATE INDEX idx_med_adherence_order ON medication_adherence(medication_order_id);
+CREATE INDEX idx_med_adherence_condition ON medication_adherence(chronic_condition_id);
 CREATE INDEX idx_med_adherence_status ON medication_adherence(adherence_status);
 
 -- Diabetes-specific management tracking
