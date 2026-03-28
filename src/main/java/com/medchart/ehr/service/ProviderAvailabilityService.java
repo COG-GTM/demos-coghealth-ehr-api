@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -57,8 +58,9 @@ public class ProviderAvailabilityService {
                 providerId, dayOfWeek, date);
         List<ProviderAvailability> overrides = availabilityRepository.findByProviderIdAndSpecificDateAndActiveTrue(
                 providerId, date);
-        recurring.addAll(overrides);
-        return recurring;
+        List<ProviderAvailability> result = new ArrayList<>(recurring);
+        result.addAll(overrides);
+        return result;
     }
 
     @Transactional(readOnly = true)
