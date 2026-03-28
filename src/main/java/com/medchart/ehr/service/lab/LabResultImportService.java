@@ -25,6 +25,7 @@ import java.util.*;
 @Service
 @Slf4j
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class LabResultImportService {
 
     private static final List<OrderStatus> MATCHABLE_STATUSES = List.of(
@@ -112,6 +113,11 @@ public class LabResultImportService {
             return unmatchedRepository.findByReviewStatus(reviewStatus, pageable);
         }
         return unmatchedRepository.findAll(pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public long getUnmatchedCount() {
+        return unmatchedRepository.countByReviewStatus(ReviewStatus.PENDING);
     }
 
     private void validateFile(MultipartFile file) {
