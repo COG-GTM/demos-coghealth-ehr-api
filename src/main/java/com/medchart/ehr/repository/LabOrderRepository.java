@@ -15,7 +15,8 @@ public interface LabOrderRepository extends JpaRepository<LabOrder, Long> {
     Optional<LabOrder> findByOrderNumber(String orderNumber);
 
     @Query("SELECT lo FROM LabOrder lo JOIN lo.patient p " +
-           "WHERE p.mrn = :mrn AND lo.testCode = :testCode AND lo.status IN :statuses")
+           "WHERE p.mrn = :mrn AND lo.testCode = :testCode AND lo.status IN :statuses " +
+           "ORDER BY lo.orderDateTime DESC")
     List<LabOrder> findByPatientMrnAndTestCodeAndStatusIn(
             String mrn, String testCode, List<OrderStatus> statuses);
 

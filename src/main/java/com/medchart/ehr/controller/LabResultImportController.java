@@ -1,8 +1,8 @@
 package com.medchart.ehr.controller;
 
 import com.medchart.ehr.domain.order.ReviewStatus;
-import com.medchart.ehr.domain.order.UnmatchedLabResult;
 import com.medchart.ehr.dto.LabResultImportResponse;
+import com.medchart.ehr.dto.UnmatchedLabResultDTO;
 import com.medchart.ehr.service.lab.LabResultImportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -49,7 +49,7 @@ public class LabResultImportController {
 
     @GetMapping("/import/unmatched")
     @Operation(summary = "Get unmatched lab results for manual review")
-    public ResponseEntity<Page<UnmatchedLabResult>> getUnmatchedResults(
+    public ResponseEntity<Page<UnmatchedLabResultDTO>> getUnmatchedResults(
             @RequestParam(required = false) ReviewStatus reviewStatus,
             Pageable pageable) {
         return ResponseEntity.ok(importService.getUnmatchedResults(reviewStatus, pageable));

@@ -5,6 +5,7 @@ import com.medchart.ehr.audit.AuditAction;
 import com.medchart.ehr.domain.order.*;
 import com.medchart.ehr.dto.LabResultImportResponse;
 import com.medchart.ehr.dto.ParsedLabResult;
+import com.medchart.ehr.dto.UnmatchedLabResultDTO;
 import com.medchart.ehr.repository.*;
 import com.medchart.ehr.service.ProviderNotificationService;
 import lombok.RequiredArgsConstructor;
@@ -108,11 +109,14 @@ public class LabResultImportService {
     }
 
     @Transactional(readOnly = true)
-    public Page<UnmatchedLabResult> getUnmatchedResults(ReviewStatus reviewStatus, Pageable pageable) {
+    public Page<UnmatchedLabResultDTO> getUnmatchedResults(ReviewStatus reviewStatus, Pageable pageable) {
+        Page<UnmatchedLabResult> results;
         if (reviewStatus != null) {
-            return unmatchedRepository.findByReviewStatus(reviewStatus, pageable);
+            results = unmatchedRepository.findByReviewStatus(reviewStatus, pageable);
+        } else {
+            results = unmatchedRepository.findAll(pageable);
         }
-        return unmatchedRepository.findAll(pageable);
+        return results.map(this::toUnmatchedDto);
     }
 
     @Transactional(readOnly = true)
@@ -327,6 +331,32 @@ public class LabResultImportService {
                 default: return ResultFlag.NORMAL;
             }
         }
+    }
+
+    private UnmatchedLabResultDTO toUnmatchedDto(UnmatchedLabResult entity) {
+        return UnmatchedLabResultDTO.builder()
+                .id(entity.getId())
+                .importId(entity.getLabResultImport().getId())
+                .patientIdentifier(entity.getPatientIdentifier())
+                .patientFirstName(entity.getPatientFirstName())
+                .patientLastName(entity.getPatientLastName())
+                .orderNumber(entity.getOrderNumber())
+                .testCode(entity.getTestCode())
+                .testName(entity.getTestName())
+                .value(entity.getValue())
+                .numericValue(entity.getNumericValue())
+                .unit(entity.getUnit())
+                .referenceRange(entity.getReferenceRange())
+                .flag(entity.getFlag())
+                .resultStatus(entity.getResultStatus())
+                .resultDateTime(entity.getResultDateTime())
+                .performingLab(entity.getPerformingLab())
+                .reviewStatus(entity.getReviewStatus())
+                .reviewedBy(entity.getReviewedBy())
+                .reviewedAt(entity.getReviewedAt())
+                .reviewNotes(entity.getReviewNotes())
+                .createdAt(entity.getCreatedAt())
+                .build();
     }
 
     private LabResultImportResponse toResponse(LabResultImport record) {
