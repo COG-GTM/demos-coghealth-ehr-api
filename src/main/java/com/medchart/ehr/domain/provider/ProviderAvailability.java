@@ -1,5 +1,6 @@
 package com.medchart.ehr.domain.provider;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -27,6 +28,7 @@ public class ProviderAvailability {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "provider_id", nullable = false)
     private Provider provider;
@@ -90,4 +92,9 @@ public class ProviderAvailability {
 
     @Version
     private Long version;
+
+    @Transient
+    public Long getProviderId() {
+        return provider != null ? provider.getId() : null;
+    }
 }
