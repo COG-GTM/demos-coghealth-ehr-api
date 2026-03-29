@@ -5,6 +5,9 @@ import com.medchart.ehr.domain.encounter.EncounterStatus;
 import com.medchart.ehr.repository.EncounterRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -32,11 +35,13 @@ public class EncounterService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "encounters", key = "#id")
     public Optional<Encounter> findById(Long id) {
         return encounterRepository.findById(id);
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "encounters", key = "'details-' + #id")
     public Optional<Encounter> findByIdWithDetails(Long id) {
         return encounterRepository.findByIdWithDetails(id);
     }
@@ -47,6 +52,7 @@ public class EncounterService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "encountersByPatient", key = "#patientId")
     public List<Encounter> findByPatientId(Long patientId) {
         return encounterRepository.findByPatientId(patientId);
     }
@@ -57,11 +63,13 @@ public class EncounterService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "encountersByProvider", key = "#providerId")
     public List<Encounter> findByProviderId(Long providerId) {
         return encounterRepository.findByAttendingProviderId(providerId);
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "providerSchedule", key = "#providerId + '-' + #date.toString()")
     public List<Encounter> getProviderSchedule(Long providerId, LocalDate date) {
         LocalDateTime startOfDay = date.atStartOfDay();
         LocalDateTime endOfDay = date.plusDays(1).atStartOfDay();
@@ -78,6 +86,11 @@ public class EncounterService {
         return encounterRepository.findByStatus(status);
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "encountersByPatient", allEntries = true),
+            @CacheEvict(value = "encountersByProvider", allEntries = true),
+            @CacheEvict(value = "providerSchedule", allEntries = true)
+    })
     public Encounter create(Encounter encounter) {
         String encNumber = generateEncounterNumber();
         encounter.setEncounterNumber(encNumber);
@@ -88,11 +101,21 @@ public class EncounterService {
         return saved;
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "encounters", allEntries = true),
+            @CacheEvict(value = "encountersByPatient", allEntries = true),
+            @CacheEvict(value = "encountersByProvider", allEntries = true),
+            @CacheEvict(value = "providerSchedule", allEntries = true)
+    })
     public Encounter update(Encounter encounter) {
         log.info("Updating encounter {}", encounter.getEncounterNumber());
         return encounterRepository.save(encounter);
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "encounters", key = "#encounterId"),
+            @CacheEvict(value = "providerSchedule", allEntries = true)
+    })
     public void checkIn(Long encounterId) {
         encounterRepository.findById(encounterId).ifPresent(enc -> {
             enc.setStatus(EncounterStatus.CHECKED_IN);
@@ -101,6 +124,10 @@ public class EncounterService {
         });
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "encounters", key = "#encounterId"),
+            @CacheEvict(value = "providerSchedule", allEntries = true)
+    })
     public void startEncounter(Long encounterId) {
         encounterRepository.findById(encounterId).ifPresent(enc -> {
             enc.setStatus(EncounterStatus.IN_PROGRESS);
@@ -109,6 +136,12 @@ public class EncounterService {
         });
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "encounters", key = "#encounterId"),
+            @CacheEvict(value = "encountersByPatient", allEntries = true),
+            @CacheEvict(value = "encountersByProvider", allEntries = true),
+            @CacheEvict(value = "providerSchedule", allEntries = true)
+    })
     public void completeEncounter(Long encounterId, String notes) {
         encounterRepository.findById(encounterId).ifPresent(enc -> {
             enc.setStatus(EncounterStatus.COMPLETED);
@@ -120,6 +153,12 @@ public class EncounterService {
         });
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "encounters", key = "#encounterId"),
+            @CacheEvict(value = "encountersByPatient", allEntries = true),
+            @CacheEvict(value = "encountersByProvider", allEntries = true),
+            @CacheEvict(value = "providerSchedule", allEntries = true)
+    })
     public void cancelEncounter(Long encounterId) {
         encounterRepository.findById(encounterId).ifPresent(enc -> {
             enc.setStatus(EncounterStatus.CANCELLED);
@@ -128,6 +167,10 @@ public class EncounterService {
         });
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "encounters", key = "#encounterId"),
+            @CacheEvict(value = "providerSchedule", allEntries = true)
+    })
     public void markNoShow(Long encounterId) {
         encounterRepository.findById(encounterId).ifPresent(enc -> {
             enc.setStatus(EncounterStatus.NO_SHOW);

@@ -21,11 +21,6 @@ spring:
     enabled: true
     baseline-on-migrate: true
 
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
-
   rabbitmq:
     host: localhost
     port: 5672
