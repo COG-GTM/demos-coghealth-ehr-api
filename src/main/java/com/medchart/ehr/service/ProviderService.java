@@ -74,6 +74,8 @@ public class ProviderService {
     }
 
     @Caching(evict = {
+            @CacheEvict(value = "providers", allEntries = true),
+            @CacheEvict(value = "providersByNpi", allEntries = true),
             @CacheEvict(value = "allProviders", allEntries = true),
             @CacheEvict(value = "activeProviders", allEntries = true),
             @CacheEvict(value = "providersByDepartment", allEntries = true),
@@ -88,6 +90,7 @@ public class ProviderService {
 
     @Caching(evict = {
             @CacheEvict(value = "providers", key = "#id"),
+            @CacheEvict(value = "providersByNpi", allEntries = true),
             @CacheEvict(value = "allProviders", allEntries = true),
             @CacheEvict(value = "activeProviders", allEntries = true),
             @CacheEvict(value = "providersByDepartment", allEntries = true),

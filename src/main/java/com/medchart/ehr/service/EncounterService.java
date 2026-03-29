@@ -113,7 +113,9 @@ public class EncounterService {
     }
 
     @Caching(evict = {
-            @CacheEvict(value = "encounters", key = "#encounterId"),
+            @CacheEvict(value = "encounters", allEntries = true),
+            @CacheEvict(value = "encountersByPatient", allEntries = true),
+            @CacheEvict(value = "encountersByProvider", allEntries = true),
             @CacheEvict(value = "providerSchedule", allEntries = true)
     })
     public void checkIn(Long encounterId) {
@@ -125,7 +127,9 @@ public class EncounterService {
     }
 
     @Caching(evict = {
-            @CacheEvict(value = "encounters", key = "#encounterId"),
+            @CacheEvict(value = "encounters", allEntries = true),
+            @CacheEvict(value = "encountersByPatient", allEntries = true),
+            @CacheEvict(value = "encountersByProvider", allEntries = true),
             @CacheEvict(value = "providerSchedule", allEntries = true)
     })
     public void startEncounter(Long encounterId) {
@@ -137,7 +141,7 @@ public class EncounterService {
     }
 
     @Caching(evict = {
-            @CacheEvict(value = "encounters", key = "#encounterId"),
+            @CacheEvict(value = "encounters", allEntries = true),
             @CacheEvict(value = "encountersByPatient", allEntries = true),
             @CacheEvict(value = "encountersByProvider", allEntries = true),
             @CacheEvict(value = "providerSchedule", allEntries = true)
@@ -154,7 +158,7 @@ public class EncounterService {
     }
 
     @Caching(evict = {
-            @CacheEvict(value = "encounters", key = "#encounterId"),
+            @CacheEvict(value = "encounters", allEntries = true),
             @CacheEvict(value = "encountersByPatient", allEntries = true),
             @CacheEvict(value = "encountersByProvider", allEntries = true),
             @CacheEvict(value = "providerSchedule", allEntries = true)
@@ -168,7 +172,9 @@ public class EncounterService {
     }
 
     @Caching(evict = {
-            @CacheEvict(value = "encounters", key = "#encounterId"),
+            @CacheEvict(value = "encounters", allEntries = true),
+            @CacheEvict(value = "encountersByPatient", allEntries = true),
+            @CacheEvict(value = "encountersByProvider", allEntries = true),
             @CacheEvict(value = "providerSchedule", allEntries = true)
     })
     public void markNoShow(Long encounterId) {
