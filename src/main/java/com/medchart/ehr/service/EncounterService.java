@@ -35,13 +35,13 @@ public class EncounterService {
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "encounters", key = "#id")
+    @Cacheable(value = "encounters", key = "#id", unless = "#result == null")
     public Optional<Encounter> findById(Long id) {
         return encounterRepository.findById(id);
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "encounters", key = "'details-' + #id")
+    @Cacheable(value = "encounters", key = "'details-' + #id", unless = "#result == null")
     public Optional<Encounter> findByIdWithDetails(Long id) {
         return encounterRepository.findByIdWithDetails(id);
     }

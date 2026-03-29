@@ -38,13 +38,13 @@ public class ProviderService {
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "providers", key = "#id")
+    @Cacheable(value = "providers", key = "#id", unless = "#result == null")
     public Optional<Provider> findById(Long id) {
         return providerRepository.findById(id);
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "providersByNpi", key = "#npi")
+    @Cacheable(value = "providersByNpi", key = "#npi", unless = "#result == null")
     public Optional<Provider> findByNpi(String npi) {
         return providerRepository.findByNpi(npi);
     }
