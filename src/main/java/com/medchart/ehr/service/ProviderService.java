@@ -94,7 +94,9 @@ public class ProviderService {
             @CacheEvict(value = "allProviders", allEntries = true),
             @CacheEvict(value = "activeProviders", allEntries = true),
             @CacheEvict(value = "providersByDepartment", allEntries = true),
-            @CacheEvict(value = "providersBySpecialty", allEntries = true)
+            @CacheEvict(value = "providersBySpecialty", allEntries = true),
+            @CacheEvict(value = "departments", allEntries = true),
+            @CacheEvict(value = "specialties", allEntries = true)
     })
     public void deactivate(Long id) {
         providerRepository.findById(id).ifPresent(provider -> {

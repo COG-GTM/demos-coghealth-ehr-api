@@ -45,7 +45,7 @@ public class PatientService {
     }
 
     @AuditAccess(action = AuditAction.SEARCH, resourceType = "Patient", description = "Search patients")
-    @Cacheable(value = "patientSearch", key = "#searchTerm + '-' + #pageable.pageNumber + '-' + #pageable.pageSize")
+    @Cacheable(value = "patientSearch", key = "#searchTerm + '-' + #pageable.pageNumber + '-' + #pageable.pageSize + '-' + #pageable.sort.toString()")
     public Page<PatientDTO> searchPatients(String searchTerm, Pageable pageable) {
         return patientRepository.searchPatients(searchTerm, pageable)
                 .map(patientMapper::toDto);
