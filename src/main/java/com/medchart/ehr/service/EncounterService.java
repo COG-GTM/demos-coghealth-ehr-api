@@ -3,6 +3,7 @@ package com.medchart.ehr.service;
 import com.medchart.ehr.domain.encounter.Encounter;
 import com.medchart.ehr.domain.encounter.EncounterStatus;
 import com.medchart.ehr.repository.EncounterRepository;
+import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
@@ -37,24 +38,32 @@ public class EncounterService {
     @Transactional(readOnly = true)
     @Cacheable(value = "encounters", key = "#id", unless = "#result == null")
     public Optional<Encounter> findById(Long id) {
-        return encounterRepository.findById(id);
+        Optional<Encounter> encounter = encounterRepository.findById(id);
+        encounter.ifPresent(this::initializeLazyCollections);
+        return encounter;
     }
 
     @Transactional(readOnly = true)
     @Cacheable(value = "encounters", key = "'details-' + #id", unless = "#result == null")
     public Optional<Encounter> findByIdWithDetails(Long id) {
-        return encounterRepository.findByIdWithDetails(id);
+        Optional<Encounter> encounter = encounterRepository.findByIdWithDetails(id);
+        encounter.ifPresent(this::initializeLazyCollections);
+        return encounter;
     }
 
     @Transactional(readOnly = true)
     public Optional<Encounter> findByEncounterNumber(String encounterNumber) {
-        return encounterRepository.findByEncounterNumber(encounterNumber);
+        Optional<Encounter> encounter = encounterRepository.findByEncounterNumber(encounterNumber);
+        encounter.ifPresent(this::initializeLazyCollections);
+        return encounter;
     }
 
     @Transactional(readOnly = true)
     @Cacheable(value = "encountersByPatient", key = "#patientId")
     public List<Encounter> findByPatientId(Long patientId) {
-        return encounterRepository.findByPatientId(patientId);
+        List<Encounter> encounters = encounterRepository.findByPatientId(patientId);
+        encounters.forEach(this::initializeLazyCollections);
+        return encounters;
     }
 
     @Transactional(readOnly = true)
@@ -65,7 +74,9 @@ public class EncounterService {
     @Transactional(readOnly = true)
     @Cacheable(value = "encountersByProvider", key = "#providerId")
     public List<Encounter> findByProviderId(Long providerId) {
-        return encounterRepository.findByAttendingProviderId(providerId);
+        List<Encounter> encounters = encounterRepository.findByAttendingProviderId(providerId);
+        encounters.forEach(this::initializeLazyCollections);
+        return encounters;
     }
 
     @Transactional(readOnly = true)
@@ -73,7 +84,9 @@ public class EncounterService {
     public List<Encounter> getProviderSchedule(Long providerId, LocalDate date) {
         LocalDateTime startOfDay = date.atStartOfDay();
         LocalDateTime endOfDay = date.plusDays(1).atStartOfDay();
-        return encounterRepository.findTodaysSchedule(providerId, startOfDay, endOfDay);
+        List<Encounter> encounters = encounterRepository.findTodaysSchedule(providerId, startOfDay, endOfDay);
+        encounters.forEach(this::initializeLazyCollections);
+        return encounters;
     }
 
     @Transactional(readOnly = true)
@@ -188,6 +201,17 @@ public class EncounterService {
     @Transactional(readOnly = true)
     public long getPatientEncounterCount(Long patientId) {
         return encounterRepository.countByPatientId(patientId);
+    }
+
+    private void initializeLazyCollections(Encounter encounter) {
+        Hibernate.initialize(encounter.getDiagnoses());
+        if (encounter.getPatient() != null) {
+            Hibernate.initialize(encounter.getPatient().getIdentifiers());
+            Hibernate.initialize(encounter.getPatient().getEmergencyContacts());
+        }
+        if (encounter.getAttendingProvider() != null) {
+            Hibernate.initialize(encounter.getAttendingProvider().getLicenses());
+        }
     }
 
     private String generateEncounterNumber() {

@@ -2,6 +2,7 @@ package com.medchart.ehr.service;
 
 import com.medchart.ehr.domain.provider.Provider;
 import com.medchart.ehr.repository.ProviderRepository;
+import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
@@ -28,37 +29,49 @@ public class ProviderService {
     @Transactional(readOnly = true)
     @Cacheable(value = "allProviders")
     public List<Provider> findAll() {
-        return providerRepository.findAll();
+        List<Provider> providers = providerRepository.findAll();
+        providers.forEach(this::initializeLazyCollections);
+        return providers;
     }
 
     @Transactional(readOnly = true)
     @Cacheable(value = "activeProviders")
     public List<Provider> findActive() {
-        return providerRepository.findByActiveTrue();
+        List<Provider> providers = providerRepository.findByActiveTrue();
+        providers.forEach(this::initializeLazyCollections);
+        return providers;
     }
 
     @Transactional(readOnly = true)
     @Cacheable(value = "providers", key = "#id", unless = "#result == null")
     public Optional<Provider> findById(Long id) {
-        return providerRepository.findById(id);
+        Optional<Provider> provider = providerRepository.findById(id);
+        provider.ifPresent(this::initializeLazyCollections);
+        return provider;
     }
 
     @Transactional(readOnly = true)
     @Cacheable(value = "providersByNpi", key = "#npi", unless = "#result == null")
     public Optional<Provider> findByNpi(String npi) {
-        return providerRepository.findByNpi(npi);
+        Optional<Provider> provider = providerRepository.findByNpi(npi);
+        provider.ifPresent(this::initializeLazyCollections);
+        return provider;
     }
 
     @Transactional(readOnly = true)
     @Cacheable(value = "providersByDepartment", key = "#department")
     public List<Provider> findByDepartment(String department) {
-        return providerRepository.findByDepartment(department);
+        List<Provider> providers = providerRepository.findByDepartment(department);
+        providers.forEach(this::initializeLazyCollections);
+        return providers;
     }
 
     @Transactional(readOnly = true)
     @Cacheable(value = "providersBySpecialty", key = "#specialty")
     public List<Provider> findBySpecialty(String specialty) {
-        return providerRepository.findBySpecialty(specialty);
+        List<Provider> providers = providerRepository.findBySpecialty(specialty);
+        providers.forEach(this::initializeLazyCollections);
+        return providers;
     }
 
     @Transactional(readOnly = true)
@@ -109,5 +122,9 @@ public class ProviderService {
     @Transactional(readOnly = true)
     public List<Provider> search(String lastName) {
         return providerRepository.findByLastNameContainingIgnoreCase(lastName);
+    }
+
+    private void initializeLazyCollections(Provider provider) {
+        Hibernate.initialize(provider.getLicenses());
     }
 }
