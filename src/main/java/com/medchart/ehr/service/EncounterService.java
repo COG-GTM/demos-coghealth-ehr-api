@@ -214,7 +214,12 @@ public class EncounterService {
 
     private void initializeLazyCollections(Encounter encounter) {
         Hibernate.initialize(encounter.getDiagnoses());
-        encounter.getDiagnoses().forEach(ed -> Hibernate.initialize(ed.getDiagnosis()));
+        encounter.getDiagnoses().forEach(ed -> {
+            if (ed.getDiagnosis() != null) {
+                Hibernate.initialize(ed.getDiagnosis());
+                Hibernate.initialize(ed.getDiagnosis().getDiagnosedBy());
+            }
+        });
         if (encounter.getPatient() != null) {
             Hibernate.initialize(encounter.getPatient().getIdentifiers());
             Hibernate.initialize(encounter.getPatient().getEmergencyContacts());
