@@ -4,6 +4,7 @@ import com.medchart.ehr.domain.clinical.Diagnosis;
 import lombok.*;
 
 import javax.persistence.*;
+import java.io.Serializable;
 
 @Entity
 @Table(name = "encounter_diagnoses")
@@ -12,7 +13,9 @@ import javax.persistence.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class EncounterDiagnosis {
+public class EncounterDiagnosis implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
