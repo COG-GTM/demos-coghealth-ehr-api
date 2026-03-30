@@ -43,7 +43,7 @@ public class ProviderService {
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "providers", key = "#id", unless = "#result == null")
+    @Cacheable(value = "providers", key = "#id", unless = "!#result.isPresent()")
     public Optional<Provider> findById(Long id) {
         Optional<Provider> provider = providerRepository.findById(id);
         provider.ifPresent(this::initializeLazyCollections);
@@ -51,7 +51,7 @@ public class ProviderService {
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "providersByNpi", key = "#npi", unless = "#result == null")
+    @Cacheable(value = "providersByNpi", key = "#npi", unless = "!#result.isPresent()")
     public Optional<Provider> findByNpi(String npi) {
         Optional<Provider> provider = providerRepository.findByNpi(npi);
         provider.ifPresent(this::initializeLazyCollections);

@@ -1,5 +1,7 @@
 package com.medchart.ehr.service;
 
+import com.medchart.ehr.audit.AuditAccess;
+import com.medchart.ehr.audit.AuditAction;
 import com.medchart.ehr.domain.encounter.Encounter;
 import com.medchart.ehr.domain.encounter.EncounterStatus;
 import com.medchart.ehr.repository.EncounterRepository;
@@ -36,7 +38,8 @@ public class EncounterService {
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "encounters", key = "#id", unless = "#result == null")
+    @Cacheable(value = "encounters", key = "#id", unless = "!#result.isPresent()")
+    @AuditAccess(action = AuditAction.READ, resourceType = "Encounter", description = "View encounter by ID")
     public Optional<Encounter> findById(Long id) {
         Optional<Encounter> encounter = encounterRepository.findById(id);
         encounter.ifPresent(this::initializeLazyCollections);
@@ -44,7 +47,8 @@ public class EncounterService {
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "encounters", key = "'details-' + #id", unless = "#result == null")
+    @Cacheable(value = "encounters", key = "'details-' + #id", unless = "!#result.isPresent()")
+    @AuditAccess(action = AuditAction.READ, resourceType = "Encounter", description = "View encounter with details")
     public Optional<Encounter> findByIdWithDetails(Long id) {
         Optional<Encounter> encounter = encounterRepository.findByIdWithDetails(id);
         encounter.ifPresent(this::initializeLazyCollections);
@@ -52,6 +56,7 @@ public class EncounterService {
     }
 
     @Transactional(readOnly = true)
+    @AuditAccess(action = AuditAction.READ, resourceType = "Encounter", description = "View encounter by number")
     public Optional<Encounter> findByEncounterNumber(String encounterNumber) {
         Optional<Encounter> encounter = encounterRepository.findByEncounterNumber(encounterNumber);
         encounter.ifPresent(this::initializeLazyCollections);
@@ -60,6 +65,7 @@ public class EncounterService {
 
     @Transactional(readOnly = true)
     @Cacheable(value = "encountersByPatient", key = "#patientId")
+    @AuditAccess(action = AuditAction.READ, resourceType = "Encounter", description = "View encounters by patient")
     public List<Encounter> findByPatientId(Long patientId) {
         List<Encounter> encounters = encounterRepository.findByPatientId(patientId);
         encounters.forEach(this::initializeLazyCollections);
@@ -73,6 +79,7 @@ public class EncounterService {
 
     @Transactional(readOnly = true)
     @Cacheable(value = "encountersByProvider", key = "#providerId")
+    @AuditAccess(action = AuditAction.READ, resourceType = "Encounter", description = "View encounters by provider")
     public List<Encounter> findByProviderId(Long providerId) {
         List<Encounter> encounters = encounterRepository.findByAttendingProviderId(providerId);
         encounters.forEach(this::initializeLazyCollections);
@@ -81,6 +88,7 @@ public class EncounterService {
 
     @Transactional(readOnly = true)
     @Cacheable(value = "providerSchedule", key = "#providerId + '-' + #date.toString()")
+    @AuditAccess(action = AuditAction.READ, resourceType = "Encounter", description = "View provider schedule")
     public List<Encounter> getProviderSchedule(Long providerId, LocalDate date) {
         LocalDateTime startOfDay = date.atStartOfDay();
         LocalDateTime endOfDay = date.plusDays(1).atStartOfDay();
@@ -100,6 +108,7 @@ public class EncounterService {
     }
 
     @Caching(evict = {
+            @CacheEvict(value = "encounters", allEntries = true),
             @CacheEvict(value = "encountersByPatient", allEntries = true),
             @CacheEvict(value = "encountersByProvider", allEntries = true),
             @CacheEvict(value = "providerSchedule", allEntries = true)
