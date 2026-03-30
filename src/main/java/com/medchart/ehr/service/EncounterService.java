@@ -217,6 +217,7 @@ public class EncounterService {
         encounter.getDiagnoses().forEach(ed -> {
             if (ed.getDiagnosis() != null) {
                 Hibernate.initialize(ed.getDiagnosis());
+                Hibernate.initialize(ed.getDiagnosis().getPatient());
                 Hibernate.initialize(ed.getDiagnosis().getDiagnosedBy());
             }
         });
