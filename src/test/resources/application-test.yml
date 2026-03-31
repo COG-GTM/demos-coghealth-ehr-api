@@ -1,0 +1,47 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+
+  flyway:
+    enabled: false
+
+  redis:
+    host: localhost
+    port: 6379
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+
+medchart:
+  security:
+    jwt:
+      secret: test-secret-key-that-is-at-least-512-bits-long-for-hs512-algorithm-testing-purposes-only
+      expiration: 3600000
+  audit:
+    enabled: false
+    async: false
+  integration:
+    insurance:
+      base-url: http://localhost:8081
+      timeout: 5000
+    pharmacy:
+      base-url: http://localhost:8082
+      timeout: 10000
+    lab:
+      hl7-port: 2575
+
+logging:
+  level:
+    com.medchart: WARN
