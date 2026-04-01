@@ -1,17 +1,15 @@
 package com.medchart.ehr.legacy;
 
-import com.medchart.ehr.domain.encounter.Encounter;
-import com.medchart.ehr.domain.patient.Patient;
+import com.medchart.ehr.audit.AuditAccess;
+import com.medchart.ehr.audit.AuditAction;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
-import java.io.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
@@ -21,6 +19,7 @@ public class EncounterExportService {
     @Autowired
     private EntityManager entityManager;
 
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Encounter", description = "Export encounters for date range")
     public byte[] exportEncountersForDateRange(LocalDate startDate, LocalDate endDate) {
         String sql = "SELECT e.id, e.encounter_number, e.encounter_type, e.status, e.encounter_date_time, " +
                      "p.mrn, p.first_name, p.last_name, p.date_of_birth " +
@@ -52,9 +51,10 @@ public class EncounterExportService {
         return csv.toString().getBytes();
     }
 
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Encounter", description = "Export patient encounter history")
     public byte[] exportPatientEncounterHistory(Long patientId) {
         Query patientQuery = entityManager.createNativeQuery(
-            "SELECT mrn, first_name, last_name, ssn, date_of_birth FROM patients WHERE id = ?1");
+            "SELECT mrn, first_name, last_name, date_of_birth FROM patients WHERE id = ?1");
         patientQuery.setParameter(1, patientId);
         Object[] patientData = (Object[]) patientQuery.getSingleResult();
         
@@ -68,8 +68,7 @@ public class EncounterExportService {
         export.append("Generated: ").append(LocalDateTime.now()).append("\n\n");
         export.append("Patient: ").append(patientData[1]).append(" ").append(patientData[2]).append("\n");
         export.append("MRN: ").append(patientData[0]).append("\n");
-        export.append("SSN: ").append(patientData[3]).append("\n");
-        export.append("DOB: ").append(patientData[4]).append("\n\n");
+        export.append("DOB: ").append(patientData[3]).append("\n\n");
         export.append("Encounters:\n");
         export.append("-".repeat(80)).append("\n");
         
@@ -84,27 +83,24 @@ public class EncounterExportService {
         return export.toString().getBytes();
     }
 
-    public void exportAllPatientsToFile(String filePath) {
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Patient", description = "Export all active patients")
+    public byte[] exportAllPatients() {
         Query query = entityManager.createNativeQuery(
-            "SELECT id, mrn, first_name, last_name, date_of_birth, " +
-            "email, phone_home, phone_mobile, street1, city, state, zip_code " +
+            "SELECT id, mrn, first_name, last_name, date_of_birth " +
             "FROM patients WHERE active = true");
         
         List<Object[]> patients = query.getResultList();
         
-        try (PrintWriter writer = new PrintWriter(new FileWriter(filePath))) {
-            writer.println("ID,MRN,FirstName,LastName,DOB,Email,PhoneHome,PhoneMobile,Street,City,State,Zip");
-            for (Object[] p : patients) {
-                writer.println(String.join(",", 
-                    String.valueOf(p[0]), String.valueOf(p[1]), String.valueOf(p[2]),
-                    String.valueOf(p[3]), String.valueOf(p[4]), String.valueOf(p[5]),
-                    String.valueOf(p[6]), String.valueOf(p[7]), String.valueOf(p[8]),
-                    String.valueOf(p[9]), String.valueOf(p[10]), String.valueOf(p[11])));
-            }
-            log.info("Exported {} patients to file: {}", patients.size(), filePath);
-        } catch (IOException e) {
-            log.error("Failed to export patients to file", e);
-            throw new RuntimeException("Export failed", e);
+        StringBuilder csv = new StringBuilder();
+        csv.append("ID,MRN,FirstName,LastName,DOB\n");
+        for (Object[] p : patients) {
+            csv.append(String.join(",",
+                String.valueOf(p[0]), String.valueOf(p[1]), String.valueOf(p[2]),
+                String.valueOf(p[3]), String.valueOf(p[4])));
+            csv.append("\n");
         }
+        
+        log.info("Exported {} patients", patients.size());
+        return csv.toString().getBytes();
     }
 }
