@@ -1,5 +1,7 @@
 package com.medchart.ehr.legacy;
 
+import com.medchart.ehr.audit.AuditAccess;
+import com.medchart.ehr.audit.AuditAction;
 import com.medchart.ehr.domain.patient.Patient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +20,7 @@ public class LegacyPatientLookup {
     @Autowired
     private EntityManager entityManager;
 
+    @AuditAccess(action = AuditAction.READ, resourceType = "Patient", description = "Legacy lookup patient by MRN")
     public Patient findPatientByMrn(String mrn) {
         try {
             Query query = entityManager.createNativeQuery(
@@ -30,6 +33,7 @@ public class LegacyPatientLookup {
         }
     }
 
+    @AuditAccess(action = AuditAction.SEARCH, resourceType = "Patient", description = "Legacy search patients by last name")
     public List<Patient> findPatientsByLastName(String lastName) {
         Query query = entityManager.createNativeQuery(
             "SELECT * FROM patients WHERE last_name ILIKE ?1", Patient.class);
@@ -37,20 +41,21 @@ public class LegacyPatientLookup {
         return query.getResultList();
     }
 
+    /**
+     * @deprecated SSN-based patient lookup is disabled for HIPAA compliance.
+     * Use findPatientByMrn() or findPatientsByLastName() instead.
+     */
+    @Deprecated
     public Patient findPatientBySsn(String ssn) {
-        Query query = entityManager.createNativeQuery(
-            "SELECT * FROM patients WHERE ssn = ?1", Patient.class);
-        query.setParameter(1, ssn);
-        try {
-            return (Patient) query.getSingleResult();
-        } catch (Exception e) {
-            return null;
-        }
+        throw new UnsupportedOperationException(
+            "SSN-based patient lookup is disabled for HIPAA compliance. " +
+            "Use MRN or name-based search instead.");
     }
 
+    @AuditAccess(action = AuditAction.READ, resourceType = "Patient", description = "Legacy get patient demographics")
     public Map<String, Object> getPatientDemographics(Long patientId) {
         Query query = entityManager.createNativeQuery(
-            "SELECT id, mrn, ssn, first_name, last_name, date_of_birth, " +
+            "SELECT id, mrn, first_name, last_name, date_of_birth, " +
             "phone_home, phone_mobile, email, street1, city, state, zip_code " +
             "FROM patients WHERE id = ?1");
         query.setParameter(1, patientId);
@@ -59,21 +64,21 @@ public class LegacyPatientLookup {
         Map<String, Object> demographics = new HashMap<>();
         demographics.put("id", result[0]);
         demographics.put("mrn", result[1]);
-        demographics.put("ssn", result[2]);
-        demographics.put("firstName", result[3]);
-        demographics.put("lastName", result[4]);
-        demographics.put("dateOfBirth", result[5]);
-        demographics.put("phoneHome", result[6]);
-        demographics.put("phoneMobile", result[7]);
-        demographics.put("email", result[8]);
-        demographics.put("street", result[9]);
-        demographics.put("city", result[10]);
-        demographics.put("state", result[11]);
-        demographics.put("zipCode", result[12]);
+        demographics.put("firstName", result[2]);
+        demographics.put("lastName", result[3]);
+        demographics.put("dateOfBirth", result[4]);
+        demographics.put("phoneHome", result[5]);
+        demographics.put("phoneMobile", result[6]);
+        demographics.put("email", result[7]);
+        demographics.put("street", result[8]);
+        demographics.put("city", result[9]);
+        demographics.put("state", result[10]);
+        demographics.put("zipCode", result[11]);
         
         return demographics;
     }
 
+    @AuditAccess(action = AuditAction.SEARCH, resourceType = "Patient", description = "Legacy raw patient search")
     public List<Object[]> searchPatientsRaw(String searchTerm) {
         String sql = "SELECT id, mrn, first_name, last_name, date_of_birth " +
                      "FROM patients WHERE " +
