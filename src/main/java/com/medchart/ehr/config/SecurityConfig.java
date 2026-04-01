@@ -39,7 +39,11 @@ public class SecurityConfig {
             .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             .and()
             .authorizeRequests()
-                .antMatchers("/**").permitAll();
+                .antMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+                .antMatchers("/actuator/health", "/actuator/info").permitAll()
+                .anyRequest().authenticated()
+            .and()
+            .httpBasic();
         
         return http.build();
     }
