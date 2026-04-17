@@ -1,6 +1,9 @@
 spring:
   application:
     name: medchart-ehr-api
+  threads:
+    virtual:
+      enabled: true
 
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/medchart_ehr}
@@ -14,7 +17,6 @@ spring:
     show-sql: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
 
   flyway:
@@ -22,9 +24,10 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
-  redis:
-    host: localhost
-    port: 6379
+  data:
+    redis:
+      host: localhost
+      port: 6379
 
   rabbitmq:
     host: localhost
