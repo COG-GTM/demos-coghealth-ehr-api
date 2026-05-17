@@ -11,6 +11,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Legacy patient lookup using native SQL queries.
+ *
+ * Provides direct database access for backward-compatible search
+ * operations that predate the JPA repository layer.
+ */
 @Service
 @Slf4j
 public class LegacyPatientLookup {

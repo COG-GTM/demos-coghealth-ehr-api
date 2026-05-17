@@ -7,6 +7,12 @@ import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * In-memory cache for insurance eligibility lookup results.
+ *
+ * Stores eligibility data in a {@link ConcurrentHashMap} keyed by
+ * patient MRN and payer ID to reduce external gateway calls.
+ */
 @Service
 @Slf4j
 public class InsuranceCache {

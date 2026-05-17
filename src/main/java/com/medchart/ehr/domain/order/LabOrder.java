@@ -12,6 +12,12 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Laboratory test order placed by a provider for a patient.
+ *
+ * Tracks specimen collection, lab routing, priority, fasting
+ * requirements, and associated {@link LabResult} entries.
+ */
 @Entity
 @Table(name = "lab_orders", indexes = {
     @Index(name = "idx_lab_order_patient", columnList = "patient_id"),

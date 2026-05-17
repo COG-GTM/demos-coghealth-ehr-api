@@ -1,5 +1,8 @@
 package com.medchart.ehr.domain.medication;
 
+/**
+ * Lifecycle status of a medication order from draft through completion.
+ */
 public enum MedicationOrderStatus {
     DRAFT,
     PENDING,

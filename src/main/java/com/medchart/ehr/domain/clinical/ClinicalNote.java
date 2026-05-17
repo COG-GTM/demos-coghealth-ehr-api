@@ -10,6 +10,12 @@ import org.hibernate.annotations.UpdateTimestamp;
 import javax.persistence.*;
 import java.time.LocalDateTime;
 
+/**
+ * Clinical documentation authored by a provider for a patient encounter.
+ *
+ * Supports a signature workflow (draft → signed → cosigned) and
+ * amendment tracking via the {@code amendedFrom} self-reference.
+ */
 @Entity
 @Table(name = "clinical_notes", indexes = {
     @Index(name = "idx_note_patient", columnList = "patient_id"),

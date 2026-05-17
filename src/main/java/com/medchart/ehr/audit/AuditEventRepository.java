@@ -9,6 +9,12 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Repository for querying HIPAA audit trail records.
+ *
+ * Provides methods for retrieving audit events by patient, user, date range,
+ * and action type to support compliance reporting and access reviews.
+ */
 @Repository
 public interface AuditEventRepository extends JpaRepository<AuditEvent, Long> {
 

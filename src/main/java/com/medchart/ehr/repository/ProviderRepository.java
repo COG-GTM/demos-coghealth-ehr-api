@@ -8,6 +8,12 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Spring Data repository for {@link Provider} entities.
+ *
+ * Supports lookup by NPI, department, specialty, and name search,
+ * as well as distinct department and specialty listings.
+ */
 @Repository
 public interface ProviderRepository extends JpaRepository<Provider, Long> {
 

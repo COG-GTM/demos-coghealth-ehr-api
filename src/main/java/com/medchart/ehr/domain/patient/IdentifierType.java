@@ -1,5 +1,11 @@
 package com.medchart.ehr.domain.patient;
 
+/**
+ * Types of patient identifiers used across the EHR system.
+ *
+ * Includes government-issued IDs (SSN, driver's license, passport)
+ * and healthcare-specific identifiers (MRN, insurance member/group IDs).
+ */
 public enum IdentifierType {
     MRN,
     SSN,

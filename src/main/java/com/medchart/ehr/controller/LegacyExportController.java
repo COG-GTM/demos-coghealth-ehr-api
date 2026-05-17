@@ -12,6 +12,14 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * REST controller for legacy data export and reporting.
+ *
+ * Provides CSV and text-based exports of encounter and patient data,
+ * as well as on-demand report generation. Uses native SQL queries
+ * via {@link com.medchart.ehr.legacy.EncounterExportService} and
+ * {@link com.medchart.ehr.legacy.ReportGenerator}.
+ */
 @RestController
 @RequestMapping("/v1/export")
 @RequiredArgsConstructor

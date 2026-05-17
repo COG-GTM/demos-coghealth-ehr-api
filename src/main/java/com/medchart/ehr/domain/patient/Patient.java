@@ -12,6 +12,12 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Core patient entity representing a person receiving care.
+ *
+ * Contains demographics, contact information, and identifiers (MRN, SSN).
+ * All access to patient records is audit-logged for HIPAA compliance.
+ */
 @Entity
 @Table(name = "patients", indexes = {
     @Index(name = "idx_patient_mrn", columnList = "mrn"),

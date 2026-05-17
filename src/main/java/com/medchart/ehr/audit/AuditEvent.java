@@ -6,6 +6,13 @@ import org.hibernate.annotations.CreationTimestamp;
 import javax.persistence.*;
 import java.time.LocalDateTime;
 
+/**
+ * Persistent audit trail entity for HIPAA-compliant access logging.
+ *
+ * Records every access to Protected Health Information (PHI) including
+ * the acting user, affected patient, action performed, and request metadata.
+ * Entries are immutable once created and indexed for efficient compliance queries.
+ */
 @Entity
 @Table(name = "audit_events", indexes = {
     @Index(name = "idx_audit_user", columnList = "userId"),

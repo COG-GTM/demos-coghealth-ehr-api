@@ -7,6 +7,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Service for persisting HIPAA audit trail events.
+ *
+ * Saves audit records asynchronously in a separate transaction to ensure
+ * audit logging does not interfere with the primary business operation.
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor

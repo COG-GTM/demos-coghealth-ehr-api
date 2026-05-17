@@ -17,6 +17,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * Service for clinical encounter lifecycle management.
+ *
+ * Handles creation, lookup, and workflow state transitions
+ * (check-in, start, complete, cancel, no-show) for patient encounters.
+ */
 @Service
 @Transactional
 public class EncounterService {
