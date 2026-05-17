@@ -4,6 +4,12 @@ import lombok.*;
 
 import javax.persistence.*;
 
+/**
+ * Emergency contact associated with a patient.
+ *
+ * Stores relationship, contact details, and priority ordering
+ * for reaching a patient's designated contacts.
+ */
 @Entity
 @Table(name = "emergency_contacts")
 @Getter

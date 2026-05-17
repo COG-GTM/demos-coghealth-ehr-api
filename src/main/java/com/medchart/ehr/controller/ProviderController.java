@@ -7,6 +7,12 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * REST controller for healthcare provider management.
+ *
+ * Supports lookup by NPI, department, and specialty, as well as
+ * CRUD operations and provider deactivation.
+ */
 @RestController
 @RequestMapping("/v1/providers")
 public class ProviderController {

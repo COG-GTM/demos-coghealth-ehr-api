@@ -13,6 +13,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+/**
+ * JWT token provider for stateless authentication.
+ *
+ * Handles token generation, parsing, and validation using HS512 signing.
+ * Token expiration and secret are configured via application properties.
+ */
 @Component
 public class JwtTokenProvider {
 

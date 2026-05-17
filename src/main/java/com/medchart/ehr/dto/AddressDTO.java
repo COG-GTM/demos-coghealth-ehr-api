@@ -2,6 +2,9 @@ package com.medchart.ehr.dto;
 
 import lombok.*;
 
+/**
+ * Data transfer object for a postal address.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

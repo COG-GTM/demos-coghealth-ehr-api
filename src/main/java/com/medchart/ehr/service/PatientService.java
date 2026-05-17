@@ -16,6 +16,12 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.persistence.EntityNotFoundException;
 import java.util.Optional;
 
+/**
+ * Service for patient record management with HIPAA-compliant audit logging.
+ *
+ * All read and write operations are annotated with {@link AuditAccess}
+ * to create an immutable audit trail of PHI access.
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor

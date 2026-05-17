@@ -1,5 +1,8 @@
 package com.medchart.ehr.domain.order;
 
+/**
+ * Lifecycle status of a laboratory or diagnostic order.
+ */
 public enum OrderStatus {
     DRAFT,
     PENDING,

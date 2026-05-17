@@ -10,6 +10,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Data transfer object for patient demographics and contact information.
+ *
+ * Used by the REST API to decouple the external representation from
+ * the {@link com.medchart.ehr.domain.patient.Patient} JPA entity.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

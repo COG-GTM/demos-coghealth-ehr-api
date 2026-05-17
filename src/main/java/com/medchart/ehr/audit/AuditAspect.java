@@ -13,6 +13,13 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import javax.servlet.http.HttpServletRequest;
 import java.lang.reflect.Method;
 
+/**
+ * AOP aspect for HIPAA-compliant audit logging of PHI access.
+ *
+ * Intercepts methods annotated with {@link AuditAccess} to automatically
+ * record audit trail entries including user identity, client IP, and
+ * the outcome of each access attempt.
+ */
 @Aspect
 @Component
 @Slf4j

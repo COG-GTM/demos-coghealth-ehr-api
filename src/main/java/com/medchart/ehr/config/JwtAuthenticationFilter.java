@@ -16,6 +16,13 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
+/**
+ * Spring Security filter that authenticates requests using JWT bearer tokens.
+ *
+ * Extracts the JWT from the Authorization header, validates it, and sets
+ * the authenticated user in the Spring Security context for downstream
+ * access control.
+ */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 

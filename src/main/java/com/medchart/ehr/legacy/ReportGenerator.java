@@ -13,6 +13,12 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+/**
+ * On-demand report generator producing CSV and text exports.
+ *
+ * Generates patient roster and encounter summary reports using
+ * native SQL queries and writes them to temporary files.
+ */
 @Service
 @Slf4j
 public class ReportGenerator {

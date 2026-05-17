@@ -5,6 +5,11 @@ import lombok.*;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
 
+/**
+ * Embeddable value object representing a postal address.
+ *
+ * Embedded within {@link Patient} for home and mailing addresses.
+ */
 @Embeddable
 @Getter
 @Setter

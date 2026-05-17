@@ -17,6 +17,12 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Spring Security configuration for the EHR API.
+ *
+ * Configures stateless JWT-based authentication, CORS policies for
+ * the frontend SPA, and BCrypt password encoding.
+ */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
