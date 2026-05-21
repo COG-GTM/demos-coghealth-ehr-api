@@ -11,6 +11,7 @@ import java.util.Set;
 @AllArgsConstructor
 public class AuthResponse {
     private String token;
+    @Builder.Default
     private final String type = "Bearer";
     private String username;
     private String email;
