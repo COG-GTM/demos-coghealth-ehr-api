@@ -105,7 +105,7 @@ public class AuthController {
 
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refreshToken(@AuthenticationPrincipal User user) {
-        String jwt = tokenProvider.generateTokenFromUsername(user.getUsername());
+        String jwt = tokenProvider.generateTokenForUser(user);
 
         return ResponseEntity.ok(buildAuthResponse(jwt, user));
     }
@@ -125,7 +125,7 @@ public class AuthController {
 
         log.info("Password changed for user: {}", user.getUsername());
 
-        String jwt = tokenProvider.generateTokenFromUsername(user.getUsername());
+        String jwt = tokenProvider.generateTokenForUser(user);
         return ResponseEntity.ok(buildAuthResponse(jwt, user));
     }
 
