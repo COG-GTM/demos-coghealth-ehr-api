@@ -34,6 +34,8 @@ If you prefer a local PostgreSQL instance, use the default profile with Docker i
 mvn spring-boot:run
 ```
 
+Run the command from the repository root.
+
 ## Tech Stack
 
 - Java 11
