@@ -10,6 +10,8 @@ Spring Boot REST API for the CogHealth EHR system.
 ./start.sh
 ```
 
+Run the command from the repository root.
+
 ## Tech Stack
 
 - Java 17
