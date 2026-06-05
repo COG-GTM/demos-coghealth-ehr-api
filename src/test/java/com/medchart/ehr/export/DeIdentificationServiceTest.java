@@ -71,14 +71,27 @@ class DeIdentificationServiceTest {
     }
 
     @Test
-    void deIdentifyPatient_preservesMrnAndGender() {
+    void deIdentifyPatient_removesMrnAndAddsResearchId() {
         Patient patient = buildPatient("Test", "User", LocalDate.of(1990, 6, 1), "10001");
         patient.setGender(Gender.MALE);
 
         Map<String, Object> result = service.deIdentifyPatient(patient);
 
-        assertEquals("MRN001", result.get("mrn"));
+        // MRN is a Safe Harbor identifier and must not appear in de-identified output
+        assertFalse(result.containsKey("mrn"));
+        assertFalse(result.containsValue("MRN001"));
+        assertNotNull(result.get("researchId"));
         assertEquals("MALE", result.get("gender"));
+    }
+
+    @Test
+    void deIdentify_assignsUniqueResearchIdPerPatient() {
+        Patient p1 = buildPatient("Alice", "A", LocalDate.of(1985, 3, 10), "11111");
+        Patient p2 = buildPatient("Bob", "B", LocalDate.of(1990, 7, 20), "22222");
+
+        List<Map<String, Object>> results = service.deIdentify(List.of(p1, p2));
+
+        assertNotEquals(results.get(0).get("researchId"), results.get(1).get("researchId"));
     }
 
     @Test

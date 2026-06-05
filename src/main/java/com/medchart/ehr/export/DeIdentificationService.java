@@ -9,16 +9,18 @@ import java.time.Period;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
  * HIPAA Safe Harbor de-identification (45 CFR §164.514(b)(2)).
  *
- * Strips the 18 Safe Harbor identifiers relevant to patient export:
+ * Strips the Safe Harbor identifiers relevant to patient export:
  * - Names replaced with "[REDACTED]"
- * - DOB converted to age
+ * - Medical record number replaced with a random research id
+ * - DOB converted to age (ages over 89 grouped as 90)
  * - ZIP truncated to first 3 digits + "00"
- * - SSN, email, phone numbers stripped
+ * - SSN, email, phone numbers omitted entirely
  */
 @Service
 @Slf4j
@@ -32,7 +34,9 @@ public class DeIdentificationService {
 
     Map<String, Object> deIdentifyPatient(Patient patient) {
         Map<String, Object> safe = new LinkedHashMap<>();
-        safe.put("mrn", patient.getMrn());
+        // Safe Harbor identifier #12 (medical record number) must be removed.
+        // Use a non-reversible random research id so rows remain distinguishable.
+        safe.put("researchId", UUID.randomUUID().toString());
         safe.put("firstName", "[REDACTED]");
         safe.put("lastName", "[REDACTED]");
         safe.put("age", calculateAge(patient.getDateOfBirth()));

@@ -3,9 +3,7 @@ package com.medchart.ehr.export;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.medchart.ehr.audit.AuditAction;
-import com.medchart.ehr.audit.AuditEvent;
-import com.medchart.ehr.audit.AuditEventRepository;
+import com.medchart.ehr.audit.PatientAccessLogger;
 import com.medchart.ehr.domain.patient.Patient;
 import com.medchart.ehr.repository.PatientRepository;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +31,9 @@ public class BatchPatientExportService {
     private final DeIdentificationService deIdentificationService;
     private final ExportEncryptionService encryptionService;
     private final DataExportRepository dataExportRepository;
-    private final AuditEventRepository auditEventRepository;
+    private final PatientAccessLogger patientAccessLogger;
+
+    private static final String EXPORT_RESOURCE_TYPE = "PatientBatchExport";
 
     @Value("${medchart.export.temp-dir:/tmp/medchart-exports}")
     private String tempDir;
@@ -88,21 +88,15 @@ public class BatchPatientExportService {
 
         dataExportRepository.save(export);
 
-        AuditEvent auditEvent = AuditEvent.builder()
-                .userId(userId)
-                .userName(userName)
-                .action(AuditAction.EXPORT)
-                .resourceType("PatientBatchExport")
-                .description(String.format("Batch export: %d patients, reason=%s, format=%s, deIdentified=%s",
-                        patients.size(), request.getReason(), request.getFormat(), isResearch))
-                .ipAddress(ipAddress)
-                .requestDetails("exportReference=" + reference)
-                .success(true)
-                .build();
-        auditEventRepository.save(auditEvent);
-
-        log.info("AUDIT EXPORT: User {} exported {} patients, reason={}, ref={}",
-                userId, patients.size(), request.getReason(), reference);
+        patientAccessLogger.logExport(
+                userId,
+                userName,
+                EXPORT_RESOURCE_TYPE,
+                patients.size(),
+                String.format("Batch export created: reason=%s, format=%s, deIdentified=%s",
+                        request.getReason(), request.getFormat(), isResearch),
+                ipAddress,
+                "exportReference=" + reference);
 
         return DataExportDTO.fromEntity(export);
     }
@@ -125,16 +119,14 @@ public class BatchPatientExportService {
             export.incrementDownloadCount();
             dataExportRepository.save(export);
 
-            AuditEvent auditEvent = AuditEvent.builder()
-                    .userId(userId)
-                    .action(AuditAction.EXPORT)
-                    .resourceType("PatientBatchExport")
-                    .description("Downloaded export: " + exportReference +
-                            " (download #" + export.getDownloadCount() + ")")
-                    .ipAddress(ipAddress)
-                    .success(true)
-                    .build();
-            auditEventRepository.save(auditEvent);
+            patientAccessLogger.logExport(
+                    userId,
+                    export.getUserName(),
+                    EXPORT_RESOURCE_TYPE,
+                    export.getPatientCount(),
+                    "Export downloaded (download #" + export.getDownloadCount() + ")",
+                    ipAddress,
+                    "exportReference=" + exportReference);
 
             return encrypted;
         } catch (IOException e) {
@@ -157,12 +149,12 @@ public class BatchPatientExportService {
         map.put("email", patient.getEmail());
         map.put("phoneHome", patient.getPhoneHome());
         map.put("phoneMobile", patient.getPhoneMobile());
-        if (patient.getAddress() != null) {
-            map.put("street", patient.getAddress().getStreet1());
-            map.put("city", patient.getAddress().getCity());
-            map.put("state", patient.getAddress().getState());
-            map.put("zipCode", patient.getAddress().getZipCode());
-        }
+        // Always emit address keys so CSV headers (derived from the first row) stay
+        // consistent regardless of whether the first patient has an address.
+        map.put("street", patient.getAddress() != null ? patient.getAddress().getStreet1() : null);
+        map.put("city", patient.getAddress() != null ? patient.getAddress().getCity() : null);
+        map.put("state", patient.getAddress() != null ? patient.getAddress().getState() : null);
+        map.put("zipCode", patient.getAddress() != null ? patient.getAddress().getZipCode() : null);
         map.put("active", patient.getActive());
         return map;
     }

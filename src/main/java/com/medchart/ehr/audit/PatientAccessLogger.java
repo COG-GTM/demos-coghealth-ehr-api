@@ -125,6 +125,36 @@ public class PatientAccessLogger {
     }
 
     /**
+     * Log a patient data export (creation or download) for HIPAA compliance.
+     * Captures who exported, when, how many records, and why.
+     */
+    public void logExport(
+            String userId,
+            String userName,
+            String resourceType,
+            int recordCount,
+            String description,
+            String ipAddress,
+            String requestDetails) {
+
+        log.info("AUDIT EXPORT: User {} exported {} {} records - {}",
+            userId, recordCount, resourceType, description);
+
+        AuditEvent event = new AuditEvent();
+        event.setUserId(userId);
+        event.setUserName(userName);
+        event.setAction(AuditAction.EXPORT);
+        event.setResourceType(resourceType);
+        event.setDescription(description);
+        event.setIpAddress(ipAddress);
+        event.setRequestDetails(requestDetails);
+        event.setTimestamp(LocalDateTime.now());
+        event.setSuccess(true);
+
+        auditEventRepository.save(event);
+    }
+
+    /**
      * Generate audit report for compliance review.
      */
     public Map<String, Object> generateAccessReport(Long patientId, LocalDateTime startDate, LocalDateTime endDate) {
