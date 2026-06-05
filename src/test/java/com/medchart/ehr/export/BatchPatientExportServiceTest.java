@@ -3,6 +3,7 @@ package com.medchart.ehr.export;
 import com.medchart.ehr.audit.PatientAccessLogger;
 import com.medchart.ehr.domain.patient.Patient;
 import com.medchart.ehr.repository.PatientRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,6 +16,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -49,6 +51,7 @@ class BatchPatientExportServiceTest {
 
     @BeforeEach
     void setUp() throws IOException {
+        TransactionSynchronizationManager.initSynchronization();
         byte[] key = new byte[32];
         for (int i = 0; i < 32; i++) {
             key[i] = (byte) i;
@@ -65,6 +68,13 @@ class BatchPatientExportServiceTest {
         tempDir = Files.createTempDirectory("export-test");
         ReflectionTestUtils.setField(service, "tempDir", tempDir.toString());
         ReflectionTestUtils.setField(service, "ttlHours", 24);
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
     }
 
     @Test

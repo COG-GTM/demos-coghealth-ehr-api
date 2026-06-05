@@ -14,6 +14,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -92,16 +94,19 @@ public class BatchPatientExportService {
         dataExportRepository.save(export);
         writeEncryptedFile(filePath, encrypted);
 
-        patientAccessLogger.logExport(
-                userId,
-                userName,
-                EXPORT_RESOURCE_TYPE,
-                patients.size(),
-                String.format("Batch export created: reason=%s, format=%s, deIdentified=%s",
-                        request.getReason(), request.getFormat(), isResearch),
-                ipAddress,
-                "exportReference=" + reference,
-                true);
+        // Audit success only after transaction commits so the HIPAA trail
+        // never contains a record for an export that was rolled back.
+        int patientCount = patients.size();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                patientAccessLogger.logExport(
+                        userId, userName, EXPORT_RESOURCE_TYPE, patientCount,
+                        String.format("Batch export created: reason=%s, format=%s, deIdentified=%s",
+                                request.getReason(), request.getFormat(), isResearch),
+                        ipAddress, "exportReference=" + reference, true);
+            }
+        });
 
         return DataExportDTO.fromEntity(export);
     }
@@ -140,15 +145,18 @@ public class BatchPatientExportService {
             export.incrementDownloadCount();
             dataExportRepository.save(export);
 
-            patientAccessLogger.logExport(
-                    userId,
-                    userName,
-                    EXPORT_RESOURCE_TYPE,
-                    export.getPatientCount(),
-                    "Export downloaded (download #" + export.getDownloadCount() + ")",
-                    ipAddress,
-                    "exportReference=" + exportReference,
-                    true);
+            int downloadNum = export.getDownloadCount();
+            int recordCount = export.getPatientCount();
+            String ownerName = export.getUserName();
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    patientAccessLogger.logExport(
+                            userId, userName, EXPORT_RESOURCE_TYPE, recordCount,
+                            "Export downloaded (download #" + downloadNum + ")",
+                            ipAddress, "exportReference=" + exportReference, true);
+                }
+            });
 
             return new ExportDownload(decrypted, export.getFormat(), exportReference);
         } catch (IOException e) {
