@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
@@ -66,7 +67,7 @@ public class BatchPatientExportService {
         byte[] encrypted = encryptionService.encrypt(content);
 
         String reference = UUID.randomUUID().toString();
-        Path filePath = writeToSecureTempFile(reference, encrypted, request.getFormat());
+        Path filePath = computeExportPath(reference, request.getFormat());
 
         LocalDateTime now = LocalDateTime.now();
         DataExport export = DataExport.builder()
@@ -86,7 +87,10 @@ public class BatchPatientExportService {
                 .ipAddress(ipAddress)
                 .build();
 
+        // Save DB record before file I/O so a constraint violation won't leave
+        // an orphaned encrypted file on disk with no corresponding DB record.
         dataExportRepository.save(export);
+        writeEncryptedFile(filePath, encrypted);
 
         patientAccessLogger.logExport(
                 userId,
@@ -106,7 +110,7 @@ public class BatchPatientExportService {
     public ExportDownload downloadExport(String exportReference, String userId,
                                          String userName, boolean isAdmin, String ipAddress) {
         DataExport export = dataExportRepository.findByExportReference(exportReference)
-                .orElseThrow(() -> new ExportException("Export not found: " + exportReference));
+                .orElseThrow(() -> new ExportException("Export not found: " + exportReference, HttpStatus.NOT_FOUND));
 
         // PHI authorization: only the export's owner or an admin may download it.
         if (!isAdmin && !export.getUserId().equals(userId)) {
@@ -123,11 +127,11 @@ public class BatchPatientExportService {
         }
 
         if (export.getDeleted()) {
-            throw new ExportException("Export has been deleted (expired)");
+            throw new ExportException("Export has been deleted (expired)", HttpStatus.GONE);
         }
 
         if (export.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new ExportException("Export has expired");
+            throw new ExportException("Export has expired", HttpStatus.GONE);
         }
 
         try {
@@ -227,16 +231,15 @@ public class BatchPatientExportService {
         return str;
     }
 
-    private Path writeToSecureTempFile(String reference, byte[] data, ExportFormat format) {
+    private Path computeExportPath(String reference, ExportFormat format) {
+        String extension = format == ExportFormat.JSON ? ".json.enc" : ".csv.enc";
+        return Paths.get(tempDir, reference + extension);
+    }
+
+    private void writeEncryptedFile(Path filePath, byte[] data) {
         try {
-            Path dir = Paths.get(tempDir);
-            Files.createDirectories(dir);
-
-            String extension = format == ExportFormat.JSON ? ".json.enc" : ".csv.enc";
-            Path file = dir.resolve(reference + extension);
-            Files.write(file, data);
-
-            return file;
+            Files.createDirectories(filePath.getParent());
+            Files.write(filePath, data);
         } catch (IOException e) {
             throw new ExportException("Failed to write export file", e);
         }

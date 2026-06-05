@@ -73,7 +73,7 @@ public class PatientExportController {
 
     @ExceptionHandler(ExportException.class)
     public ResponseEntity<String> handleExportException(ExportException e) {
-        return ResponseEntity.badRequest().body(e.getMessage());
+        return ResponseEntity.status(e.getStatus()).body(e.getMessage());
     }
 
     private String getCurrentUserId() {
