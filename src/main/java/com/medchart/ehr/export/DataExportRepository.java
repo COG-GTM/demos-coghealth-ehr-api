@@ -18,6 +18,8 @@ public interface DataExportRepository extends JpaRepository<DataExport, Long> {
 
     Page<DataExport> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
+    Page<DataExport> findByUserIdOrderByCreatedAtDesc(String userId, Pageable pageable);
+
     List<DataExport> findByDeletedFalseAndExpiresAtBefore(LocalDateTime now);
 
     @Modifying

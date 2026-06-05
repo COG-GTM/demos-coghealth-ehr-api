@@ -102,9 +102,23 @@ public class BatchPatientExportService {
     }
 
     @Transactional
-    public byte[] downloadExport(String exportReference, String userId, String ipAddress) {
+    public ExportDownload downloadExport(String exportReference, String userId,
+                                         boolean isAdmin, String ipAddress) {
         DataExport export = dataExportRepository.findByExportReference(exportReference)
                 .orElseThrow(() -> new ExportException("Export not found: " + exportReference));
+
+        // PHI authorization: only the export's owner or an admin may download it.
+        if (!isAdmin && !export.getUserId().equals(userId)) {
+            patientAccessLogger.logExport(
+                    userId,
+                    null,
+                    EXPORT_RESOURCE_TYPE,
+                    export.getPatientCount(),
+                    "DENIED download of export owned by another user",
+                    ipAddress,
+                    "exportReference=" + exportReference);
+            throw new ExportAccessDeniedException("Not authorized to download this export");
+        }
 
         if (export.getDeleted()) {
             throw new ExportException("Export has been deleted (expired)");
@@ -116,6 +130,7 @@ public class BatchPatientExportService {
 
         try {
             byte[] encrypted = Files.readAllBytes(Paths.get(export.getFilePath()));
+            byte[] decrypted = encryptionService.decrypt(encrypted);
             export.incrementDownloadCount();
             dataExportRepository.save(export);
 
@@ -128,15 +143,17 @@ public class BatchPatientExportService {
                     ipAddress,
                     "exportReference=" + exportReference);
 
-            return encrypted;
+            return new ExportDownload(decrypted, export.getFormat(), exportReference);
         } catch (IOException e) {
             throw new ExportException("Failed to read export file", e);
         }
     }
 
-    public Page<DataExportDTO> getExportHistory(Pageable pageable) {
-        return dataExportRepository.findAllByOrderByCreatedAtDesc(pageable)
-                .map(DataExportDTO::fromEntity);
+    public Page<DataExportDTO> getExportHistory(String userId, boolean isAdmin, Pageable pageable) {
+        Page<DataExport> exports = isAdmin
+                ? dataExportRepository.findAllByOrderByCreatedAtDesc(pageable)
+                : dataExportRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+        return exports.map(DataExportDTO::fromEntity);
     }
 
     private Map<String, Object> toExportMap(Patient patient) {

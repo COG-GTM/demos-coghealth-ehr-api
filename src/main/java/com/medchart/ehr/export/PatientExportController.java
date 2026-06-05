@@ -39,7 +39,7 @@ public class PatientExportController {
     }
 
     @GetMapping("/{exportReference}/download")
-    @Operation(summary = "Download an encrypted export file")
+    @Operation(summary = "Download an export file (decrypted, served over TLS)")
     public ResponseEntity<byte[]> downloadExport(
             @PathVariable String exportReference,
             HttpServletRequest httpRequest) {
@@ -47,20 +47,27 @@ public class PatientExportController {
         String userId = getCurrentUserId();
         String ipAddress = getClientIpAddress(httpRequest);
 
-        byte[] data = exportService.downloadExport(exportReference, userId, ipAddress);
+        ExportDownload download = exportService.downloadExport(
+                exportReference, userId, isCurrentUserAdmin(), ipAddress);
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=export_" + exportReference + ".enc")
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .contentLength(data.length)
-                .body(data);
+                        "attachment; filename=" + download.getFileName())
+                .contentType(MediaType.parseMediaType(download.getContentType()))
+                .contentLength(download.getContent().length)
+                .body(download.getContent());
     }
 
     @GetMapping
-    @Operation(summary = "Get export history with download counts")
+    @Operation(summary = "Get export history with download counts (admins see all)")
     public ResponseEntity<Page<DataExportDTO>> getExportHistory(Pageable pageable) {
-        return ResponseEntity.ok(exportService.getExportHistory(pageable));
+        return ResponseEntity.ok(
+                exportService.getExportHistory(getCurrentUserId(), isCurrentUserAdmin(), pageable));
+    }
+
+    @ExceptionHandler(ExportAccessDeniedException.class)
+    public ResponseEntity<String> handleAccessDenied(ExportAccessDeniedException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
     }
 
     @ExceptionHandler(ExportException.class)
@@ -82,6 +89,15 @@ public class PatientExportController {
             return auth.getName();
         }
         return "System User";
+    }
+
+    private boolean isCurrentUserAdmin() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getAuthorities() == null) {
+            return false;
+        }
+        return auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
     }
 
     private String getClientIpAddress(HttpServletRequest request) {
