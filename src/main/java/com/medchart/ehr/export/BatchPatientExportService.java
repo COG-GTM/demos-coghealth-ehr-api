@@ -49,7 +49,7 @@ public class BatchPatientExportService {
 
     @Transactional
     public DataExportDTO createExport(BatchExportRequest request, String userId,
-                                      String userName, String ipAddress) {
+                                      String userName, String userRole, String ipAddress) {
         List<Patient> patients = patientRepository.findAllById(request.getPatientIds());
 
         if (patients.isEmpty()) {
@@ -104,7 +104,7 @@ public class BatchPatientExportService {
             @Override
             public void afterCommit() {
                 patientAccessLogger.logExport(
-                        userId, userName, EXPORT_RESOURCE_TYPE, patientCount,
+                        userId, userRole, EXPORT_RESOURCE_TYPE, patientCount,
                         String.format("Batch export created: reason=%s, format=%s, deIdentified=%s",
                                 request.getReason(), request.getFormat(), isResearch),
                         ipAddress, "exportReference=" + reference, true);
@@ -116,7 +116,7 @@ public class BatchPatientExportService {
 
     @Transactional
     public ExportDownload downloadExport(String exportReference, String userId,
-                                         String userName, boolean isAdmin, String ipAddress) {
+                                         String userRole, boolean isAdmin, String ipAddress) {
         DataExport export = dataExportRepository.findByExportReference(exportReference)
                 .orElseThrow(() -> new ExportException("Export not found: " + exportReference, HttpStatus.NOT_FOUND));
 
@@ -124,7 +124,7 @@ public class BatchPatientExportService {
         if (!isAdmin && !export.getUserId().equals(userId)) {
             patientAccessLogger.logExport(
                     userId,
-                    userName,
+                    userRole,
                     EXPORT_RESOURCE_TYPE,
                     export.getPatientCount(),
                     "DENIED download of export owned by another user",
@@ -150,12 +150,11 @@ public class BatchPatientExportService {
 
             int downloadNum = export.getDownloadCount();
             int recordCount = export.getPatientCount();
-            String ownerName = export.getUserName();
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
                     patientAccessLogger.logExport(
-                            userId, userName, EXPORT_RESOURCE_TYPE, recordCount,
+                            userId, userRole, EXPORT_RESOURCE_TYPE, recordCount,
                             "Export downloaded (download #" + downloadNum + ")",
                             ipAddress, "exportReference=" + exportReference, true);
                 }

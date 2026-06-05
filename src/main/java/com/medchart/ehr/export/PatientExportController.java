@@ -9,6 +9,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import com.medchart.ehr.domain.auth.User;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -34,10 +35,11 @@ public class PatientExportController {
             HttpServletRequest httpRequest) {
 
         String userId = getCurrentUserId();
+        String userName = getCurrentUserName();
         String userRole = getCurrentUserRole();
         String ipAddress = getClientIpAddress(httpRequest);
 
-        DataExportDTO result = exportService.createExport(request, userId, userRole, ipAddress);
+        DataExportDTO result = exportService.createExport(request, userId, userName, userRole, ipAddress);
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 
@@ -85,6 +87,22 @@ public class PatientExportController {
             return auth.getName();
         }
         return "system";
+    }
+
+    /**
+     * Returns the authenticated user's display name (first + last), stored in
+     * {@code DataExport.userName} and surfaced to API clients via the DTO.
+     */
+    private String getCurrentUserName() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof User) {
+            User user = (User) auth.getPrincipal();
+            return (user.getFirstName() + " " + user.getLastName()).trim();
+        }
+        if (auth != null && auth.getName() != null && !"anonymousUser".equals(auth.getName())) {
+            return auth.getName();
+        }
+        return "System User";
     }
 
     /**

@@ -87,16 +87,34 @@ class ExportCleanupSchedulerTest {
     }
 
     @Test
-    void keepsFileThatHasDbRecord() throws IOException {
+    void keepsFileThatHasLiveDbRecord() throws IOException {
         Path tracked = tempDir.resolve("tracked-ref.csv.enc");
         Files.write(tracked, "x".getBytes(StandardCharsets.UTF_8));
         Files.setLastModifiedTime(tracked,
                 FileTime.from(Instant.now().minus(2, ChronoUnit.HOURS)));
+        DataExport live = DataExport.builder().exportReference("tracked-ref").deleted(false).build();
         when(dataExportRepository.findByExportReference("tracked-ref"))
-                .thenReturn(Optional.of(new DataExport()));
+                .thenReturn(Optional.of(live));
 
         scheduler.cleanupExpiredExports();
 
-        assertTrue(Files.exists(tracked), "file with a DB record should never be treated as orphan");
+        assertTrue(Files.exists(tracked), "file with a live DB record should never be treated as orphan");
+    }
+
+    @Test
+    void retriesFileDeletionWhenRecordAlreadySoftDeleted() throws IOException {
+        // Record was marked deleted but a prior Phase-2 file deletion failed;
+        // the sweep must reclaim the leftover encrypted PHI file.
+        Path leftover = tempDir.resolve("deleted-ref.csv.enc");
+        Files.write(leftover, "x".getBytes(StandardCharsets.UTF_8));
+        Files.setLastModifiedTime(leftover,
+                FileTime.from(Instant.now().minus(2, ChronoUnit.HOURS)));
+        DataExport softDeleted = DataExport.builder().exportReference("deleted-ref").deleted(true).build();
+        when(dataExportRepository.findByExportReference("deleted-ref"))
+                .thenReturn(Optional.of(softDeleted));
+
+        scheduler.cleanupExpiredExports();
+
+        assertFalse(Files.exists(leftover), "file for a soft-deleted record should be reclaimed");
     }
 }

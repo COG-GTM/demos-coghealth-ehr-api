@@ -89,17 +89,20 @@ class BatchPatientExportServiceTest {
         request.setFormat(ExportFormat.CSV);
         request.setReason(ExportReason.CLINICAL);
 
-        DataExportDTO dto = service.createExport(request, "alice", "Alice", "127.0.0.1");
+        DataExportDTO dto = service.createExport(request, "alice", "Alice", "ROLE_PROVIDER", "127.0.0.1");
 
         // capture the persisted export so download can find it
         ArgumentCaptor<DataExport> captor = ArgumentCaptor.forClass(DataExport.class);
         verify(dataExportRepository).save(captor.capture());
         DataExport saved = captor.getValue();
+        // userName stores the display name (not a role) for the entity/DTO
+        assertEquals("Alice", saved.getUserName());
+        assertEquals("Alice", dto.getUserName());
         when(dataExportRepository.findByExportReference(dto.getExportReference()))
                 .thenReturn(Optional.of(saved));
 
         ExportDownload download = service.downloadExport(
-                dto.getExportReference(), "alice", "Alice", false, "127.0.0.1");
+                dto.getExportReference(), "alice", "ROLE_PROVIDER", false, "127.0.0.1");
 
         String content = new String(download.getContent(), StandardCharsets.UTF_8);
         assertTrue(content.contains("MRN001"));
@@ -116,8 +119,8 @@ class BatchPatientExportServiceTest {
                 .thenReturn(Optional.of(export));
 
         assertThrows(ExportAccessDeniedException.class, () ->
-                service.downloadExport("ref-1", "intruder", "Intruder", false, "127.0.0.1"));
-        verify(patientAccessLogger).logExport(eq("intruder"), eq("Intruder"), any(),
+                service.downloadExport("ref-1", "intruder", "ROLE_STAFF", false, "127.0.0.1"));
+        verify(patientAccessLogger).logExport(eq("intruder"), eq("ROLE_STAFF"), any(),
                 anyInt(), contains("DENIED"), any(), any(), eq(false));
     }
 
@@ -135,7 +138,7 @@ class BatchPatientExportServiceTest {
         when(dataExportRepository.findByExportReference("ref-2"))
                 .thenReturn(Optional.of(export));
 
-        ExportDownload download = service.downloadExport("ref-2", "admin", "Admin", true, "127.0.0.1");
+        ExportDownload download = service.downloadExport("ref-2", "admin", "ROLE_ADMIN", true, "127.0.0.1");
 
         assertEquals("data", new String(download.getContent(), StandardCharsets.UTF_8));
     }
@@ -153,7 +156,7 @@ class BatchPatientExportServiceTest {
         request.setFormat(ExportFormat.CSV);
         request.setReason(ExportReason.CLINICAL);
 
-        DataExportDTO dto = service.createExport(request, "alice", "ROLE_PROVIDER", "127.0.0.1");
+        DataExportDTO dto = service.createExport(request, "alice", "Alice", "ROLE_PROVIDER", "127.0.0.1");
 
         assertEquals("/api/v1/exports/" + dto.getExportReference() + "/download",
                 dto.getDownloadUrl());

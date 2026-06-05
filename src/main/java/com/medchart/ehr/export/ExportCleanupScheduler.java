@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 @Component
@@ -58,8 +59,10 @@ public class ExportCleanupScheduler {
             log.info("Cleanup complete: {} exports removed", expired.size());
         }
 
-        // Sweep any files left on disk with no corresponding DB record (e.g. a
-        // create whose transaction failed to commit after the file was written).
+        // Sweep stale files left on disk: those with no DB record (e.g. a create
+        // whose transaction failed to commit after the file was written) and those
+        // whose record is already marked deleted but whose Phase-2 file deletion
+        // previously failed (and which the deleted-false query above never retries).
         cleanupOrphanedFiles();
     }
 
@@ -77,9 +80,12 @@ public class ExportCleanupScheduler {
                 if (reference == null) {
                     return;
                 }
-                boolean hasRecord = dataExportRepository.findByExportReference(reference).isPresent();
-                if (!hasRecord && isOlderThan(file, cutoff)) {
-                    log.warn("Deleting orphaned export file with no DB record: {}", file);
+                Optional<DataExport> record = dataExportRepository.findByExportReference(reference);
+                // Reclaim the file if there is no record at all, or the record is
+                // already soft-deleted (so a failed Phase-2 deletion is retried).
+                boolean reclaimable = record.isEmpty() || Boolean.TRUE.equals(record.get().getDeleted());
+                if (reclaimable && isOlderThan(file, cutoff)) {
+                    log.warn("Deleting stale export file (no live DB record): {}", file);
                     deleteExportFile(file.toString());
                 }
             });
