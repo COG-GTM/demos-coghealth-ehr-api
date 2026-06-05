@@ -44,6 +44,9 @@ public class BatchPatientExportService {
     @Value("${medchart.export.ttl-hours:24}")
     private int ttlHours;
 
+    @Value("${server.servlet.context-path:}")
+    private String contextPath;
+
     @Transactional
     public DataExportDTO createExport(BatchExportRequest request, String userId,
                                       String userName, String ipAddress) {
@@ -108,7 +111,7 @@ public class BatchPatientExportService {
             }
         });
 
-        return DataExportDTO.fromEntity(export);
+        return DataExportDTO.fromEntity(export, contextPath);
     }
 
     @Transactional
@@ -168,7 +171,7 @@ public class BatchPatientExportService {
         Page<DataExport> exports = isAdmin
                 ? dataExportRepository.findAllByOrderByCreatedAtDesc(pageable)
                 : dataExportRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
-        return exports.map(DataExportDTO::fromEntity);
+        return exports.map(e -> DataExportDTO.fromEntity(e, contextPath));
     }
 
     private Map<String, Object> toExportMap(Patient patient) {

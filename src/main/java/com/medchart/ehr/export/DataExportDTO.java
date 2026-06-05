@@ -26,7 +26,8 @@ public class DataExportDTO {
     private Boolean deleted;
     private String downloadUrl;
 
-    public static DataExportDTO fromEntity(DataExport entity) {
+    public static DataExportDTO fromEntity(DataExport entity, String contextPath) {
+        String prefix = contextPath == null ? "" : contextPath;
         return DataExportDTO.builder()
                 .exportReference(entity.getExportReference())
                 .userId(entity.getUserId())
@@ -41,7 +42,7 @@ public class DataExportDTO {
                 .createdAt(entity.getCreatedAt())
                 .expiresAt(entity.getExpiresAt())
                 .deleted(entity.getDeleted())
-                .downloadUrl("/v1/exports/" + entity.getExportReference() + "/download")
+                .downloadUrl(prefix + "/v1/exports/" + entity.getExportReference() + "/download")
                 .build();
     }
 }

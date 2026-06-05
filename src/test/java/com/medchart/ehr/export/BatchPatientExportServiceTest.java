@@ -141,6 +141,25 @@ class BatchPatientExportServiceTest {
     }
 
     @Test
+    void createExport_downloadUrlIncludesContextPath() {
+        ReflectionTestUtils.setField(service, "contextPath", "/api");
+        Patient patient = Patient.builder()
+                .mrn("MRN001").firstName("John").lastName("Doe")
+                .dateOfBirth(LocalDate.of(1980, 1, 1)).active(true).build();
+        when(patientRepository.findAllById(any())).thenReturn(List.of(patient));
+
+        BatchExportRequest request = new BatchExportRequest();
+        request.setPatientIds(List.of(1L));
+        request.setFormat(ExportFormat.CSV);
+        request.setReason(ExportReason.CLINICAL);
+
+        DataExportDTO dto = service.createExport(request, "alice", "ROLE_PROVIDER", "127.0.0.1");
+
+        assertEquals("/api/v1/exports/" + dto.getExportReference() + "/download",
+                dto.getDownloadUrl());
+    }
+
+    @Test
     void getExportHistory_adminSeesAll_nonAdminSeesOwn() {
         Pageable pageable = PageRequest.of(0, 10);
         Page<DataExport> empty = new PageImpl<>(List.of());

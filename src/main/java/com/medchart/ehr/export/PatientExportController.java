@@ -10,8 +10,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
@@ -31,10 +34,10 @@ public class PatientExportController {
             HttpServletRequest httpRequest) {
 
         String userId = getCurrentUserId();
-        String userName = getCurrentUserName();
+        String userRole = getCurrentUserRole();
         String ipAddress = getClientIpAddress(httpRequest);
 
-        DataExportDTO result = exportService.createExport(request, userId, userName, ipAddress);
+        DataExportDTO result = exportService.createExport(request, userId, userRole, ipAddress);
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 
@@ -45,11 +48,11 @@ public class PatientExportController {
             HttpServletRequest httpRequest) {
 
         String userId = getCurrentUserId();
-        String userName = getCurrentUserName();
+        String userRole = getCurrentUserRole();
         String ipAddress = getClientIpAddress(httpRequest);
 
         ExportDownload download = exportService.downloadExport(
-                exportReference, userId, userName, isCurrentUserAdmin(), ipAddress);
+                exportReference, userId, userRole, isCurrentUserAdmin(), ipAddress);
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
@@ -84,12 +87,19 @@ public class PatientExportController {
         return "system";
     }
 
-    private String getCurrentUserName() {
+    /**
+     * Returns the authenticated user's role(s) as a comma-separated string.
+     * Stored in the audit trail's userName field (per {@code PatientAccessLogger}
+     * convention) so each export event captures "who (userId) + role".
+     */
+    private String getCurrentUserRole() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getName() != null && !"anonymousUser".equals(auth.getName())) {
-            return auth.getName();
+        if (auth != null && auth.getAuthorities() != null && !auth.getAuthorities().isEmpty()) {
+            return auth.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .collect(Collectors.joining(","));
         }
-        return "System User";
+        return "UNKNOWN";
     }
 
     private boolean isCurrentUserAdmin() {
