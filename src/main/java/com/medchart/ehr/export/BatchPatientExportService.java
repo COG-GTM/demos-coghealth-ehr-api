@@ -1,0 +1,232 @@
+package com.medchart.ehr.export;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.medchart.ehr.audit.AuditAction;
+import com.medchart.ehr.audit.AuditEvent;
+import com.medchart.ehr.audit.AuditEventRepository;
+import com.medchart.ehr.domain.patient.Patient;
+import com.medchart.ehr.repository.PatientRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+@Slf4j
+@RequiredArgsConstructor
+public class BatchPatientExportService {
+
+    private final PatientRepository patientRepository;
+    private final DeIdentificationService deIdentificationService;
+    private final ExportEncryptionService encryptionService;
+    private final DataExportRepository dataExportRepository;
+    private final AuditEventRepository auditEventRepository;
+
+    @Value("${medchart.export.temp-dir:/tmp/medchart-exports}")
+    private String tempDir;
+
+    @Value("${medchart.export.ttl-hours:24}")
+    private int ttlHours;
+
+    @Transactional
+    public DataExportDTO createExport(BatchExportRequest request, String userId,
+                                      String userName, String ipAddress) {
+        List<Patient> patients = patientRepository.findAllById(request.getPatientIds());
+
+        if (patients.isEmpty()) {
+            throw new ExportException("No patients found for the given IDs");
+        }
+
+        boolean isResearch = request.getReason() == ExportReason.RESEARCH;
+        byte[] content;
+
+        if (isResearch) {
+            List<Map<String, Object>> deIdentified = deIdentificationService.deIdentify(patients);
+            content = formatData(deIdentified, request.getFormat());
+        } else {
+            List<Map<String, Object>> patientData = patients.stream()
+                    .map(this::toExportMap)
+                    .collect(Collectors.toList());
+            content = formatData(patientData, request.getFormat());
+        }
+
+        byte[] encrypted = encryptionService.encrypt(content);
+
+        String reference = UUID.randomUUID().toString();
+        Path filePath = writeToSecureTempFile(reference, encrypted, request.getFormat());
+
+        LocalDateTime now = LocalDateTime.now();
+        DataExport export = DataExport.builder()
+                .exportReference(reference)
+                .userId(userId)
+                .userName(userName)
+                .reason(request.getReason())
+                .reasonDetails(request.getReasonDetails())
+                .format(request.getFormat())
+                .patientCount(patients.size())
+                .deIdentified(isResearch)
+                .filePath(filePath.toString())
+                .fileSizeBytes((long) encrypted.length)
+                .downloadCount(0)
+                .expiresAt(now.plusHours(ttlHours))
+                .deleted(false)
+                .ipAddress(ipAddress)
+                .build();
+
+        dataExportRepository.save(export);
+
+        AuditEvent auditEvent = AuditEvent.builder()
+                .userId(userId)
+                .userName(userName)
+                .action(AuditAction.EXPORT)
+                .resourceType("PatientBatchExport")
+                .description(String.format("Batch export: %d patients, reason=%s, format=%s, deIdentified=%s",
+                        patients.size(), request.getReason(), request.getFormat(), isResearch))
+                .ipAddress(ipAddress)
+                .requestDetails("exportReference=" + reference)
+                .success(true)
+                .build();
+        auditEventRepository.save(auditEvent);
+
+        log.info("AUDIT EXPORT: User {} exported {} patients, reason={}, ref={}",
+                userId, patients.size(), request.getReason(), reference);
+
+        return DataExportDTO.fromEntity(export);
+    }
+
+    @Transactional
+    public byte[] downloadExport(String exportReference, String userId, String ipAddress) {
+        DataExport export = dataExportRepository.findByExportReference(exportReference)
+                .orElseThrow(() -> new ExportException("Export not found: " + exportReference));
+
+        if (export.getDeleted()) {
+            throw new ExportException("Export has been deleted (expired)");
+        }
+
+        if (export.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new ExportException("Export has expired");
+        }
+
+        try {
+            byte[] encrypted = Files.readAllBytes(Paths.get(export.getFilePath()));
+            export.incrementDownloadCount();
+            dataExportRepository.save(export);
+
+            AuditEvent auditEvent = AuditEvent.builder()
+                    .userId(userId)
+                    .action(AuditAction.EXPORT)
+                    .resourceType("PatientBatchExport")
+                    .description("Downloaded export: " + exportReference +
+                            " (download #" + export.getDownloadCount() + ")")
+                    .ipAddress(ipAddress)
+                    .success(true)
+                    .build();
+            auditEventRepository.save(auditEvent);
+
+            return encrypted;
+        } catch (IOException e) {
+            throw new ExportException("Failed to read export file", e);
+        }
+    }
+
+    public Page<DataExportDTO> getExportHistory(Pageable pageable) {
+        return dataExportRepository.findAllByOrderByCreatedAtDesc(pageable)
+                .map(DataExportDTO::fromEntity);
+    }
+
+    private Map<String, Object> toExportMap(Patient patient) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("mrn", patient.getMrn());
+        map.put("firstName", patient.getFirstName());
+        map.put("lastName", patient.getLastName());
+        map.put("dateOfBirth", patient.getDateOfBirth() != null ? patient.getDateOfBirth().toString() : null);
+        map.put("gender", patient.getGender() != null ? patient.getGender().name() : null);
+        map.put("email", patient.getEmail());
+        map.put("phoneHome", patient.getPhoneHome());
+        map.put("phoneMobile", patient.getPhoneMobile());
+        if (patient.getAddress() != null) {
+            map.put("street", patient.getAddress().getStreet1());
+            map.put("city", patient.getAddress().getCity());
+            map.put("state", patient.getAddress().getState());
+            map.put("zipCode", patient.getAddress().getZipCode());
+        }
+        map.put("active", patient.getActive());
+        return map;
+    }
+
+    private byte[] formatData(List<Map<String, Object>> data, ExportFormat format) {
+        if (format == ExportFormat.JSON) {
+            return formatAsJson(data);
+        }
+        return formatAsCsv(data);
+    }
+
+    private byte[] formatAsJson(List<Map<String, Object>> data) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.registerModule(new JavaTimeModule());
+            mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+            return mapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(data);
+        } catch (Exception e) {
+            throw new ExportException("Failed to generate JSON export", e);
+        }
+    }
+
+    private byte[] formatAsCsv(List<Map<String, Object>> data) {
+        if (data.isEmpty()) {
+            return new byte[0];
+        }
+
+        StringBuilder csv = new StringBuilder();
+        Set<String> headers = data.get(0).keySet();
+        csv.append(String.join(",", headers)).append("\n");
+
+        for (Map<String, Object> row : data) {
+            csv.append(headers.stream()
+                    .map(h -> escapeCsv(row.get(h)))
+                    .collect(Collectors.joining(","))
+            ).append("\n");
+        }
+
+        return csv.toString().getBytes();
+    }
+
+    private String escapeCsv(Object value) {
+        if (value == null) {
+            return "";
+        }
+        String str = value.toString();
+        if (str.contains(",") || str.contains("\"") || str.contains("\n")) {
+            return "\"" + str.replace("\"", "\"\"") + "\"";
+        }
+        return str;
+    }
+
+    private Path writeToSecureTempFile(String reference, byte[] data, ExportFormat format) {
+        try {
+            Path dir = Paths.get(tempDir);
+            Files.createDirectories(dir);
+
+            String extension = format == ExportFormat.JSON ? ".json.enc" : ".csv.enc";
+            Path file = dir.resolve(reference + extension);
+            Files.write(file, data);
+
+            return file;
+        } catch (IOException e) {
+            throw new ExportException("Failed to write export file", e);
+        }
+    }
+}
