@@ -104,7 +104,7 @@ public class BatchPatientExportService {
 
     @Transactional
     public ExportDownload downloadExport(String exportReference, String userId,
-                                         boolean isAdmin, String ipAddress) {
+                                         String userName, boolean isAdmin, String ipAddress) {
         DataExport export = dataExportRepository.findByExportReference(exportReference)
                 .orElseThrow(() -> new ExportException("Export not found: " + exportReference));
 
@@ -112,7 +112,7 @@ public class BatchPatientExportService {
         if (!isAdmin && !export.getUserId().equals(userId)) {
             patientAccessLogger.logExport(
                     userId,
-                    null,
+                    userName,
                     EXPORT_RESOURCE_TYPE,
                     export.getPatientCount(),
                     "DENIED download of export owned by another user",
@@ -138,7 +138,7 @@ public class BatchPatientExportService {
 
             patientAccessLogger.logExport(
                     userId,
-                    export.getUserName(),
+                    userName,
                     EXPORT_RESOURCE_TYPE,
                     export.getPatientCount(),
                     "Export downloaded (download #" + export.getDownloadCount() + ")",

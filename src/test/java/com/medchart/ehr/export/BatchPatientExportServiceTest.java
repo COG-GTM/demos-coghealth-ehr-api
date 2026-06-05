@@ -89,7 +89,7 @@ class BatchPatientExportServiceTest {
                 .thenReturn(Optional.of(saved));
 
         ExportDownload download = service.downloadExport(
-                dto.getExportReference(), "alice", false, "127.0.0.1");
+                dto.getExportReference(), "alice", "Alice", false, "127.0.0.1");
 
         String content = new String(download.getContent(), StandardCharsets.UTF_8);
         assertTrue(content.contains("MRN001"));
@@ -106,8 +106,8 @@ class BatchPatientExportServiceTest {
                 .thenReturn(Optional.of(export));
 
         assertThrows(ExportAccessDeniedException.class, () ->
-                service.downloadExport("ref-1", "intruder", false, "127.0.0.1"));
-        verify(patientAccessLogger).logExport(eq("intruder"), any(), any(),
+                service.downloadExport("ref-1", "intruder", "Intruder", false, "127.0.0.1"));
+        verify(patientAccessLogger).logExport(eq("intruder"), eq("Intruder"), any(),
                 anyInt(), contains("DENIED"), any(), any(), eq(false));
     }
 
@@ -125,7 +125,7 @@ class BatchPatientExportServiceTest {
         when(dataExportRepository.findByExportReference("ref-2"))
                 .thenReturn(Optional.of(export));
 
-        ExportDownload download = service.downloadExport("ref-2", "admin", true, "127.0.0.1");
+        ExportDownload download = service.downloadExport("ref-2", "admin", "Admin", true, "127.0.0.1");
 
         assertEquals("data", new String(download.getContent(), StandardCharsets.UTF_8));
     }

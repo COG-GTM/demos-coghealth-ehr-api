@@ -45,10 +45,11 @@ public class PatientExportController {
             HttpServletRequest httpRequest) {
 
         String userId = getCurrentUserId();
+        String userName = getCurrentUserName();
         String ipAddress = getClientIpAddress(httpRequest);
 
         ExportDownload download = exportService.downloadExport(
-                exportReference, userId, isCurrentUserAdmin(), ipAddress);
+                exportReference, userId, userName, isCurrentUserAdmin(), ipAddress);
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
