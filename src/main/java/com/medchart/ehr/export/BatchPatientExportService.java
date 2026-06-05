@@ -96,7 +96,8 @@ public class BatchPatientExportService {
                 String.format("Batch export created: reason=%s, format=%s, deIdentified=%s",
                         request.getReason(), request.getFormat(), isResearch),
                 ipAddress,
-                "exportReference=" + reference);
+                "exportReference=" + reference,
+                true);
 
         return DataExportDTO.fromEntity(export);
     }
@@ -116,7 +117,8 @@ public class BatchPatientExportService {
                     export.getPatientCount(),
                     "DENIED download of export owned by another user",
                     ipAddress,
-                    "exportReference=" + exportReference);
+                    "exportReference=" + exportReference,
+                    false);
             throw new ExportAccessDeniedException("Not authorized to download this export");
         }
 
@@ -141,7 +143,8 @@ public class BatchPatientExportService {
                     export.getPatientCount(),
                     "Export downloaded (download #" + export.getDownloadCount() + ")",
                     ipAddress,
-                    "exportReference=" + exportReference);
+                    "exportReference=" + exportReference,
+                    true);
 
             return new ExportDownload(decrypted, export.getFormat(), exportReference);
         } catch (IOException e) {

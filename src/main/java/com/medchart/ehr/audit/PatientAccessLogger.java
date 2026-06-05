@@ -27,6 +27,7 @@ import java.util.Map;
 public class PatientAccessLogger {
 
     private final AuditEventRepository auditEventRepository;
+    private final AuditService auditService;
 
     /**
      * PATTERN: Log PHI access
@@ -125,8 +126,11 @@ public class PatientAccessLogger {
     }
 
     /**
-     * Log a patient data export (creation or download) for HIPAA compliance.
-     * Captures who exported, when, how many records, and why.
+     * Log a patient data export (creation, download, or denied attempt) for HIPAA compliance.
+     * Captures who exported, when, how many records, why, and whether it succeeded.
+     *
+     * Persisted via {@link AuditService#saveAuditEventAsync} (REQUIRES_NEW) so the audit
+     * record survives even if the caller's transaction rolls back (e.g. on a denied access).
      */
     public void logExport(
             String userId,
@@ -135,10 +139,16 @@ public class PatientAccessLogger {
             int recordCount,
             String description,
             String ipAddress,
-            String requestDetails) {
+            String requestDetails,
+            boolean success) {
 
-        log.info("AUDIT EXPORT: User {} exported {} {} records - {}",
-            userId, recordCount, resourceType, description);
+        if (success) {
+            log.info("AUDIT EXPORT: User {} exported {} {} records - {}",
+                userId, recordCount, resourceType, description);
+        } else {
+            log.warn("AUDIT EXPORT DENIED: User {} attempt on {} - {}",
+                userId, resourceType, description);
+        }
 
         AuditEvent event = new AuditEvent();
         event.setUserId(userId);
@@ -149,9 +159,9 @@ public class PatientAccessLogger {
         event.setIpAddress(ipAddress);
         event.setRequestDetails(requestDetails);
         event.setTimestamp(LocalDateTime.now());
-        event.setSuccess(true);
+        event.setSuccess(success);
 
-        auditEventRepository.save(event);
+        auditService.saveAuditEventAsync(event);
     }
 
     /**

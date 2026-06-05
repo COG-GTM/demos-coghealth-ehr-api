@@ -108,7 +108,7 @@ class BatchPatientExportServiceTest {
         assertThrows(ExportAccessDeniedException.class, () ->
                 service.downloadExport("ref-1", "intruder", false, "127.0.0.1"));
         verify(patientAccessLogger).logExport(eq("intruder"), any(), any(),
-                anyInt(), contains("DENIED"), any(), any());
+                anyInt(), contains("DENIED"), any(), any(), eq(false));
     }
 
     @Test
