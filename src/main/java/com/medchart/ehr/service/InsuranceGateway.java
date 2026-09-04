@@ -38,7 +38,7 @@ public class InsuranceGateway {
         }
         
         // Mock response - in production this comes from payer
-        return AppointmentService.EligibilityResult.builder()
+        return EligibilityResult.builder()
             .eligible(true)
             .memberId("INS" + patientMrn.hashCode())
             .planName("Premium Health Plan")
