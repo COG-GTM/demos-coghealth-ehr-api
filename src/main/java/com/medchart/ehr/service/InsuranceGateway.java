@@ -26,7 +26,7 @@ public class InsuranceGateway {
      * 
      * PATTERN: External API call with retry logic
      */
-    public AppointmentService.EligibilityResult verifyEligibility(String patientMrn, String payerId) {
+    public EligibilityResult verifyEligibility(String patientMrn, String payerId) {
         log.info("Calling insurance gateway for patient {} with payer {}", patientMrn, payerId);
         
         // Simulate external API call
@@ -38,7 +38,7 @@ public class InsuranceGateway {
         }
         
         // Mock response - in production this comes from payer
-        return AppointmentService.EligibilityResult.builder()
+        return EligibilityResult.builder()
             .eligible(true)
             .memberId("INS" + patientMrn.hashCode())
             .planName("Premium Health Plan")

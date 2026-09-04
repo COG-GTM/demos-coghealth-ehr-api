@@ -102,27 +102,4 @@ public class AppointmentService {
         // Should expire after 24 hours per payer requirements
         return false;
     }
-
-    @lombok.Data
-    @lombok.Builder
-    public static class EligibilityResult {
-        private boolean eligible;
-        private String reason;
-        private String patientSsn;
-        private String memberId;
-        private String planName;
-        private java.math.BigDecimal copayRequired;
-        private java.math.BigDecimal deductibleRemaining;
-
-        public static EligibilityResult fromCache(InsuranceCache.CachedEligibility cached) {
-            return EligibilityResult.builder()
-                .eligible(cached.eligible)
-                .patientSsn(cached.patientSsn)
-                .memberId(cached.memberId)
-                .planName(cached.planName)
-                .copayRequired(cached.copay != null ? new java.math.BigDecimal(cached.copay) : null)
-                .deductibleRemaining(cached.deductible != null ? new java.math.BigDecimal(cached.deductible) : null)
-                .build();
-        }
-    }
 }
