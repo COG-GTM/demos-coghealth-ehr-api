@@ -1,20 +1,13 @@
 spring:
   datasource:
-    url: ${NEON_DB_URL}
-    username: ${NEON_DB_USERNAME}
-    password: ${NEON_DB_PASSWORD}
+    url: ${TEST_DB_URL:jdbc:postgresql://localhost:5432/coghealth}
+    username: ${TEST_DB_USERNAME:coghealth}
+    password: ${TEST_DB_PASSWORD:coghealth_dev_2024}
     driver-class-name: org.postgresql.Driver
-    hikari:
-      minimum-idle: 2
-      maximum-pool-size: 5
-      keepalive-time: 60000
 
   jpa:
     hibernate:
-      ddl-auto: validate
-    properties:
-      hibernate:
-        default_batch_fetch_size: 16
+      ddl-auto: none
 
   flyway:
     enabled: true
@@ -24,7 +17,3 @@ spring:
     exclude:
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
       - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
-
-  rabbitmq:
-    host: localhost
-    port: 5672
