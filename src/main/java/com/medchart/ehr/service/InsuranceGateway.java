@@ -26,7 +26,7 @@ public class InsuranceGateway {
      * 
      * PATTERN: External API call with retry logic
      */
-    public AppointmentService.EligibilityResult verifyEligibility(String patientMrn, String payerId) {
+    public AppointmentService.EligibilityResult checkEligibility(String patientMrn, String payerId) {
         log.info("Calling insurance gateway for patient {} with payer {}", patientMrn, payerId);
         
         // Simulate external API call
