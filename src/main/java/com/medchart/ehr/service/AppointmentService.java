@@ -78,7 +78,7 @@ public class AppointmentService {
         
         // Cache miss - call external gateway
         log.info("Checking eligibility with payer {} for patient {}", payerId, patientMrn);
-        EligibilityResult result = insuranceGateway.verifyEligibility(patientMrn, payerId);
+        EligibilityResult result = insuranceGateway.checkEligibility(patientMrn, payerId);
         
         // Cache the result (NOTE: This caches PII - see InsuranceCache for HIPAA issue)
         if (result.isEligible()) {
