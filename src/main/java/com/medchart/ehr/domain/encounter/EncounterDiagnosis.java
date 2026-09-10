@@ -3,7 +3,7 @@ package com.medchart.ehr.domain.encounter;
 import com.medchart.ehr.domain.clinical.Diagnosis;
 import lombok.*;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "encounter_diagnoses")
