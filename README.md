@@ -1,6 +1,6 @@
 # CogHealth EHR API
 
-Spring Boot REST API for the CogHealth EHR system.
+Spring Boot 3.5.x REST API for the CogHealth EHR system.
 
 > **Full setup instructions:** See the [main README](https://github.com/cogdeasy/demos-coghealth-ehr-data#readme) for complete setup with all three repos.
 
@@ -8,11 +8,11 @@ Spring Boot REST API for the CogHealth EHR system.
 
 No local database setup required. The `dev` profile connects to a shared Neon PostgreSQL instance with pre-seeded test data.
 
-**Prerequisites:** Java 11 (required — later versions are incompatible)
+**Prerequisites:** Java 21
 
 ```bash
 # On macOS with Homebrew
-export JAVA_HOME=/opt/homebrew/opt/openjdk@11
+export JAVA_HOME=/opt/homebrew/opt/openjdk@21
 export PATH="$JAVA_HOME/bin:$PATH"
 
 # Set Neon credentials (get these from your team lead or .env file)
@@ -36,11 +36,21 @@ mvn spring-boot:run
 
 ## Tech Stack
 
-- Java 11
-- Spring Boot 2.7.x
+- Java 21
+- Spring Boot 3.5.x
 - PostgreSQL (Neon cloud or local)
 - Flyway (schema migrations)
 - JJWT (authentication tokens)
+
+## Java 11 → 21 migration
+
+- Spring Boot 2.7.18 → 3.5.x
+- Spring Security 6 lambda DSL
+- `javax` → `jakarta`
+- springdoc 1.7 → 2.8
+- MapStruct bump to 1.6.3
+- Added `flyway-database-postgresql`
+- `spring.redis` → `spring.data.redis`
 
 ## Database
 
