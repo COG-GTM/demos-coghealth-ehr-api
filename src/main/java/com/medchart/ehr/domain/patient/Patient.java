@@ -96,6 +96,9 @@ public class Patient {
     @Column(length = 100)
     private String religion;
 
+    @Column(columnDefinition = "TEXT")
+    private String allergies;
+
     @OneToMany(mappedBy = "patient", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<PatientIdentifier> identifiers = new ArrayList<>();

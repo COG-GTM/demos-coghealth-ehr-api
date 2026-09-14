@@ -45,6 +45,7 @@ public class PatientDTO {
     private String ethnicity;
     private String race;
     private String religion;
+    private String allergies;
 
     private List<PatientIdentifierDTO> identifiers;
     private List<EmergencyContactDTO> emergencyContacts;
