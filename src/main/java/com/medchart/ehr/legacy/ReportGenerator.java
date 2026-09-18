@@ -2,6 +2,7 @@ package com.medchart.ehr.legacy;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.persistence.EntityManager;
@@ -20,7 +21,8 @@ public class ReportGenerator {
     @Autowired
     private EntityManager entityManager;
 
-    private static final String TEMP_DIR = System.getProperty("java.io.tmpdir");
+    @Value("${medchart.reports.temp-dir:${java.io.tmpdir}}")
+    private String tempDir;
 
     public String generatePatientRoster() {
         String sql = "SELECT p.id, p.mrn, p.ssn, p.first_name, p.last_name, p.date_of_birth, " +
@@ -35,8 +37,8 @@ public class ReportGenerator {
         List<Object[]> results = query.getResultList();
         
         String filename = "patient_roster_" + 
-            LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".csv";
-        String filePath = TEMP_DIR + File.separator + filename;
+            LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS")) + ".csv";
+        String filePath = tempDir + File.separator + filename;
         
         try (PrintWriter writer = new PrintWriter(new FileWriter(filePath))) {
             writer.println("ID,MRN,SSN,FirstName,LastName,DOB,PhoneHome,PhoneMobile,Email,Address,City,State,Zip,Insurance,MemberID");
@@ -72,8 +74,8 @@ public class ReportGenerator {
         List<Object[]> results = query.getResultList();
         
         String filename = "encounter_summary_" + 
-            LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".txt";
-        String filePath = TEMP_DIR + File.separator + filename;
+            LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS")) + ".txt";
+        String filePath = tempDir + File.separator + filename;
         
         try (PrintWriter writer = new PrintWriter(new FileWriter(filePath))) {
             writer.println("ENCOUNTER SUMMARY REPORT");
