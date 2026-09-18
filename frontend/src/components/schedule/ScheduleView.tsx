@@ -1,9 +1,14 @@
-import { useState } from 'react';
-import { format, addDays, subDays, startOfWeek, addWeeks, subWeeks } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
+import { format, addDays, startOfWeek } from 'date-fns';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../common';
 import { AppointmentCard } from './AppointmentCard';
 import { cn } from '../../utils';
+import {
+  getAppointmentsForDay,
+  getAppointmentsForHour,
+  getTimeSlots,
+  shiftDate,
+} from './scheduleUtils';
 import type { Appointment } from '../../types';
 
 interface ScheduleViewProps {
@@ -24,17 +29,10 @@ export function ScheduleView({
   isLoading,
 }: ScheduleViewProps) {
   const goToToday = () => onDateChange(new Date());
-  const goPrev = () => onDateChange(view === 'day' ? subDays(selectedDate, 1) : subWeeks(selectedDate, 1));
-  const goNext = () => onDateChange(view === 'day' ? addDays(selectedDate, 1) : addWeeks(selectedDate, 1));
+  const goPrev = () => onDateChange(shiftDate(selectedDate, view, 'prev'));
+  const goNext = () => onDateChange(shiftDate(selectedDate, view, 'next'));
 
-  const timeSlots = Array.from({ length: 12 }, (_, i) => i + 7);
-
-  const getAppointmentsForHour = (hour: number) => {
-    return appointments.filter((apt) => {
-      const aptHour = new Date(apt.scheduledTime).getHours();
-      return aptHour === hour;
-    });
-  };
+  const timeSlots = getTimeSlots();
 
   return (
     <div className="h-full flex flex-col">
@@ -90,7 +88,7 @@ export function ScheduleView({
         {view === 'day' ? (
           <div className="divide-y">
             {timeSlots.map((hour) => {
-              const hourAppointments = getAppointmentsForHour(hour);
+              const hourAppointments = getAppointmentsForHour(appointments, hour);
               const timeLabel = format(new Date().setHours(hour, 0, 0, 0), 'h:mm a');
 
               return (
@@ -119,9 +117,7 @@ export function ScheduleView({
           <div className="grid grid-cols-7 divide-x">
             {Array.from({ length: 7 }).map((_, dayIndex) => {
               const day = addDays(startOfWeek(selectedDate), dayIndex);
-              const dayAppointments = appointments.filter(
-                (apt) => format(new Date(apt.scheduledTime), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd')
-              );
+              const dayAppointments = getAppointmentsForDay(appointments, day);
 
               return (
                 <div key={dayIndex} className="min-h-[500px]">
