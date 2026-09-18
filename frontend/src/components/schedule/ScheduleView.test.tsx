@@ -41,10 +41,22 @@ function makeAppointment(id: number, scheduledTime: string, lastName: string): A
 
 const selectedDate = new Date(2024, 2, 13, 12, 0, 0);
 
+function slotLabels(container: HTMLElement): string[] {
+  return Array.from(container.querySelectorAll('.w-20')).map((el) => el.textContent ?? '');
+}
+
+function slotRow(container: HTMLElement, label: string): HTMLElement {
+  const gutter = Array.from(container.querySelectorAll('.w-20')).find(
+    (el) => el.textContent === label
+  );
+  if (!gutter?.parentElement) throw new Error(`No time slot for ${label}`);
+  return gutter.parentElement;
+}
+
 function renderScheduleView(overrides: Partial<Parameters<typeof ScheduleView>[0]> = {}) {
   const onDateChange = vi.fn();
   const onViewChange = vi.fn();
-  render(
+  const { container } = render(
     <MemoryRouter>
       <ScheduleView
         appointments={[]}
@@ -56,7 +68,7 @@ function renderScheduleView(overrides: Partial<Parameters<typeof ScheduleView>[0
       />
     </MemoryRouter>
   );
-  return { onDateChange, onViewChange };
+  return { onDateChange, onViewChange, container };
 }
 
 describe('ScheduleView navigation', () => {
@@ -92,22 +104,21 @@ describe('ScheduleView day view', () => {
   ];
 
   it('renders the 7am-6pm slots only', () => {
-    renderScheduleView({ view: 'day', appointments });
+    const { container } = renderScheduleView({ view: 'day', appointments });
+    const labels = slotLabels(container);
 
-    expect(screen.getByText('7:00 AM')).toBeInTheDocument();
-    expect(screen.getByText('6:00 PM')).toBeInTheDocument();
-    expect(screen.queryByText('6:00 AM')).not.toBeInTheDocument();
-    expect(screen.queryByText('9:00 PM')).not.toBeInTheDocument();
+    expect(labels).toHaveLength(12);
+    expect(labels[0]).toBe('7:00 AM');
+    expect(labels[labels.length - 1]).toBe('6:00 PM');
+    expect(labels).not.toContain('6:00 AM');
+    expect(labels).not.toContain('9:00 PM');
   });
 
   it('places in-window appointments in their hour slot and drops out-of-window ones', () => {
-    renderScheduleView({ view: 'day', appointments });
+    const { container } = renderScheduleView({ view: 'day', appointments });
 
-    const sevenAmRow = screen.getByText('7:00 AM').parentElement as HTMLElement;
-    expect(within(sevenAmRow).getByText(/Early, Ada/)).toBeInTheDocument();
-
-    const sixPmRow = screen.getByText('6:00 PM').parentElement as HTMLElement;
-    expect(within(sixPmRow).getByText(/Late, Ada/)).toBeInTheDocument();
+    expect(within(slotRow(container, '7:00 AM')).getByText(/Early, Ada/)).toBeInTheDocument();
+    expect(within(slotRow(container, '6:00 PM')).getByText(/Late, Ada/)).toBeInTheDocument();
 
     expect(screen.queryByText(/Evening, Ada/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Dawn, Ada/)).not.toBeInTheDocument();
