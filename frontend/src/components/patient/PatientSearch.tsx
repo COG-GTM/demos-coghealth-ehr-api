@@ -59,6 +59,7 @@ export function PatientSearch({ onSelect, autoFocus, placeholder = 'Search patie
         />
         {query && (
           <button
+            aria-label="Clear search"
             onClick={() => {
               setQuery('');
               inputRef.current?.focus();
