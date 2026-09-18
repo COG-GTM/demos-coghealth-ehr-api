@@ -4,6 +4,11 @@ import lombok.*;
 
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Embeddable
 @Getter
@@ -32,13 +37,17 @@ public class Address {
     private String country;
 
     public String getFormattedAddress() {
-        StringBuilder sb = new StringBuilder();
-        if (street1 != null) sb.append(street1);
-        if (street2 != null) sb.append(", ").append(street2);
-        if (city != null) sb.append(", ").append(city);
-        if (state != null) sb.append(", ").append(state);
-        if (zipCode != null) sb.append(" ").append(zipCode);
-        if (country != null && !country.equals("USA")) sb.append(", ").append(country);
-        return sb.toString();
+        List<String> segments = new ArrayList<>();
+        if (street1 != null) segments.add(street1);
+        if (street2 != null) segments.add(street2);
+        if (city != null) segments.add(city);
+
+        String stateAndZip = Stream.of(state, zipCode)
+                .filter(Objects::nonNull)
+                .collect(Collectors.joining(" "));
+        if (!stateAndZip.isEmpty()) segments.add(stateAndZip);
+
+        if (country != null && !country.equals("USA")) segments.add(country);
+        return String.join(", ", segments);
     }
 }
