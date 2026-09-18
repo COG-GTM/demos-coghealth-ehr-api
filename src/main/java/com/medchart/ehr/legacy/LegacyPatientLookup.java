@@ -7,7 +7,9 @@ import org.springframework.stereotype.Service;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -15,19 +17,20 @@ import java.util.Map;
 @Slf4j
 public class LegacyPatientLookup {
 
+    private static final Map<String, String> DEMOGRAPHIC_COLUMNS = demographicColumns();
+
     @Autowired
     private EntityManager entityManager;
 
     public Patient findPatientByMrn(String mrn) {
-        try {
-            Query query = entityManager.createNativeQuery(
-                "SELECT * FROM patients WHERE mrn = ?1", Patient.class);
-            query.setParameter(1, mrn);
-            return (Patient) query.getSingleResult();
-        } catch (Exception e) {
-            log.warn("Patient not found for MRN: " + mrn);
-            return null;
+        Query query = entityManager.createNativeQuery(
+            "SELECT * FROM patients WHERE mrn = ?1", Patient.class);
+        query.setParameter(1, mrn);
+        Patient patient = firstOrNull(query);
+        if (patient == null) {
+            log.warn("Patient not found for the requested MRN");
         }
+        return patient;
     }
 
     public List<Patient> findPatientsByLastName(String lastName) {
@@ -41,36 +44,24 @@ public class LegacyPatientLookup {
         Query query = entityManager.createNativeQuery(
             "SELECT * FROM patients WHERE ssn = ?1", Patient.class);
         query.setParameter(1, ssn);
-        try {
-            return (Patient) query.getSingleResult();
-        } catch (Exception e) {
-            return null;
-        }
+        return firstOrNull(query);
     }
 
     public Map<String, Object> getPatientDemographics(Long patientId) {
         Query query = entityManager.createNativeQuery(
-            "SELECT id, mrn, ssn, first_name, last_name, date_of_birth, " +
-            "phone_home, phone_mobile, email, street1, city, state, zip_code " +
-            "FROM patients WHERE id = ?1");
+            "SELECT " + String.join(", ", DEMOGRAPHIC_COLUMNS.keySet()) + " FROM patients WHERE id = ?1");
         query.setParameter(1, patientId);
-        
-        Object[] result = (Object[]) query.getSingleResult();
+
+        Object[] result = firstOrNull(query);
+        if (result == null) {
+            return null;
+        }
+
         Map<String, Object> demographics = new HashMap<>();
-        demographics.put("id", result[0]);
-        demographics.put("mrn", result[1]);
-        demographics.put("ssn", result[2]);
-        demographics.put("firstName", result[3]);
-        demographics.put("lastName", result[4]);
-        demographics.put("dateOfBirth", result[5]);
-        demographics.put("phoneHome", result[6]);
-        demographics.put("phoneMobile", result[7]);
-        demographics.put("email", result[8]);
-        demographics.put("street", result[9]);
-        demographics.put("city", result[10]);
-        demographics.put("state", result[11]);
-        demographics.put("zipCode", result[12]);
-        
+        int column = 0;
+        for (String key : DEMOGRAPHIC_COLUMNS.values()) {
+            demographics.put(key, result[column++]);
+        }
         return demographics;
     }
 
@@ -81,5 +72,29 @@ public class LegacyPatientLookup {
         Query query = entityManager.createNativeQuery(sql);
         query.setParameter(1, "%" + searchTerm + "%");
         return query.getResultList();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> T firstOrNull(Query query) {
+        List<T> results = query.getResultList();
+        return results.isEmpty() ? null : results.get(0);
+    }
+
+    private static Map<String, String> demographicColumns() {
+        Map<String, String> columns = new LinkedHashMap<>();
+        columns.put("id", "id");
+        columns.put("mrn", "mrn");
+        columns.put("ssn", "ssn");
+        columns.put("first_name", "firstName");
+        columns.put("last_name", "lastName");
+        columns.put("date_of_birth", "dateOfBirth");
+        columns.put("phone_home", "phoneHome");
+        columns.put("phone_mobile", "phoneMobile");
+        columns.put("email", "email");
+        columns.put("street1", "street");
+        columns.put("city", "city");
+        columns.put("state", "state");
+        columns.put("zip_code", "zipCode");
+        return Collections.unmodifiableMap(columns);
     }
 }
