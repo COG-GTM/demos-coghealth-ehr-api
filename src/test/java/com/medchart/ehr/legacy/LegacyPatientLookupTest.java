@@ -67,7 +67,7 @@ class LegacyPatientLookupTest {
         Map<String, Object> demographics = lookup.getPatientDemographics(alice.getId());
 
         assertThat(demographics).isNotNull();
-        assertThat(demographics.get("id")).isEqualTo(alice.getId());
+        assertThat(((Number) demographics.get("id")).longValue()).isEqualTo(alice.getId());
         assertThat(demographics.get("mrn")).isEqualTo("MRN-1001");
         assertThat(demographics.get("ssn")).isEqualTo("111-22-3333");
         assertThat(demographics.get("firstName")).isEqualTo("Alice");
