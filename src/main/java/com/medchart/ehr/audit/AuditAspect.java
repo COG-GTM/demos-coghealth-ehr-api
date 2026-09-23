@@ -6,18 +6,28 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
 import java.lang.reflect.Method;
+import java.util.stream.Collectors;
 
 @Aspect
 @Component
 @Slf4j
 @RequiredArgsConstructor
 public class AuditAspect {
+
+    static final String SYSTEM_USER_ID = "system";
+    static final String SYSTEM_USER_NAME = "System User";
+    static final String ANONYMOUS_USER_ID = "anonymous";
+    static final String ANONYMOUS_USER_NAME = "Anonymous";
 
     private final AuditService auditService;
 
@@ -28,11 +38,11 @@ public class AuditAspect {
         AuditAccess auditAccess = method.getAnnotation(AuditAccess.class);
 
         Long patientId = extractPatientId(joinPoint.getArgs());
-        String userId = getCurrentUserId();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         AuditEvent.AuditEventBuilder eventBuilder = AuditEvent.builder()
-                .userId(userId)
-                .userName(getCurrentUserName())
+                .userId(getCurrentUserId(authentication))
+                .userName(getCurrentUserName(authentication))
                 .patientId(patientId)
                 .action(auditAccess.action())
                 .resourceType(auditAccess.resourceType())
@@ -62,12 +72,37 @@ public class AuditAspect {
         return null;
     }
 
-    private String getCurrentUserId() {
-        return "system";
+    private String getCurrentUserId(Authentication authentication) {
+        if (authentication == null) {
+            return SYSTEM_USER_ID;
+        }
+        if (!authentication.isAuthenticated() || isAnonymous(authentication)) {
+            return ANONYMOUS_USER_ID;
+        }
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof UserDetails) {
+            return ((UserDetails) principal).getUsername();
+        }
+        String name = authentication.getName();
+        return name != null && !name.isEmpty() ? name : ANONYMOUS_USER_ID;
     }
 
-    private String getCurrentUserName() {
-        return "System User";
+    private String getCurrentUserName(Authentication authentication) {
+        if (authentication == null) {
+            return SYSTEM_USER_NAME;
+        }
+        if (!authentication.isAuthenticated() || isAnonymous(authentication)) {
+            return ANONYMOUS_USER_NAME;
+        }
+        String roles = authentication.getAuthorities() == null ? "" : authentication.getAuthorities().stream()
+                .map(authority -> authority.getAuthority())
+                .filter(authority -> authority != null && !authority.isEmpty())
+                .collect(Collectors.joining(","));
+        return roles.isEmpty() ? getCurrentUserId(authentication) : roles;
+    }
+
+    private boolean isAnonymous(Authentication authentication) {
+        return authentication instanceof AnonymousAuthenticationToken;
     }
 
     private String getClientIpAddress() {
