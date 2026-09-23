@@ -1,6 +1,7 @@
 package com.medchart.ehr.controller;
 
 import com.medchart.ehr.legacy.EncounterExportService;
+import com.medchart.ehr.legacy.ExportRequestException;
 import com.medchart.ehr.legacy.ReportGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -66,5 +67,10 @@ public class LegacyExportController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=daily_report.csv")
                 .contentType(MediaType.parseMediaType("text/csv"))
                 .body(data);
+    }
+
+    @ExceptionHandler(ExportRequestException.class)
+    public ResponseEntity<String> handleInvalidExportRequest(ExportRequestException e) {
+        return ResponseEntity.badRequest().body(e.getMessage());
     }
 }

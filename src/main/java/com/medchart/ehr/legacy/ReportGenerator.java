@@ -1,5 +1,7 @@
 package com.medchart.ehr.legacy;
 
+import com.medchart.ehr.audit.AuditAccess;
+import com.medchart.ehr.audit.AuditAction;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -9,6 +11,7 @@ import javax.persistence.Query;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -22,6 +25,13 @@ public class ReportGenerator {
 
     private static final String TEMP_DIR = System.getProperty("java.io.tmpdir");
 
+    static final long MAX_SUMMARY_RANGE_DAYS = 31;
+
+    private static final int SSN_COLUMN = 2;
+    private static final int MEMBER_ID_COLUMN = 14;
+
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Patient",
+        description = "Patient roster report")
     public String generatePatientRoster() {
         String sql = "SELECT p.id, p.mrn, p.ssn, p.first_name, p.last_name, p.date_of_birth, " +
                      "p.phone_home, p.phone_mobile, p.email, " +
@@ -44,7 +54,7 @@ public class ReportGenerator {
                 StringBuilder line = new StringBuilder();
                 for (int i = 0; i < row.length; i++) {
                     if (i > 0) line.append(",");
-                    line.append(row[i] != null ? row[i].toString().replace(",", ";") : "");
+                    line.append(maskedValue(i, row[i]));
                 }
                 writer.println(line);
             }
@@ -57,9 +67,13 @@ public class ReportGenerator {
         return filePath;
     }
 
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Encounter",
+        description = "Encounter summary report")
     public String generateEncounterSummary(LocalDateTime startDate, LocalDateTime endDate) {
+        validateSummaryRange(startDate, endDate);
+
         String sql = "SELECT e.id, e.encounter_number, e.encounter_date_time, e.encounter_type, e.status, " +
-                     "p.mrn, p.first_name, p.last_name, p.ssn, p.date_of_birth, " +
+                     "p.mrn, p.first_name, p.last_name, p.date_of_birth, " +
                      "pr.first_name as provider_first, pr.last_name as provider_last " +
                      "FROM encounters e " +
                      "JOIN patients p ON e.patient_id = p.id " +
@@ -101,14 +115,45 @@ public class ReportGenerator {
         return filePath;
     }
 
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Patient",
+        description = "Daily patient roster report download")
     public byte[] generateDailyReport() {
         String tempFile = generatePatientRoster();
+        Path path = Path.of(tempFile);
         try {
-            byte[] content = Files.readAllBytes(Path.of(tempFile));
-            return content;
+            return Files.readAllBytes(path);
         } catch (IOException e) {
             log.error("Failed to read temp file", e);
             throw new RuntimeException(e);
+        } finally {
+            try {
+                Files.deleteIfExists(path);
+            } catch (IOException e) {
+                log.warn("Failed to delete temporary report file", e);
+            }
+        }
+    }
+
+    private String maskedValue(int columnIndex, Object value) {
+        if (columnIndex == SSN_COLUMN) {
+            return PhiMasker.maskSsn(value);
+        }
+        if (columnIndex == MEMBER_ID_COLUMN) {
+            return PhiMasker.maskIdentifier(value);
+        }
+        return value != null ? value.toString().replace(",", ";") : "";
+    }
+
+    private void validateSummaryRange(LocalDateTime startDate, LocalDateTime endDate) {
+        if (startDate == null || endDate == null) {
+            throw new ExportRequestException("startDate and endDate are required");
+        }
+        if (endDate.isBefore(startDate)) {
+            throw new ExportRequestException("endDate must not be before startDate");
+        }
+        if (Duration.between(startDate, endDate).toDays() > MAX_SUMMARY_RANGE_DAYS) {
+            throw new ExportRequestException(
+                "Date range must not exceed " + MAX_SUMMARY_RANGE_DAYS + " days");
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.medchart.ehr.legacy;
 
+import com.medchart.ehr.audit.AuditAccess;
+import com.medchart.ehr.audit.AuditAction;
 import com.medchart.ehr.domain.encounter.Encounter;
 import com.medchart.ehr.domain.patient.Patient;
 import lombok.extern.slf4j.Slf4j;
@@ -12,16 +14,24 @@ import java.io.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
 @Slf4j
 public class EncounterExportService {
 
+    static final long MAX_EXPORT_RANGE_DAYS = 31;
+    static final int MAX_EXPORT_ROWS = 5000;
+
     @Autowired
     private EntityManager entityManager;
 
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Encounter",
+        description = "Bulk encounter export for date range")
     public byte[] exportEncountersForDateRange(LocalDate startDate, LocalDate endDate) {
+        validateDateRange(startDate, endDate);
+
         String sql = "SELECT e.id, e.encounter_number, e.encounter_type, e.status, e.encounter_date_time, " +
                      "p.mrn, p.first_name, p.last_name, p.date_of_birth " +
                      "FROM encounters e " +
@@ -31,8 +41,13 @@ public class EncounterExportService {
         Query query = entityManager.createNativeQuery(sql);
         query.setParameter(1, startDate.atStartOfDay());
         query.setParameter(2, endDate.plusDays(1).atStartOfDay());
+        query.setMaxResults(MAX_EXPORT_ROWS + 1);
         
         List<Object[]> results = query.getResultList();
+        if (results.size() > MAX_EXPORT_ROWS) {
+            throw new ExportRequestException(
+                "Export exceeds the maximum of " + MAX_EXPORT_ROWS + " encounters; narrow the date range");
+        }
         
         StringBuilder csv = new StringBuilder();
         csv.append("EncounterId,EncounterNumber,PatientMRN,PatientName,DOB,EncounterDate,Type,Status\n");
@@ -52,6 +67,8 @@ public class EncounterExportService {
         return csv.toString().getBytes();
     }
 
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Encounter",
+        description = "Patient encounter history export")
     public byte[] exportPatientEncounterHistory(Long patientId) {
         Query patientQuery = entityManager.createNativeQuery(
             "SELECT mrn, first_name, last_name, ssn, date_of_birth FROM patients WHERE id = ?1");
@@ -68,7 +85,7 @@ public class EncounterExportService {
         export.append("Generated: ").append(LocalDateTime.now()).append("\n\n");
         export.append("Patient: ").append(patientData[1]).append(" ").append(patientData[2]).append("\n");
         export.append("MRN: ").append(patientData[0]).append("\n");
-        export.append("SSN: ").append(patientData[3]).append("\n");
+        export.append("SSN: ").append(PhiMasker.maskSsn(patientData[3])).append("\n");
         export.append("DOB: ").append(patientData[4]).append("\n\n");
         export.append("Encounters:\n");
         export.append("-".repeat(80)).append("\n");
@@ -82,6 +99,20 @@ public class EncounterExportService {
         }
         
         return export.toString().getBytes();
+    }
+
+    private void validateDateRange(LocalDate startDate, LocalDate endDate) {
+        if (startDate == null || endDate == null) {
+            throw new ExportRequestException("startDate and endDate are required");
+        }
+        if (endDate.isBefore(startDate)) {
+            throw new ExportRequestException("endDate must not be before startDate");
+        }
+        long days = ChronoUnit.DAYS.between(startDate, endDate) + 1;
+        if (days > MAX_EXPORT_RANGE_DAYS) {
+            throw new ExportRequestException(
+                "Date range must not exceed " + MAX_EXPORT_RANGE_DAYS + " days");
+        }
     }
 
     public void exportAllPatientsToFile(String filePath) {
