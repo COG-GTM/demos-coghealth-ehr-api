@@ -1,5 +1,8 @@
 package com.medchart.ehr.legacy;
 
+import com.medchart.ehr.audit.AuditAction;
+import com.medchart.ehr.audit.AuditContext;
+import com.medchart.ehr.audit.PatientAccessLogger;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,9 +23,19 @@ public class ReportGenerator {
     @Autowired
     private EntityManager entityManager;
 
+    @Autowired
+    private PatientAccessLogger accessLogger;
+
+    @Autowired
+    private AuditContext auditContext;
+
     private static final String TEMP_DIR = System.getProperty("java.io.tmpdir");
 
     public String generatePatientRoster() {
+        return generatePatientRoster("Patient roster report (MRN, SSN, demographics, insurance)");
+    }
+
+    private String generatePatientRoster(String reason) {
         String sql = "SELECT p.id, p.mrn, p.ssn, p.first_name, p.last_name, p.date_of_birth, " +
                      "p.phone_home, p.phone_mobile, p.email, " +
                      "p.street1, p.city, p.state, p.zip_code, " +
@@ -53,6 +66,15 @@ public class ReportGenerator {
             throw new RuntimeException("Report generation failed", e);
         }
         
+        accessLogger.logBulkAccess(
+                auditContext.getUserId(),
+                auditContext.getUserRole(),
+                AuditAction.EXPORT,
+                "Patient",
+                results.size(),
+                reason,
+                auditContext.getIpAddress());
+
         log.info("Generated patient roster at: {}", filePath);
         return filePath;
     }
@@ -97,12 +119,21 @@ public class ReportGenerator {
             throw new RuntimeException("Report generation failed", e);
         }
         
+        accessLogger.logBulkAccess(
+                auditContext.getUserId(),
+                auditContext.getUserRole(),
+                AuditAction.EXPORT,
+                "Encounter",
+                results.size(),
+                "Encounter summary report for " + startDate + " to " + endDate,
+                auditContext.getIpAddress());
+
         log.info("Generated encounter summary at: {}", filePath);
         return filePath;
     }
 
     public byte[] generateDailyReport() {
-        String tempFile = generatePatientRoster();
+        String tempFile = generatePatientRoster("Daily patient roster report download");
         try {
             byte[] content = Files.readAllBytes(Path.of(tempFile));
             return content;
