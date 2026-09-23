@@ -11,12 +11,15 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
+
+import com.medchart.ehr.domain.auth.User;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
 import java.lang.reflect.Method;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Aspect
 @Component
@@ -94,11 +97,18 @@ public class AuditAspect {
         if (!authentication.isAuthenticated() || isAnonymous(authentication)) {
             return ANONYMOUS_USER_NAME;
         }
-        String roles = authentication.getAuthorities() == null ? "" : authentication.getAuthorities().stream()
-                .map(authority -> authority.getAuthority())
-                .filter(authority -> authority != null && !authority.isEmpty())
-                .collect(Collectors.joining(","));
-        return roles.isEmpty() ? getCurrentUserId(authentication) : roles;
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof User) {
+            User user = (User) principal;
+            String fullName = Stream.of(user.getFirstName(), user.getLastName())
+                    .filter(part -> part != null && !part.trim().isEmpty())
+                    .map(String::trim)
+                    .collect(Collectors.joining(" "));
+            if (!fullName.isEmpty()) {
+                return fullName;
+            }
+        }
+        return getCurrentUserId(authentication);
     }
 
     private boolean isAnonymous(Authentication authentication) {

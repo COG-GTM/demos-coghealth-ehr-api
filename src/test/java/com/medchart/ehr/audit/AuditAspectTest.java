@@ -1,5 +1,6 @@
 package com.medchart.ehr.audit;
 
+import com.medchart.ehr.domain.auth.User;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.jupiter.api.AfterEach;
@@ -13,6 +14,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.lang.reflect.Method;
+import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -61,8 +63,15 @@ class AuditAspectTest {
 
     @Test
     void recordsAuthenticatedPrincipalAsActor() throws Throwable {
-        UserDetails principal = new org.springframework.security.core.userdetails.User(
-                "dr.patel", "", AuthorityUtils.createAuthorityList("ROLE_PROVIDER"));
+        User principal = User.builder()
+                .id(7L)
+                .username("dr.patel")
+                .password("")
+                .email("dr.patel@example.org")
+                .firstName("Anita")
+                .lastName("Patel")
+                .roles(Collections.singleton(User.Role.PROVIDER))
+                .build();
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
 
@@ -70,9 +79,23 @@ class AuditAspectTest {
 
         AuditEvent event = capturedEvent();
         assertThat(event.getUserId()).isEqualTo("dr.patel");
-        assertThat(event.getUserName()).isEqualTo("ROLE_PROVIDER");
+        assertThat(event.getUserName()).isEqualTo("Anita Patel");
         assertThat(event.getPatientId()).isEqualTo(42L);
         assertThat(event.getSuccess()).isTrue();
+    }
+
+    @Test
+    void fallsBackToUsernameWhenPrincipalHasNoName() throws Throwable {
+        UserDetails principal = new org.springframework.security.core.userdetails.User(
+                "integration.client", "", AuthorityUtils.createAuthorityList("ROLE_PROVIDER"));
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
+
+        auditAspect.auditAccess(joinPoint);
+
+        AuditEvent event = capturedEvent();
+        assertThat(event.getUserId()).isEqualTo("integration.client");
+        assertThat(event.getUserName()).isEqualTo("integration.client");
     }
 
     @Test
