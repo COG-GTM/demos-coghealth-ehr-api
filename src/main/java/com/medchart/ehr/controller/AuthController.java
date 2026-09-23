@@ -1,5 +1,6 @@
 package com.medchart.ehr.controller;
 
+import com.medchart.ehr.audit.AuthenticationAuditLogger;
 import com.medchart.ehr.domain.auth.User;
 import com.medchart.ehr.repository.UserRepository;
 import com.medchart.ehr.config.JwtTokenProvider;
@@ -9,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -28,18 +30,26 @@ public class AuthController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
+    private final AuthenticationAuditLogger authenticationAuditLogger;
 
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
-        Authentication authentication = authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(
-                loginRequest.getUsername(),
-                loginRequest.getPassword()
-            )
-        );
+        Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                    loginRequest.getUsername(),
+                    loginRequest.getPassword()
+                )
+            );
+        } catch (AuthenticationException e) {
+            authenticationAuditLogger.logLoginFailure(loginRequest.getUsername(), e.getMessage());
+            throw e;
+        }
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = tokenProvider.generateToken(authentication);
+        authenticationAuditLogger.logLoginSuccess(authentication.getName());
 
         Map<String, String> response = new HashMap<>();
         response.put("token", jwt);
@@ -74,7 +84,9 @@ public class AuthController {
             .credentialsNonExpired(true)
             .build();
 
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
+
+        authenticationAuditLogger.logRegistration(savedUser.getUsername(), savedUser.getId());
 
         log.info("Registered new user: {}", signUpRequest.getUsername());
         
