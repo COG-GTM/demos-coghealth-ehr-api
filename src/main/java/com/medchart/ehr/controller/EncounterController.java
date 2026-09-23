@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -14,6 +15,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/v1/encounters")
+@PreAuthorize("hasAnyRole('PROVIDER', 'STAFF', 'ADMIN')")
 public class EncounterController {
 
     private final EncounterService encounterService;
@@ -71,11 +73,13 @@ public class EncounterController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('PROVIDER', 'ADMIN')")
     public Encounter create(@RequestBody Encounter encounter) {
         return encounterService.create(encounter);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('PROVIDER', 'ADMIN')")
     public ResponseEntity<Encounter> update(@PathVariable Long id, @RequestBody Encounter encounter) {
         return encounterService.findById(id)
                 .map(existing -> {
@@ -98,6 +102,7 @@ public class EncounterController {
     }
 
     @PostMapping("/{id}/complete")
+    @PreAuthorize("hasAnyRole('PROVIDER', 'ADMIN')")
     public ResponseEntity<Void> complete(@PathVariable Long id, @RequestBody(required = false) String notes) {
         encounterService.completeEncounter(id, notes);
         return ResponseEntity.ok().build();
