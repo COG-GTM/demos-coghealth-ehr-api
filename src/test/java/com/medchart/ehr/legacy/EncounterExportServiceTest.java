@@ -14,6 +14,7 @@ import javax.persistence.Query;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,7 +44,7 @@ class EncounterExportServiceTest {
     void patientHistoryExportMasksSsn() {
         when(query.getSingleResult()).thenReturn(
             new Object[]{"MRN001", "Ada", "Lovelace", "123-45-6789", LocalDate.of(1980, 1, 2)});
-        when(query.getResultList()).thenReturn(List.of());
+        when(query.getResultList()).thenReturn(Collections.emptyList());
 
         String export = new String(service.exportPatientEncounterHistory(7L), StandardCharsets.UTF_8);
 
@@ -83,7 +84,7 @@ class EncounterExportServiceTest {
 
     @Test
     void dateRangeExportReturnsCsvWithinLimits() {
-        when(query.getResultList()).thenReturn(List.of(encounterRow(1)));
+        when(query.getResultList()).thenReturn(Collections.singletonList(encounterRow(1)));
 
         String csv = new String(service.exportEncountersForDateRange(
             LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 10)), StandardCharsets.UTF_8);

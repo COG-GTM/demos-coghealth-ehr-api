@@ -15,7 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -42,7 +42,7 @@ class ReportGeneratorTest {
 
     @Test
     void dailyReportMasksSsnAndInsuranceMemberId() throws Exception {
-        when(query.getResultList()).thenReturn(List.of(rosterRow()));
+        when(query.getResultList()).thenReturn(Collections.singletonList(rosterRow()));
 
         String csv = new String(reportGenerator.generateDailyReport(), StandardCharsets.UTF_8);
 
@@ -54,7 +54,7 @@ class ReportGeneratorTest {
 
     @Test
     void dailyReportDeletesTheTemporaryPhiFile() throws Exception {
-        when(query.getResultList()).thenReturn(List.of(rosterRow()));
+        when(query.getResultList()).thenReturn(Collections.singletonList(rosterRow()));
 
         reportGenerator.generateDailyReport();
 
