@@ -1,7 +1,10 @@
 package com.medchart.ehr.legacy;
 
+import com.medchart.ehr.audit.AuditAccess;
+import com.medchart.ehr.audit.AuditAction;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import javax.persistence.EntityManager;
@@ -22,16 +25,23 @@ public class ReportGenerator {
 
     private static final String TEMP_DIR = System.getProperty("java.io.tmpdir");
 
-    public String generatePatientRoster() {
-        String sql = "SELECT p.id, p.mrn, p.ssn, p.first_name, p.last_name, p.date_of_birth, " +
+    @PreAuthorize("hasRole('PHI_EXPORT')")
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Patient", description = "Patient roster report")
+    public String generatePatientRoster(int page, int size) {
+        ExportLimits.validatePagination(page, size);
+
+        String sql = "SELECT p.id, p.mrn, p.first_name, p.last_name, p.date_of_birth, " +
                      "p.phone_home, p.phone_mobile, p.email, " +
                      "p.street1, p.city, p.state, p.zip_code, " +
-                     "ic.payer_name, ic.member_id " +
+                     "ic.payer_name " +
                      "FROM patients p " +
                      "LEFT JOIN insurance_coverages ic ON p.id = ic.patient_id AND ic.active = true " +
-                     "WHERE p.active = true";
+                     "WHERE p.active = true " +
+                     "ORDER BY p.id";
         
         Query query = entityManager.createNativeQuery(sql);
+        query.setFirstResult(ExportLimits.offset(page, size));
+        query.setMaxResults(size);
         List<Object[]> results = query.getResultList();
         
         String filename = "patient_roster_" + 
@@ -39,7 +49,7 @@ public class ReportGenerator {
         String filePath = TEMP_DIR + File.separator + filename;
         
         try (PrintWriter writer = new PrintWriter(new FileWriter(filePath))) {
-            writer.println("ID,MRN,SSN,FirstName,LastName,DOB,PhoneHome,PhoneMobile,Email,Address,City,State,Zip,Insurance,MemberID");
+            writer.println("ID,MRN,FirstName,LastName,DOB,PhoneHome,PhoneMobile,Email,Address,City,State,Zip,Insurance");
             for (Object[] row : results) {
                 StringBuilder line = new StringBuilder();
                 for (int i = 0; i < row.length; i++) {
@@ -57,18 +67,26 @@ public class ReportGenerator {
         return filePath;
     }
 
-    public String generateEncounterSummary(LocalDateTime startDate, LocalDateTime endDate) {
+    @PreAuthorize("hasRole('PHI_EXPORT')")
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Encounter", description = "Encounter summary report")
+    public String generateEncounterSummary(LocalDateTime startDate, LocalDateTime endDate, int page, int size) {
+        ExportLimits.validatePagination(page, size);
+        ExportLimits.validateDateRange(startDate, endDate);
+
         String sql = "SELECT e.id, e.encounter_number, e.encounter_date_time, e.encounter_type, e.status, " +
-                     "p.mrn, p.first_name, p.last_name, p.ssn, p.date_of_birth, " +
+                     "p.mrn, p.first_name, p.last_name, p.date_of_birth, " +
                      "pr.first_name as provider_first, pr.last_name as provider_last " +
                      "FROM encounters e " +
                      "JOIN patients p ON e.patient_id = p.id " +
                      "LEFT JOIN providers pr ON e.attending_provider_id = pr.id " +
-                     "WHERE e.encounter_date_time BETWEEN ?1 AND ?2";
+                     "WHERE e.encounter_date_time BETWEEN ?1 AND ?2 " +
+                     "ORDER BY e.id";
         
         Query query = entityManager.createNativeQuery(sql);
         query.setParameter(1, startDate);
         query.setParameter(2, endDate);
+        query.setFirstResult(ExportLimits.offset(page, size));
+        query.setMaxResults(size);
         List<Object[]> results = query.getResultList();
         
         String filename = "encounter_summary_" + 
@@ -101,8 +119,12 @@ public class ReportGenerator {
         return filePath;
     }
 
-    public byte[] generateDailyReport() {
-        String tempFile = generatePatientRoster();
+    @PreAuthorize("hasRole('PHI_EXPORT')")
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Patient", description = "Daily patient report")
+    public byte[] generateDailyReport(int page, int size) {
+        ExportLimits.validatePagination(page, size);
+
+        String tempFile = generatePatientRoster(page, size);
         try {
             byte[] content = Files.readAllBytes(Path.of(tempFile));
             return content;
