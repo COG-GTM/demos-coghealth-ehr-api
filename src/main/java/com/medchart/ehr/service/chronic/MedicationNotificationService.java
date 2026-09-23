@@ -109,7 +109,8 @@ public class MedicationNotificationService {
      * PATTERN: Follow critical alert escalation pattern
      */
     @Async
-    public CompletableFuture<Void> sendCriticalLabAlert(Long providerId, Long patientId,
+    public CompletableFuture<ProviderNotificationService.CriticalAlertResult> sendCriticalLabAlert(
+                                                         Long providerId, Long patientId,
                                                          String patientMrn, String patientName,
                                                          String labName, String labValue,
                                                          String criticalThreshold) {
