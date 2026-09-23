@@ -26,6 +26,13 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
            "p.mrn LIKE CONCAT('%', :searchTerm, '%')")
     Page<Patient> searchPatients(String searchTerm, Pageable pageable);
 
+    @Query("SELECT p FROM Patient p WHERE " +
+           "EXISTS (SELECT 1 FROM Encounter e WHERE e.patient = p AND e.attendingProvider.id = :providerId) AND (" +
+           "LOWER(p.lastName) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+           "LOWER(p.firstName) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+           "p.mrn LIKE CONCAT('%', :searchTerm, '%'))")
+    Page<Patient> searchPatientsForProvider(String searchTerm, Long providerId, Pageable pageable);
+
     List<Patient> findByDateOfBirth(LocalDate dateOfBirth);
 
     @Query("SELECT p FROM Patient p WHERE p.lastName = :lastName AND p.dateOfBirth = :dob")

@@ -24,6 +24,8 @@ public interface EncounterRepository extends JpaRepository<Encounter, Long> {
 
     List<Encounter> findByAttendingProviderId(Long providerId);
 
+    boolean existsByPatientIdAndAttendingProviderId(Long patientId, Long providerId);
+
     List<Encounter> findByStatus(EncounterStatus status);
 
     @Query("SELECT e FROM Encounter e WHERE e.encounterDateTime BETWEEN :startDate AND :endDate")
