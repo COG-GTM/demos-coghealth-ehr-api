@@ -12,6 +12,7 @@ import javax.persistence.Query;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermission;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -85,6 +86,22 @@ class ReportGeneratorTest {
         String second = reportGenerator.generatePatientRoster(1, 50);
 
         assertThat(first).isNotEqualTo(second);
+    }
+
+    @Test
+    void reportFileIsReadableByItsOwnerOnly() throws Exception {
+        when(entityManager.createNativeQuery(anyString())).thenReturn(query);
+        when(query.setFirstResult(anyInt())).thenReturn(query);
+        when(query.setMaxResults(anyInt())).thenReturn(query);
+        when(query.getResultList()).thenReturn(List.of());
+
+        Path path = Path.of(reportGenerator.generatePatientRoster(0, 50));
+        try {
+            assertThat(Files.getPosixFilePermissions(path))
+                    .containsExactlyInAnyOrder(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE);
+        } finally {
+            Files.deleteIfExists(path);
+        }
     }
 
     @Test

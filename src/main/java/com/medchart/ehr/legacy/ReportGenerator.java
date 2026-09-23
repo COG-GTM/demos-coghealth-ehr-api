@@ -143,12 +143,23 @@ public class ReportGenerator {
         String name = prefix + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + "_";
         try {
             Path path = Files.createTempFile(Path.of(TEMP_DIR), name, suffix);
-            path.toFile().setReadable(false, false);
-            path.toFile().setReadable(true, true);
+            restrictToOwner(path);
             return path.toString();
         } catch (IOException e) {
             log.error("Failed to create report file", e);
             throw new RuntimeException("Report generation failed", e);
+        }
+    }
+
+    private void restrictToOwner(Path path) throws IOException {
+        File file = path.toFile();
+        boolean restricted = file.setReadable(false, false)
+                & file.setWritable(false, false)
+                & file.setReadable(true, true)
+                & file.setWritable(true, true);
+        if (!restricted) {
+            Files.deleteIfExists(path);
+            throw new IOException("Unable to restrict report file permissions to its owner");
         }
     }
 }
