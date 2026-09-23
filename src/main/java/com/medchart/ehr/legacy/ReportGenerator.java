@@ -44,9 +44,7 @@ public class ReportGenerator {
         query.setMaxResults(size);
         List<Object[]> results = query.getResultList();
         
-        String filename = "patient_roster_" + 
-            LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".csv";
-        String filePath = TEMP_DIR + File.separator + filename;
+        String filePath = createReportFile("patient_roster_", ".csv");
         
         try (PrintWriter writer = new PrintWriter(new FileWriter(filePath))) {
             writer.println("ID,MRN,FirstName,LastName,DOB,PhoneHome,PhoneMobile,Email,Address,City,State,Zip,Insurance");
@@ -89,9 +87,7 @@ public class ReportGenerator {
         query.setMaxResults(size);
         List<Object[]> results = query.getResultList();
         
-        String filename = "encounter_summary_" + 
-            LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".txt";
-        String filePath = TEMP_DIR + File.separator + filename;
+        String filePath = createReportFile("encounter_summary_", ".txt");
         
         try (PrintWriter writer = new PrintWriter(new FileWriter(filePath))) {
             writer.println("ENCOUNTER SUMMARY REPORT");
@@ -126,11 +122,33 @@ public class ReportGenerator {
 
         String tempFile = generatePatientRoster(page, size);
         try {
-            byte[] content = Files.readAllBytes(Path.of(tempFile));
-            return content;
+            return Files.readAllBytes(Path.of(tempFile));
         } catch (IOException e) {
             log.error("Failed to read temp file", e);
             throw new RuntimeException(e);
+        } finally {
+            try {
+                Files.deleteIfExists(Path.of(tempFile));
+            } catch (IOException e) {
+                log.error("Failed to delete report file", e);
+            }
+        }
+    }
+
+    /**
+     * Reports hold PHI, so each one gets its own owner-readable file rather than
+     * a shared, guessable path.
+     */
+    private String createReportFile(String prefix, String suffix) {
+        String name = prefix + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + "_";
+        try {
+            Path path = Files.createTempFile(Path.of(TEMP_DIR), name, suffix);
+            path.toFile().setReadable(false, false);
+            path.toFile().setReadable(true, true);
+            return path.toString();
+        } catch (IOException e) {
+            log.error("Failed to create report file", e);
+            throw new RuntimeException("Report generation failed", e);
         }
     }
 }

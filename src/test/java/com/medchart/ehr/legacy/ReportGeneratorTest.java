@@ -75,6 +75,19 @@ class ReportGeneratorTest {
     }
 
     @Test
+    void concurrentRostersGetDistinctFiles() {
+        when(entityManager.createNativeQuery(anyString())).thenReturn(query);
+        when(query.setFirstResult(anyInt())).thenReturn(query);
+        when(query.setMaxResults(anyInt())).thenReturn(query);
+        when(query.getResultList()).thenReturn(List.of());
+
+        String first = reportGenerator.generatePatientRoster(0, 50);
+        String second = reportGenerator.generatePatientRoster(1, 50);
+
+        assertThat(first).isNotEqualTo(second);
+    }
+
+    @Test
     void encounterSummaryRejectsUnboundedRange() {
         assertThatThrownBy(() -> reportGenerator.generateEncounterSummary(
                 LocalDateTime.of(1, 1, 1, 0, 0), LocalDateTime.of(9999, 12, 31, 0, 0), 0, 50))

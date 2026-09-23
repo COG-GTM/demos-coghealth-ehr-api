@@ -31,7 +31,7 @@ public class EncounterExportService {
                      "p.mrn, p.first_name, p.last_name, p.date_of_birth " +
                      "FROM encounters e " +
                      "JOIN patients p ON e.patient_id = p.id " +
-                     "WHERE e.encounter_date_time BETWEEN ?1 AND ?2 " +
+                     "WHERE e.encounter_date_time >= ?1 AND e.encounter_date_time < ?2 " +
                      "ORDER BY e.id";
         
         Query query = entityManager.createNativeQuery(sql);
@@ -72,7 +72,7 @@ public class EncounterExportService {
         Object[] patientData = (Object[]) patientQuery.getSingleResult();
         
         Query encounterQuery = entityManager.createNativeQuery(
-            "SELECT * FROM encounters WHERE patient_id = ?1 ORDER BY encounter_date_time DESC");
+            "SELECT * FROM encounters WHERE patient_id = ?1 ORDER BY encounter_date_time DESC, id DESC");
         encounterQuery.setParameter(1, patientId);
         encounterQuery.setFirstResult(ExportLimits.offset(page, size));
         encounterQuery.setMaxResults(size);

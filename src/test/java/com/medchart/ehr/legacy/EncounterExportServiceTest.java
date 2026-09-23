@@ -77,6 +77,12 @@ class EncounterExportServiceTest {
     }
 
     @Test
+    void overflowingOffsetIsRejected() {
+        assertThatThrownBy(() -> service.exportPatientEncounterHistory(1L, 5_000_000, 500))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void oversizedPageIsRejected() {
         assertThatThrownBy(() -> service.exportPatientEncounterHistory(1L, 0, 100_000))
                 .isInstanceOf(IllegalArgumentException.class);

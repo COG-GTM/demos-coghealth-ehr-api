@@ -23,6 +23,9 @@ public final class ExportLimits {
         if (size < 1 || size > MAX_PAGE_SIZE) {
             throw new IllegalArgumentException("size must be between 1 and " + MAX_PAGE_SIZE);
         }
+        if (page > Integer.MAX_VALUE / size) {
+            throw new IllegalArgumentException("page is too large for the requested size");
+        }
     }
 
     public static void validateDateRange(LocalDate startDate, LocalDate endDate) {
