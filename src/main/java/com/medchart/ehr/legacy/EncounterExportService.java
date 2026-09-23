@@ -1,25 +1,40 @@
 package com.medchart.ehr.legacy;
 
+import com.medchart.ehr.audit.AuditAction;
+import com.medchart.ehr.audit.PatientAccessLogger;
+import com.medchart.ehr.domain.auth.User;
 import com.medchart.ehr.domain.encounter.Encounter;
 import com.medchart.ehr.domain.patient.Patient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
+import javax.servlet.http.HttpServletRequest;
 import java.io.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
 public class EncounterExportService {
 
+    private static final String UNKNOWN_ROLE = "UNKNOWN";
+
     @Autowired
     private EntityManager entityManager;
+
+    @Autowired
+    private PatientAccessLogger accessLogger;
 
     public byte[] exportEncountersForDateRange(LocalDate startDate, LocalDate endDate) {
         String sql = "SELECT e.id, e.encounter_number, e.encounter_type, e.status, e.encounter_date_time, " +
@@ -32,7 +47,19 @@ public class EncounterExportService {
         query.setParameter(1, startDate.atStartOfDay());
         query.setParameter(2, endDate.plusDays(1).atStartOfDay());
         
-        List<Object[]> results = query.getResultList();
+        List<Object[]> results;
+        try {
+            results = query.getResultList();
+        } catch (RuntimeException e) {
+            accessLogger.logFailedAccess(currentUserId(), currentUserRole(), null, AuditAction.EXPORT,
+                "Encounter", "Encounter date range export failed for " + startDate + " to " + endDate,
+                clientIpAddress());
+            throw e;
+        }
+        
+        accessLogger.logBulkAccess(currentUserId(), currentUserRole(), AuditAction.EXPORT, "Encounter",
+            results.size(), "Encounter export for date range " + startDate + " to " + endDate,
+            clientIpAddress());
         
         StringBuilder csv = new StringBuilder();
         csv.append("EncounterId,EncounterNumber,PatientMRN,PatientName,DOB,EncounterDate,Type,Status\n");
@@ -56,12 +83,34 @@ public class EncounterExportService {
         Query patientQuery = entityManager.createNativeQuery(
             "SELECT mrn, first_name, last_name, ssn, date_of_birth FROM patients WHERE id = ?1");
         patientQuery.setParameter(1, patientId);
-        Object[] patientData = (Object[]) patientQuery.getSingleResult();
+        Object[] patientData;
+        try {
+            patientData = (Object[]) patientQuery.getSingleResult();
+        } catch (RuntimeException e) {
+            accessLogger.logFailedAccess(currentUserId(), currentUserRole(), patientId, AuditAction.EXPORT,
+                "Patient", "Patient encounter history export failed", clientIpAddress());
+            throw e;
+        }
+        
+        accessLogger.logAccess(currentUserId(), currentUserRole(), patientId, String.valueOf(patientData[0]),
+            AuditAction.EXPORT, "Patient", "Patient encounter history export (demographics)",
+            clientIpAddress(), currentSessionId());
         
         Query encounterQuery = entityManager.createNativeQuery(
             "SELECT * FROM encounters WHERE patient_id = ?1 ORDER BY encounter_date_time DESC");
         encounterQuery.setParameter(1, patientId);
-        List<Object[]> encounters = encounterQuery.getResultList();
+        List<Object[]> encounters;
+        try {
+            encounters = encounterQuery.getResultList();
+        } catch (RuntimeException e) {
+            accessLogger.logFailedAccess(currentUserId(), currentUserRole(), patientId, AuditAction.EXPORT,
+                "Encounter", "Patient encounter history export failed", clientIpAddress());
+            throw e;
+        }
+        
+        accessLogger.logBulkAccess(currentUserId(), currentUserRole(), AuditAction.EXPORT, "Encounter",
+            encounters.size(), "Patient encounter history export for patient " + patientId,
+            clientIpAddress());
         
         StringBuilder export = new StringBuilder();
         export.append("Patient Encounter History Report\n");
@@ -90,7 +139,17 @@ public class EncounterExportService {
             "email, phone_home, phone_mobile, street1, city, state, zip_code " +
             "FROM patients WHERE active = true");
         
-        List<Object[]> patients = query.getResultList();
+        List<Object[]> patients;
+        try {
+            patients = query.getResultList();
+        } catch (RuntimeException e) {
+            accessLogger.logFailedAccess(currentUserId(), currentUserRole(), null, AuditAction.EXPORT,
+                "Patient", "All-patient demographics file export failed", clientIpAddress());
+            throw e;
+        }
+        
+        accessLogger.logBulkAccess(currentUserId(), currentUserRole(), AuditAction.EXPORT, "Patient",
+            patients.size(), "All-patient demographics export to file", clientIpAddress());
         
         try (PrintWriter writer = new PrintWriter(new FileWriter(filePath))) {
             writer.println("ID,MRN,FirstName,LastName,DOB,Email,PhoneHome,PhoneMobile,Street,City,State,Zip");
@@ -103,8 +162,59 @@ public class EncounterExportService {
             }
             log.info("Exported {} patients to file: {}", patients.size(), filePath);
         } catch (IOException e) {
+            accessLogger.logFailedAccess(currentUserId(), currentUserRole(), null, AuditAction.EXPORT,
+                "Patient", "All-patient demographics file export failed", clientIpAddress());
             log.error("Failed to export patients to file", e);
             throw new RuntimeException("Export failed", e);
+        }
+    }
+
+    private Long currentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof User) {
+            return ((User) authentication.getPrincipal()).getId();
+        }
+        return null;
+    }
+
+    private String currentUserRole() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getAuthorities().isEmpty()) {
+            return UNKNOWN_ROLE;
+        }
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.joining(","));
+    }
+
+    private String clientIpAddress() {
+        HttpServletRequest request = currentRequest();
+        if (request == null) {
+            return null;
+        }
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+            return xForwardedFor.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
+    }
+
+    private String currentSessionId() {
+        ServletRequestAttributes attrs = currentRequestAttributes();
+        return attrs != null ? attrs.getSessionId() : null;
+    }
+
+    private HttpServletRequest currentRequest() {
+        ServletRequestAttributes attrs = currentRequestAttributes();
+        return attrs != null ? attrs.getRequest() : null;
+    }
+
+    private ServletRequestAttributes currentRequestAttributes() {
+        try {
+            return (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        } catch (Exception e) {
+            log.debug("Could not resolve current request", e);
+            return null;
         }
     }
 }
