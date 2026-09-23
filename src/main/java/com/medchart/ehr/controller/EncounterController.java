@@ -90,12 +90,14 @@ public class EncounterController {
     }
 
     @PostMapping("/{id}/check-in")
+    @PreAuthorize("hasAnyRole('PROVIDER', 'ADMIN')")
     public ResponseEntity<Void> checkIn(@PathVariable Long id) {
         encounterService.checkIn(id);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{id}/start")
+    @PreAuthorize("hasAnyRole('PROVIDER', 'ADMIN')")
     public ResponseEntity<Void> start(@PathVariable Long id) {
         encounterService.startEncounter(id);
         return ResponseEntity.ok().build();
@@ -109,12 +111,14 @@ public class EncounterController {
     }
 
     @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyRole('PROVIDER', 'ADMIN')")
     public ResponseEntity<Void> cancel(@PathVariable Long id) {
         encounterService.cancelEncounter(id);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{id}/no-show")
+    @PreAuthorize("hasAnyRole('PROVIDER', 'ADMIN')")
     public ResponseEntity<Void> noShow(@PathVariable Long id) {
         encounterService.markNoShow(id);
         return ResponseEntity.ok().build();

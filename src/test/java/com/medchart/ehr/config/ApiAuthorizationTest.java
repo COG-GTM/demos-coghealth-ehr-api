@@ -1,10 +1,12 @@
 package com.medchart.ehr.config;
 
+import com.medchart.ehr.controller.EncounterController;
 import com.medchart.ehr.controller.LegacyExportController;
 import com.medchart.ehr.controller.PatientController;
 import com.medchart.ehr.dto.PatientDTO;
 import com.medchart.ehr.legacy.EncounterExportService;
 import com.medchart.ehr.legacy.ReportGenerator;
+import com.medchart.ehr.service.EncounterService;
 import com.medchart.ehr.service.PatientService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,14 +26,16 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = {PatientController.class, LegacyExportController.class})
+@WebMvcTest(controllers = {PatientController.class, LegacyExportController.class, EncounterController.class})
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class})
 class ApiAuthorizationTest {
 
     private static final String PATIENT_URL = "/v1/patients/1";
     private static final String EXPORT_URL = "/v1/export/reports/patient-roster";
+    private static final String ENCOUNTER_CANCEL_URL = "/v1/encounters/1/cancel";
 
     @Autowired
     private MockMvc mockMvc;
@@ -44,6 +48,9 @@ class ApiAuthorizationTest {
 
     @MockBean
     private ReportGenerator reportGenerator;
+
+    @MockBean
+    private EncounterService encounterService;
 
     @MockBean
     private JwtTokenProvider tokenProvider;
@@ -81,6 +88,33 @@ class ApiAuthorizationTest {
         given(reportGenerator.generatePatientRoster()).willReturn("/tmp/roster.csv");
 
         mockMvc.perform(get(EXPORT_URL)).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "STAFF")
+    void staffCannotChangeEncounterStatus() throws Exception {
+        mockMvc.perform(post(ENCOUNTER_CANCEL_URL)).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "PROVIDER")
+    void providerCanChangeEncounterStatus() throws Exception {
+        mockMvc.perform(post(ENCOUNTER_CANCEL_URL)).andExpect(status().isOk());
+    }
+
+    @Test
+    void disabledAccountBearerTokenIsRejected() throws Exception {
+        UserDetails disabled = User.withUsername("dr.house")
+                .password("n/a")
+                .authorities(AuthorityUtils.createAuthorityList("ROLE_PROVIDER"))
+                .disabled(true)
+                .build();
+        given(tokenProvider.getUsernameFromToken(anyString())).willReturn("dr.house");
+        given(userDetailsService.loadUserByUsername("dr.house")).willReturn(disabled);
+        given(tokenProvider.validateToken(anyString(), any(UserDetails.class))).willReturn(true);
+
+        mockMvc.perform(get(PATIENT_URL).header("Authorization", "Bearer valid.jwt.token"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
