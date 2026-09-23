@@ -38,6 +38,9 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String lastName;
 
+    @Column(name = "provider_id")
+    private Long providerId;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @Enumerated(EnumType.STRING)
     @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
