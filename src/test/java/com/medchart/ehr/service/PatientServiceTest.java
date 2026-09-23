@@ -1,5 +1,6 @@
 package com.medchart.ehr.service;
 
+import com.medchart.ehr.domain.auth.User;
 import com.medchart.ehr.domain.patient.Patient;
 import com.medchart.ehr.dto.PatientDTO;
 import com.medchart.ehr.mapper.PatientMapper;
@@ -12,9 +13,13 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -108,5 +113,45 @@ class PatientServiceTest {
                 .isInstanceOf(AccessDeniedException.class);
 
         verify(patientRepository, never()).searchPatients(any(), any());
+    }
+
+    @Test
+    void searchIsScopedToAProvidersOwnPatients() {
+        User provider = User.builder().username("dana").roles(Set.of(User.Role.PROVIDER)).providerId(7L).build();
+        Pageable pageable = PageRequest.of(0, 20);
+        when(patientAccessGuard.requireAuthenticatedUser()).thenReturn(provider);
+        when(patientAccessGuard.hasUnrestrictedPatientAccess(provider)).thenReturn(false);
+        when(patientRepository.searchPatientsForProvider("smith", 7L, pageable)).thenReturn(Page.empty(pageable));
+
+        patientService.searchPatients("smith", pageable);
+
+        verify(patientRepository, never()).searchPatients(any(), any());
+        verify(patientRepository).searchPatientsForProvider("smith", 7L, pageable);
+    }
+
+    @Test
+    void searchReturnsNothingForAProviderWithNoProviderLink() {
+        User provider = User.builder().username("dana").roles(Set.of(User.Role.PROVIDER)).build();
+        Pageable pageable = PageRequest.of(0, 20);
+        when(patientAccessGuard.requireAuthenticatedUser()).thenReturn(provider);
+        when(patientAccessGuard.hasUnrestrictedPatientAccess(provider)).thenReturn(false);
+
+        assertThat(patientService.searchPatients("smith", pageable)).isEmpty();
+
+        verify(patientRepository, never()).searchPatients(any(), any());
+        verify(patientRepository, never()).searchPatientsForProvider(any(), any(), any());
+    }
+
+    @Test
+    void searchIsUnscopedForAdministrativeUsers() {
+        User admin = User.builder().username("root").roles(Set.of(User.Role.ADMIN)).build();
+        Pageable pageable = PageRequest.of(0, 20);
+        when(patientAccessGuard.requireAuthenticatedUser()).thenReturn(admin);
+        when(patientAccessGuard.hasUnrestrictedPatientAccess(admin)).thenReturn(true);
+        when(patientRepository.searchPatients("smith", pageable)).thenReturn(Page.empty(pageable));
+
+        patientService.searchPatients("smith", pageable);
+
+        verify(patientRepository).searchPatients("smith", pageable);
     }
 }

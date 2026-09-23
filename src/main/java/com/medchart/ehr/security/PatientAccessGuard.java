@@ -39,9 +39,16 @@ public class PatientAccessGuard {
                 .orElseThrow(() -> new AccessDeniedException("Unknown principal for patient access"));
     }
 
+    /**
+     * Whether the user may reach patients they have no care relationship with.
+     */
+    public boolean hasUnrestrictedPatientAccess(User user) {
+        return hasRole(user, User.Role.ADMIN) || hasRole(user, User.Role.STAFF);
+    }
+
     public void requireAccessToPatient(Long patientId) {
         User user = requireAuthenticatedUser();
-        if (hasRole(user, User.Role.ADMIN) || hasRole(user, User.Role.STAFF)) {
+        if (hasUnrestrictedPatientAccess(user)) {
             return;
         }
 

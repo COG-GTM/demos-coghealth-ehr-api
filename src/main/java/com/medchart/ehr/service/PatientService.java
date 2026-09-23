@@ -2,6 +2,7 @@ package com.medchart.ehr.service;
 
 import com.medchart.ehr.audit.AuditAccess;
 import com.medchart.ehr.audit.AuditAction;
+import com.medchart.ehr.domain.auth.User;
 import com.medchart.ehr.domain.patient.Patient;
 import com.medchart.ehr.dto.PatientDTO;
 import com.medchart.ehr.mapper.PatientMapper;
@@ -50,8 +51,17 @@ public class PatientService {
 
     @AuditAccess(action = AuditAction.SEARCH, resourceType = "Patient", description = "Search patients")
     public Page<PatientDTO> searchPatients(String searchTerm, Pageable pageable) {
-        patientAccessGuard.requireAuthenticatedUser();
-        return patientRepository.searchPatients(searchTerm, pageable)
+        User user = patientAccessGuard.requireAuthenticatedUser();
+        if (patientAccessGuard.hasUnrestrictedPatientAccess(user)) {
+            return patientRepository.searchPatients(searchTerm, pageable)
+                    .map(patientMapper::toDto);
+        }
+
+        Long providerId = user.getProviderId();
+        if (providerId == null) {
+            return Page.empty(pageable);
+        }
+        return patientRepository.searchPatientsForProvider(searchTerm, providerId, pageable)
                 .map(patientMapper::toDto);
     }
 
