@@ -7,6 +7,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -15,6 +16,7 @@ import java.time.LocalDateTime;
 @RestController
 @RequestMapping("/v1/export")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMIN')")
 public class LegacyExportController {
 
     private final EncounterExportService encounterExportService;
@@ -34,6 +36,7 @@ public class LegacyExportController {
     }
 
     @GetMapping("/patient/{patientId}/encounters")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROVIDER')")
     public ResponseEntity<byte[]> exportPatientEncounters(@PathVariable Long patientId) {
         byte[] data = encounterExportService.exportPatientEncounterHistory(patientId);
         
