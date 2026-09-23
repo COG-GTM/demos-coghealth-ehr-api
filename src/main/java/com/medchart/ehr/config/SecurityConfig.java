@@ -53,7 +53,7 @@ public class SecurityConfig {
             .and()
             .authorizeRequests()
                 .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .antMatchers("/auth/login", "/auth/register").permitAll()
+                .antMatchers("/auth/login").permitAll()
                 .antMatchers("/actuator/health/**", "/actuator/info").permitAll()
                 .antMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                 .anyRequest().authenticated()
