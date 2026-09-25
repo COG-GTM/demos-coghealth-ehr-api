@@ -2,8 +2,8 @@ package com.medchart.ehr.domain.patient;
 
 import lombok.*;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Embeddable;
+import javax.persistence.Column;
+import javax.persistence.Embeddable;
 
 @Embeddable
 @Getter

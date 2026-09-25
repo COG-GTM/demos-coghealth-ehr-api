@@ -2,7 +2,7 @@ package com.medchart.ehr.domain.patient;
 
 import lombok.*;
 
-import jakarta.persistence.*;
+import javax.persistence.*;
 
 @Entity
 @Table(name = "emergency_contacts")

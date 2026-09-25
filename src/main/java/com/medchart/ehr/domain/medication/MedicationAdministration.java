@@ -6,7 +6,7 @@ import com.medchart.ehr.domain.provider.Provider;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
-import jakarta.persistence.*;
+import javax.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity

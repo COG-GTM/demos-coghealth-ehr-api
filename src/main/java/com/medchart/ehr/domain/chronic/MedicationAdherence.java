@@ -3,7 +3,7 @@ package com.medchart.ehr.domain.chronic;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import jakarta.persistence.*;
+import javax.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;

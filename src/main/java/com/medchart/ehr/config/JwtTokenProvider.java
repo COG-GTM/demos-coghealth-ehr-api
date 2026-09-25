@@ -45,11 +45,11 @@ public class JwtTokenProvider {
         Date expiryDate = new Date(now.getTime() + jwtExpirationInMs);
 
         return Jwts.builder()
-                .claims(claims)
-                .subject(subject)
-                .issuedAt(now)
-                .expiration(expiryDate)
-                .signWith(getSigningKey(), Jwts.SIG.HS512)
+                .setClaims(claims)
+                .setSubject(subject)
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(getSigningKey(), SignatureAlgorithm.HS512)
                 .compact();
     }
 
@@ -67,11 +67,11 @@ public class JwtTokenProvider {
     }
 
     private Claims getAllClaimsFromToken(String token) {
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
                 .build()
-                .parseSignedClaims(token)
-                .getPayload();
+                .parseClaimsJws(token)
+                .getBody();
     }
 
     public Boolean validateToken(String token, UserDetails userDetails) {
