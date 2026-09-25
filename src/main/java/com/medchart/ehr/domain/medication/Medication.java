@@ -2,7 +2,7 @@ package com.medchart.ehr.domain.medication;
 
 import lombok.*;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "medications", indexes = {
