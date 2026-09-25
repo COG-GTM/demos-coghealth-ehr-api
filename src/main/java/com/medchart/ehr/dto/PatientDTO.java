@@ -4,8 +4,8 @@ import com.medchart.ehr.domain.patient.Gender;
 import com.medchart.ehr.domain.patient.MaritalStatus;
 import lombok.*;
 
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.Past;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Past;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
