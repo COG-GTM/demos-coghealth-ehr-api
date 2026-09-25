@@ -2,8 +2,8 @@ package com.medchart.ehr.domain.provider;
 
 import lombok.*;
 
-import javax.persistence.Column;
-import javax.persistence.Embeddable;
+import jakarta.persistence.Column;
+import jakarta.persistence.Embeddable;
 import java.time.LocalDate;
 
 @Embeddable
