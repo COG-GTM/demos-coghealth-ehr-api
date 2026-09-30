@@ -243,6 +243,9 @@ Memory ([`idle.json`](baseline/java11/idle.json), [`resources-*.json`](baseline/
 | throughput (32 VUs), median / max | 832 / 853 MiB | 158 / 341 MiB | 504 MiB | 168, 303 ms total, max 11 ms |
 | whole run peak (`VmHWM`) | 852 MiB | | | |
 
+GC pause count and total are per phase (difference of `jvm.gc.pause` COUNT/TOTAL_TIME before and after). The max is
+Micrometer's rolling-window MAX read at the end of the phase, so it can include pauses from just before the phase started.
+
 Non-heap used at idle: 127 MiB; 26 live threads; 17,680 classes loaded.
 
 Latency and throughput ([`k6-latency.txt`](baseline/java11/k6-latency.txt), [`k6-throughput.txt`](baseline/java11/k6-throughput.txt); 0.00% failed requests in both):
@@ -259,8 +262,8 @@ Latency and throughput ([`k6-latency.txt`](baseline/java11/k6-latency.txt), [`k6
 | **throughput** | 200.0 req/s (offered) | **4,614 req/s** (276,835 requests in 60 s) |
 
 Reading these numbers:
-- Run-to-run spread on this VM: across four full runs the same day (only the last is committed), 32-VU throughput
-  ranged 3,965–4,614 req/s and 200 req/s p99 2.9–4.8 ms. Treat differences smaller than that as noise; compare the migrated build **on the same host
+- Run-to-run spread on this VM: across five full runs the same day (only one is committed), 32-VU throughput
+  ranged 3,965–4,620 req/s, 200 req/s p99 2.9–4.8 ms, and warm startup (wall to healthy) 4.67–6.66 s. Treat differences smaller than that as noise; compare the migrated build **on the same host
   class with the same script**, ideally several runs each.
 - k6 shares the 8 vCPUs with the app and Postgres, so the throughput figure is a host-level ceiling, not app-only.
 - DEBUG logging is part of what is measured: the app wrote ~60 MiB of log during the 200 req/s phase and ~1.37 GiB
