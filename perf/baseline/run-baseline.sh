@@ -178,9 +178,9 @@ fi
 JAR="$(ls "$ROOT"/target/medchart-ehr-api-*.jar | grep -v '\.original$' | head -1)"
 mkdir -p "$LOG_DIR"
 
+INFRA_CREATED=1
 docker run -d --name "$PG_CONTAINER" -e POSTGRES_DB=coghealth -e POSTGRES_USER=coghealth \
   -e POSTGRES_PASSWORD="$PG_PASSWORD" -p "127.0.0.1:$PG_PORT:5432" postgres:14-alpine >/dev/null
-INFRA_CREATED=1
 docker run -d --name "$REDIS_CONTAINER" -p "127.0.0.1:$REDIS_PORT:6379" redis:7-alpine >/dev/null
 until docker exec "$PG_CONTAINER" pg_isready -U coghealth -d coghealth >/dev/null 2>&1; do sleep 0.5; done
 sleep 2
