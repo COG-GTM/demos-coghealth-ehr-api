@@ -1,0 +1,3806 @@
+{
+  "base_url": "http://localhost:8080/api",
+  "note": "paths are relative to base_url (context path /api)",
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/actuator/health",
+      "status": 200,
+      "content_type": "application/json",
+      "body_shape": {
+        "status": "string"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/actuator/info",
+      "status": 200,
+      "content_type": "application/json",
+      "body_shape": {}
+    },
+    {
+      "method": "GET",
+      "path": "/actuator/metrics",
+      "status": 200,
+      "content_type": "application/json",
+      "body": {
+        "names": [
+          "application.ready.time",
+          "application.started.time",
+          "disk.free",
+          "disk.total",
+          "executor.active",
+          "executor.completed",
+          "executor.pool.core",
+          "executor.pool.max",
+          "executor.pool.size",
+          "executor.queue.remaining",
+          "executor.queued",
+          "hikaricp.connections",
+          "hikaricp.connections.acquire",
+          "hikaricp.connections.active",
+          "hikaricp.connections.creation",
+          "hikaricp.connections.idle",
+          "hikaricp.connections.max",
+          "hikaricp.connections.min",
+          "hikaricp.connections.pending",
+          "hikaricp.connections.timeout",
+          "hikaricp.connections.usage",
+          "http.server.requests",
+          "jdbc.connections.max",
+          "jdbc.connections.min",
+          "jvm.buffer.count",
+          "jvm.buffer.memory.used",
+          "jvm.buffer.total.capacity",
+          "jvm.classes.loaded",
+          "jvm.classes.unloaded",
+          "jvm.gc.live.data.size",
+          "jvm.gc.max.data.size",
+          "jvm.gc.memory.allocated",
+          "jvm.gc.memory.promoted",
+          "jvm.gc.overhead",
+          "jvm.gc.pause",
+          "jvm.memory.committed",
+          "jvm.memory.max",
+          "jvm.memory.usage.after.gc",
+          "jvm.memory.used",
+          "jvm.threads.daemon",
+          "jvm.threads.live",
+          "jvm.threads.peak",
+          "jvm.threads.states",
+          "lettuce.command.completion",
+          "lettuce.command.completion.percentile",
+          "lettuce.command.firstresponse",
+          "lettuce.command.firstresponse.percentile",
+          "logback.events",
+          "process.cpu.usage",
+          "process.files.max",
+          "process.files.open",
+          "process.start.time",
+          "process.uptime",
+          "spring.data.repository.invocations",
+          "system.cpu.count",
+          "system.cpu.usage",
+          "system.load.average.1m",
+          "tomcat.sessions.active.current",
+          "tomcat.sessions.active.max",
+          "tomcat.sessions.alive.max",
+          "tomcat.sessions.created",
+          "tomcat.sessions.expired",
+          "tomcat.sessions.rejected"
+        ]
+      },
+      "note": "metric names kept verbatim"
+    },
+    {
+      "method": "GET",
+      "path": "/actuator/prometheus",
+      "status": 404,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 404,
+        "error": "Not Found",
+        "path": "/api/actuator/prometheus"
+      },
+      "note": "prometheus endpoint is not exposed"
+    },
+    {
+      "method": "GET",
+      "path": "/v3/api-docs",
+      "status": 200,
+      "content_type": "application/json",
+      "body_shape": {
+        "openapi": "string",
+        "info": {
+          "title": "string",
+          "version": "string"
+        },
+        "servers": {
+          "array_length": 1,
+          "item": {
+            "url": "string",
+            "description": "string"
+          }
+        },
+        "tags": {
+          "array_length": 1,
+          "item": {
+            "name": "string",
+            "description": "string"
+          }
+        },
+        "paths": {
+          "/v1/providers/{id}": {
+            "get": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "parameters": {
+                "array_length": 1,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string",
+                    "format": "string"
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "$ref": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "put": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "parameters": {
+                "array_length": 1,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string",
+                    "format": "string"
+                  }
+                }
+              },
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "string"
+                    }
+                  }
+                },
+                "required": "boolean"
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "$ref": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "delete": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "parameters": {
+                "array_length": 1,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string",
+                    "format": "string"
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "string"
+                }
+              }
+            }
+          },
+          "/v1/patients/{id}": {
+            "get": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "summary": "string",
+              "operationId": "string",
+              "parameters": {
+                "array_length": 1,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string",
+                    "format": "string"
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "$ref": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "put": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "summary": "string",
+              "operationId": "string",
+              "parameters": {
+                "array_length": 1,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string",
+                    "format": "string"
+                  }
+                }
+              },
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "string"
+                    }
+                  }
+                },
+                "required": "boolean"
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "$ref": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/v1/encounters/{id}": {
+            "get": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "parameters": {
+                "array_length": 1,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string",
+                    "format": "string"
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "$ref": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "put": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "parameters": {
+                "array_length": 1,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string",
+                    "format": "string"
+                  }
+                }
+              },
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "string"
+                    }
+                  }
+                },
+                "required": "boolean"
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "$ref": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/v1/providers": {
+            "get": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "parameters": {
+                "array_length": 1,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "type": "string",
+                        "items": {
+                          "$ref": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "post": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "string"
+                    }
+                  }
+                },
+                "required": "boolean"
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "$ref": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/v1/patients": {
+            "post": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "summary": "string",
+              "operationId": "string",
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "string"
+                    }
+                  }
+                },
+                "required": "boolean"
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "$ref": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/v1/encounters": {
+            "post": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "string"
+                    }
+                  }
+                },
+                "required": "boolean"
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "$ref": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/v1/encounters/{id}/start": {
+            "post": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "parameters": {
+                "array_length": 1,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string",
+                    "format": "string"
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "string"
+                }
+              }
+            }
+          },
+          "/v1/encounters/{id}/no-show": {
+            "post": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "parameters": {
+                "array_length": 1,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string",
+                    "format": "string"
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "string"
+                }
+              }
+            }
+          },
+          "/v1/encounters/{id}/complete": {
+            "post": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "parameters": {
+                "array_length": 1,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string",
+                    "format": "string"
+                  }
+                }
+              },
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "string"
+                }
+              }
+            }
+          },
+          "/v1/encounters/{id}/check-in": {
+            "post": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "parameters": {
+                "array_length": 1,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string",
+                    "format": "string"
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "string"
+                }
+              }
+            }
+          },
+          "/v1/encounters/{id}/cancel": {
+            "post": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "parameters": {
+                "array_length": 1,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string",
+                    "format": "string"
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "string"
+                }
+              }
+            }
+          },
+          "/api/auth/register": {
+            "post": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "string"
+                    }
+                  }
+                },
+                "required": "boolean"
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/api/auth/login": {
+            "post": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "string"
+                    }
+                  }
+                },
+                "required": "boolean"
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/v1/providers/specialty/{specialty}": {
+            "get": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "parameters": {
+                "array_length": 1,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "type": "string",
+                        "items": {
+                          "$ref": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/v1/providers/specialties": {
+            "get": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "type": "string",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/v1/providers/search": {
+            "get": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "parameters": {
+                "array_length": 1,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "type": "string",
+                        "items": {
+                          "$ref": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/v1/providers/npi/{npi}": {
+            "get": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "parameters": {
+                "array_length": 1,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "$ref": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/v1/providers/departments": {
+            "get": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "type": "string",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/v1/providers/department/{department}": {
+            "get": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "parameters": {
+                "array_length": 1,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "type": "string",
+                        "items": {
+                          "$ref": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/v1/patients/search": {
+            "get": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "summary": "string",
+              "operationId": "string",
+              "parameters": {
+                "array_length": 2,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "$ref": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/v1/patients/mrn/{mrn}": {
+            "get": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "summary": "string",
+              "operationId": "string",
+              "parameters": {
+                "array_length": 1,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "$ref": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/v1/export/reports/patient-roster": {
+            "get": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/v1/export/reports/encounter-summary": {
+            "get": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "parameters": {
+                "array_length": 2,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string",
+                    "format": "string"
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/v1/export/reports/daily": {
+            "get": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "type": "string",
+                        "items": {
+                          "type": "string",
+                          "format": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/v1/export/patient/{patientId}/encounters": {
+            "get": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "parameters": {
+                "array_length": 1,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string",
+                    "format": "string"
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "type": "string",
+                        "items": {
+                          "type": "string",
+                          "format": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/v1/export/encounters": {
+            "get": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "parameters": {
+                "array_length": 2,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string",
+                    "format": "string"
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "type": "string",
+                        "items": {
+                          "type": "string",
+                          "format": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/v1/encounters/status/{status}": {
+            "get": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "parameters": {
+                "array_length": 1,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string",
+                    "enum": {
+                      "array_length": 6,
+                      "item": "string"
+                    }
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "type": "string",
+                        "items": {
+                          "$ref": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/v1/encounters/provider/{providerId}": {
+            "get": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "parameters": {
+                "array_length": 1,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string",
+                    "format": "string"
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "type": "string",
+                        "items": {
+                          "$ref": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/v1/encounters/provider/{providerId}/schedule": {
+            "get": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "parameters": {
+                "array_length": 2,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string",
+                    "format": "string"
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "type": "string",
+                        "items": {
+                          "$ref": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/v1/encounters/patient/{patientId}": {
+            "get": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "parameters": {
+                "array_length": 1,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string",
+                    "format": "string"
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "type": "string",
+                        "items": {
+                          "$ref": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/v1/encounters/patient/{patientId}/paged": {
+            "get": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "parameters": {
+                "array_length": 2,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string",
+                    "format": "string"
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "$ref": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/v1/encounters/number/{encounterNumber}": {
+            "get": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "parameters": {
+                "array_length": 1,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "$ref": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/v1/encounters/date-range": {
+            "get": {
+              "tags": {
+                "array_length": 1,
+                "item": "string"
+              },
+              "operationId": "string",
+              "parameters": {
+                "array_length": 2,
+                "item": {
+                  "name": "string",
+                  "in": "string",
+                  "required": "boolean",
+                  "schema": {
+                    "type": "string",
+                    "format": "string"
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "string",
+                  "content": {
+                    "*/*": {
+                      "schema": {
+                        "type": "string",
+                        "items": {
+                          "$ref": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "components": {
+          "schemas": {
+            "License": {
+              "type": "string",
+              "properties": {
+                "licenseType": {
+                  "type": "string"
+                },
+                "licenseNumber": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string"
+                },
+                "issueDate": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "expirationDate": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "status": {
+                  "type": "string"
+                }
+              }
+            },
+            "Provider": {
+              "type": "string",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "npi": {
+                  "type": "string"
+                },
+                "firstName": {
+                  "type": "string"
+                },
+                "middleName": {
+                  "type": "string"
+                },
+                "lastName": {
+                  "type": "string"
+                },
+                "suffix": {
+                  "type": "string"
+                },
+                "credentials": {
+                  "type": "string"
+                },
+                "providerType": {
+                  "type": "string",
+                  "enum": {
+                    "array_length": 17,
+                    "item": "string"
+                  }
+                },
+                "specialty": {
+                  "type": "string"
+                },
+                "subspecialty": {
+                  "type": "string"
+                },
+                "department": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                },
+                "phoneOffice": {
+                  "type": "string"
+                },
+                "phoneMobile": {
+                  "type": "string"
+                },
+                "pager": {
+                  "type": "string"
+                },
+                "fax": {
+                  "type": "string"
+                },
+                "licenses": {
+                  "uniqueItems": "boolean",
+                  "type": "string",
+                  "items": {
+                    "$ref": "string"
+                  }
+                },
+                "hireDate": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "terminationDate": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "active": {
+                  "type": "string"
+                },
+                "acceptingPatients": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "version": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "displayName": {
+                  "type": "string"
+                },
+                "fullName": {
+                  "type": "string"
+                }
+              }
+            },
+            "AddressDTO": {
+              "type": "string",
+              "properties": {
+                "street1": {
+                  "type": "string"
+                },
+                "street2": {
+                  "type": "string"
+                },
+                "city": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string"
+                },
+                "zipCode": {
+                  "type": "string"
+                },
+                "country": {
+                  "type": "string"
+                }
+              }
+            },
+            "EmergencyContactDTO": {
+              "type": "string",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "firstName": {
+                  "type": "string"
+                },
+                "lastName": {
+                  "type": "string"
+                },
+                "relationship": {
+                  "type": "string"
+                },
+                "phoneHome": {
+                  "type": "string"
+                },
+                "phoneMobile": {
+                  "type": "string"
+                },
+                "phoneWork": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                },
+                "address": {
+                  "$ref": "string"
+                },
+                "priority": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "active": {
+                  "type": "string"
+                }
+              }
+            },
+            "PatientDTO": {
+              "required": {
+                "array_length": 2,
+                "item": "string"
+              },
+              "type": "string",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "mrn": {
+                  "type": "string"
+                },
+                "firstName": {
+                  "type": "string"
+                },
+                "middleName": {
+                  "type": "string"
+                },
+                "lastName": {
+                  "type": "string"
+                },
+                "dateOfBirth": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "gender": {
+                  "type": "string",
+                  "enum": {
+                    "array_length": 4,
+                    "item": "string"
+                  }
+                },
+                "maritalStatus": {
+                  "type": "string",
+                  "enum": {
+                    "array_length": 7,
+                    "item": "string"
+                  }
+                },
+                "email": {
+                  "type": "string"
+                },
+                "phoneHome": {
+                  "type": "string"
+                },
+                "phoneMobile": {
+                  "type": "string"
+                },
+                "phoneWork": {
+                  "type": "string"
+                },
+                "address": {
+                  "$ref": "string"
+                },
+                "mailingAddress": {
+                  "$ref": "string"
+                },
+                "preferredLanguage": {
+                  "type": "string"
+                },
+                "ethnicity": {
+                  "type": "string"
+                },
+                "race": {
+                  "type": "string"
+                },
+                "religion": {
+                  "type": "string"
+                },
+                "identifiers": {
+                  "type": "string",
+                  "items": {
+                    "$ref": "string"
+                  }
+                },
+                "emergencyContacts": {
+                  "type": "string",
+                  "items": {
+                    "$ref": "string"
+                  }
+                },
+                "active": {
+                  "type": "string"
+                },
+                "deceased": {
+                  "type": "string"
+                },
+                "deceasedDate": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "fullName": {
+                  "type": "string"
+                },
+                "age": {
+                  "type": "string",
+                  "format": "string"
+                }
+              }
+            },
+            "PatientIdentifierDTO": {
+              "type": "string",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "identifierType": {
+                  "type": "string",
+                  "enum": {
+                    "array_length": 10,
+                    "item": "string"
+                  }
+                },
+                "identifierValue": {
+                  "type": "string"
+                },
+                "issuingAuthority": {
+                  "type": "string"
+                },
+                "effectiveDate": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "expirationDate": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "active": {
+                  "type": "string"
+                }
+              }
+            },
+            "Address": {
+              "type": "string",
+              "properties": {
+                "street1": {
+                  "type": "string"
+                },
+                "street2": {
+                  "type": "string"
+                },
+                "city": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string"
+                },
+                "zipCode": {
+                  "type": "string"
+                },
+                "country": {
+                  "type": "string"
+                },
+                "formattedAddress": {
+                  "type": "string"
+                }
+              }
+            },
+            "Diagnosis": {
+              "type": "string",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "patient": {
+                  "$ref": "string"
+                },
+                "icd10Code": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": {
+                    "array_length": 6,
+                    "item": "string"
+                  }
+                },
+                "severity": {
+                  "type": "string",
+                  "enum": {
+                    "array_length": 4,
+                    "item": "string"
+                  }
+                },
+                "onsetDate": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "abatementDate": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "diagnosedBy": {
+                  "$ref": "string"
+                },
+                "notes": {
+                  "type": "string"
+                },
+                "chronic": {
+                  "type": "string"
+                },
+                "principal": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "createdBy": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string",
+                  "format": "string"
+                }
+              }
+            },
+            "EmergencyContact": {
+              "type": "string",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "patient": {
+                  "$ref": "string"
+                },
+                "firstName": {
+                  "type": "string"
+                },
+                "lastName": {
+                  "type": "string"
+                },
+                "relationship": {
+                  "type": "string"
+                },
+                "phoneHome": {
+                  "type": "string"
+                },
+                "phoneMobile": {
+                  "type": "string"
+                },
+                "phoneWork": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                },
+                "address": {
+                  "$ref": "string"
+                },
+                "priority": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "active": {
+                  "type": "string"
+                },
+                "fullName": {
+                  "type": "string"
+                }
+              }
+            },
+            "Encounter": {
+              "type": "string",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "encounterNumber": {
+                  "type": "string"
+                },
+                "patient": {
+                  "$ref": "string"
+                },
+                "attendingProvider": {
+                  "$ref": "string"
+                },
+                "encounterType": {
+                  "type": "string",
+                  "enum": {
+                    "array_length": 11,
+                    "item": "string"
+                  }
+                },
+                "status": {
+                  "type": "string",
+                  "enum": {
+                    "array_length": 6,
+                    "item": "string"
+                  }
+                },
+                "encounterDateTime": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "admitDateTime": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "dischargeDateTime": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "department": {
+                  "type": "string"
+                },
+                "room": {
+                  "type": "string"
+                },
+                "bed": {
+                  "type": "string"
+                },
+                "chiefComplaint": {
+                  "type": "string"
+                },
+                "priority": {
+                  "type": "string",
+                  "enum": {
+                    "array_length": 4,
+                    "item": "string"
+                  }
+                },
+                "visitType": {
+                  "type": "string"
+                },
+                "diagnoses": {
+                  "type": "string",
+                  "items": {
+                    "$ref": "string"
+                  }
+                },
+                "notes": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "createdBy": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string",
+                  "format": "string"
+                }
+              }
+            },
+            "EncounterDiagnosis": {
+              "type": "string",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "encounter": {
+                  "$ref": "string"
+                },
+                "diagnosis": {
+                  "$ref": "string"
+                },
+                "role": {
+                  "type": "string",
+                  "enum": {
+                    "array_length": 7,
+                    "item": "string"
+                  }
+                },
+                "rank": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "primaryDiagnosis": {
+                  "type": "string"
+                }
+              }
+            },
+            "Patient": {
+              "required": {
+                "array_length": 2,
+                "item": "string"
+              },
+              "type": "string",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "mrn": {
+                  "type": "string"
+                },
+                "ssn": {
+                  "type": "string"
+                },
+                "firstName": {
+                  "type": "string"
+                },
+                "middleName": {
+                  "type": "string"
+                },
+                "lastName": {
+                  "type": "string"
+                },
+                "dateOfBirth": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "gender": {
+                  "type": "string",
+                  "enum": {
+                    "array_length": 4,
+                    "item": "string"
+                  }
+                },
+                "maritalStatus": {
+                  "type": "string",
+                  "enum": {
+                    "array_length": 7,
+                    "item": "string"
+                  }
+                },
+                "email": {
+                  "type": "string"
+                },
+                "phoneHome": {
+                  "type": "string"
+                },
+                "phoneMobile": {
+                  "type": "string"
+                },
+                "phoneWork": {
+                  "type": "string"
+                },
+                "address": {
+                  "$ref": "string"
+                },
+                "mailingAddress": {
+                  "$ref": "string"
+                },
+                "preferredLanguage": {
+                  "type": "string"
+                },
+                "ethnicity": {
+                  "type": "string"
+                },
+                "race": {
+                  "type": "string"
+                },
+                "religion": {
+                  "type": "string"
+                },
+                "identifiers": {
+                  "type": "string",
+                  "items": {
+                    "$ref": "string"
+                  }
+                },
+                "emergencyContacts": {
+                  "type": "string",
+                  "items": {
+                    "$ref": "string"
+                  }
+                },
+                "active": {
+                  "type": "string"
+                },
+                "deceased": {
+                  "type": "string"
+                },
+                "deceasedDate": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "createdBy": {
+                  "type": "string"
+                },
+                "updatedBy": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "fullName": {
+                  "type": "string"
+                }
+              }
+            },
+            "PatientIdentifier": {
+              "type": "string",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "patient": {
+                  "$ref": "string"
+                },
+                "identifierType": {
+                  "type": "string",
+                  "enum": {
+                    "array_length": 10,
+                    "item": "string"
+                  }
+                },
+                "identifierValue": {
+                  "type": "string"
+                },
+                "issuingAuthority": {
+                  "type": "string"
+                },
+                "effectiveDate": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "expirationDate": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "active": {
+                  "type": "string"
+                }
+              }
+            },
+            "SignUpRequest": {
+              "type": "string",
+              "properties": {
+                "username": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                },
+                "password": {
+                  "type": "string"
+                },
+                "firstName": {
+                  "type": "string"
+                },
+                "lastName": {
+                  "type": "string"
+                }
+              }
+            },
+            "LoginRequest": {
+              "type": "string",
+              "properties": {
+                "username": {
+                  "type": "string"
+                },
+                "password": {
+                  "type": "string"
+                }
+              }
+            },
+            "Pageable": {
+              "type": "string",
+              "properties": {
+                "page": {
+                  "minimum": "number",
+                  "type": "string",
+                  "format": "string"
+                },
+                "size": {
+                  "minimum": "number",
+                  "type": "string",
+                  "format": "string"
+                },
+                "sort": {
+                  "type": "string",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "PagePatientDTO": {
+              "type": "string",
+              "properties": {
+                "totalPages": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "totalElements": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "number": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "sort": {
+                  "$ref": "string"
+                },
+                "size": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "content": {
+                  "type": "string",
+                  "items": {
+                    "$ref": "string"
+                  }
+                },
+                "pageable": {
+                  "$ref": "string"
+                },
+                "numberOfElements": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "first": {
+                  "type": "string"
+                },
+                "last": {
+                  "type": "string"
+                },
+                "empty": {
+                  "type": "string"
+                }
+              }
+            },
+            "PageableObject": {
+              "type": "string",
+              "properties": {
+                "sort": {
+                  "$ref": "string"
+                },
+                "offset": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "pageNumber": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "pageSize": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "paged": {
+                  "type": "string"
+                },
+                "unpaged": {
+                  "type": "string"
+                }
+              }
+            },
+            "SortObject": {
+              "type": "string",
+              "properties": {
+                "empty": {
+                  "type": "string"
+                },
+                "sorted": {
+                  "type": "string"
+                },
+                "unsorted": {
+                  "type": "string"
+                }
+              }
+            },
+            "PageEncounter": {
+              "type": "string",
+              "properties": {
+                "totalPages": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "totalElements": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "number": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "sort": {
+                  "$ref": "string"
+                },
+                "size": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "content": {
+                  "type": "string",
+                  "items": {
+                    "$ref": "string"
+                  }
+                },
+                "pageable": {
+                  "$ref": "string"
+                },
+                "numberOfElements": {
+                  "type": "string",
+                  "format": "string"
+                },
+                "first": {
+                  "type": "string"
+                },
+                "last": {
+                  "type": "string"
+                },
+                "empty": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "note": "full document in openapi.json"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/patients/1",
+      "status": 200,
+      "content_type": "application/json",
+      "body_shape": {
+        "id": "number",
+        "mrn": "string",
+        "firstName": "string",
+        "middleName": "string",
+        "lastName": "string",
+        "dateOfBirth": "string",
+        "gender": "string",
+        "maritalStatus": "null",
+        "email": "string",
+        "phoneHome": "null",
+        "phoneMobile": "null",
+        "phoneWork": "null",
+        "address": {
+          "street1": "string",
+          "street2": "string",
+          "city": "string",
+          "state": "string",
+          "zipCode": "string",
+          "country": "null"
+        },
+        "mailingAddress": "null",
+        "preferredLanguage": "null",
+        "ethnicity": "null",
+        "race": "null",
+        "religion": "null",
+        "identifiers": {
+          "array_length": 0,
+          "item": null
+        },
+        "emergencyContacts": {
+          "array_length": 0,
+          "item": null
+        },
+        "active": "boolean",
+        "deceased": "boolean",
+        "deceasedDate": "null",
+        "createdAt": "string",
+        "updatedAt": "string",
+        "fullName": "string",
+        "age": "number"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/patients/999999",
+      "status": 500,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 500,
+        "error": "Internal Server Error",
+        "path": "/api/v1/patients/999999"
+      },
+      "note": "EntityNotFoundException has no handler: 500, not 404"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/patients/mrn/MRN-2019-00001",
+      "status": 200,
+      "content_type": "application/json",
+      "body_shape": {
+        "id": "number",
+        "mrn": "string",
+        "firstName": "string",
+        "middleName": "string",
+        "lastName": "string",
+        "dateOfBirth": "string",
+        "gender": "string",
+        "maritalStatus": "null",
+        "email": "string",
+        "phoneHome": "null",
+        "phoneMobile": "null",
+        "phoneWork": "null",
+        "address": {
+          "street1": "string",
+          "street2": "string",
+          "city": "string",
+          "state": "string",
+          "zipCode": "string",
+          "country": "null"
+        },
+        "mailingAddress": "null",
+        "preferredLanguage": "null",
+        "ethnicity": "null",
+        "race": "null",
+        "religion": "null",
+        "identifiers": {
+          "array_length": 0,
+          "item": null
+        },
+        "emergencyContacts": {
+          "array_length": 0,
+          "item": null
+        },
+        "active": "boolean",
+        "deceased": "boolean",
+        "deceasedDate": "null",
+        "createdAt": "string",
+        "updatedAt": "string",
+        "fullName": "string",
+        "age": "number"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/patients/mrn/UNKNOWN-MRN",
+      "status": 500,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 500,
+        "error": "Internal Server Error",
+        "path": "/api/v1/patients/mrn/UNKNOWN-MRN"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/patients/search?q=a&page=0&size=5",
+      "status": 200,
+      "content_type": "application/json",
+      "body_shape": {
+        "content": {
+          "array_length": 5,
+          "item": {
+            "id": "number",
+            "mrn": "string",
+            "firstName": "string",
+            "middleName": "string",
+            "lastName": "string",
+            "dateOfBirth": "string",
+            "gender": "string",
+            "maritalStatus": "null",
+            "email": "string",
+            "phoneHome": "null",
+            "phoneMobile": "null",
+            "phoneWork": "null",
+            "address": {
+              "street1": "string",
+              "street2": "null",
+              "city": "string",
+              "state": "string",
+              "zipCode": "string",
+              "country": "null"
+            },
+            "mailingAddress": "null",
+            "preferredLanguage": "null",
+            "ethnicity": "null",
+            "race": "null",
+            "religion": "null",
+            "identifiers": {
+              "array_length": 0,
+              "item": null
+            },
+            "emergencyContacts": {
+              "array_length": 0,
+              "item": null
+            },
+            "active": "boolean",
+            "deceased": "boolean",
+            "deceasedDate": "null",
+            "createdAt": "string",
+            "updatedAt": "string",
+            "fullName": "string",
+            "age": "number"
+          }
+        },
+        "pageable": {
+          "sort": {
+            "empty": "boolean",
+            "sorted": "boolean",
+            "unsorted": "boolean"
+          },
+          "offset": "number",
+          "pageNumber": "number",
+          "pageSize": "number",
+          "paged": "boolean",
+          "unpaged": "boolean"
+        },
+        "totalPages": "number",
+        "totalElements": "number",
+        "last": "boolean",
+        "number": "number",
+        "sort": {
+          "empty": "boolean",
+          "sorted": "boolean",
+          "unsorted": "boolean"
+        },
+        "size": "number",
+        "numberOfElements": "number",
+        "first": "boolean",
+        "empty": "boolean"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/patients/search",
+      "status": 400,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 400,
+        "error": "Bad Request",
+        "path": "/api/v1/patients/search"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/providers",
+      "status": 200,
+      "content_type": "application/json",
+      "body_shape": {
+        "array_length": 8,
+        "item": {
+          "id": "number",
+          "npi": "string",
+          "firstName": "string",
+          "middleName": "null",
+          "lastName": "string",
+          "suffix": "null",
+          "credentials": "string",
+          "providerType": "string",
+          "specialty": "string",
+          "subspecialty": "null",
+          "department": "string",
+          "email": "string",
+          "phoneOffice": "string",
+          "phoneMobile": "null",
+          "pager": "null",
+          "fax": "null",
+          "licenses": {
+            "array_length": 0,
+            "item": null
+          },
+          "hireDate": "null",
+          "terminationDate": "null",
+          "active": "boolean",
+          "acceptingPatients": "boolean",
+          "createdAt": "string",
+          "updatedAt": "string",
+          "version": "number",
+          "displayName": "string",
+          "fullName": "string"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/providers?active=true",
+      "status": 200,
+      "content_type": "application/json",
+      "body_shape": {
+        "array_length": 7,
+        "item": {
+          "id": "number",
+          "npi": "string",
+          "firstName": "string",
+          "middleName": "null",
+          "lastName": "string",
+          "suffix": "null",
+          "credentials": "string",
+          "providerType": "string",
+          "specialty": "string",
+          "subspecialty": "null",
+          "department": "string",
+          "email": "string",
+          "phoneOffice": "string",
+          "phoneMobile": "null",
+          "pager": "null",
+          "fax": "null",
+          "licenses": {
+            "array_length": 0,
+            "item": null
+          },
+          "hireDate": "null",
+          "terminationDate": "null",
+          "active": "boolean",
+          "acceptingPatients": "boolean",
+          "createdAt": "string",
+          "updatedAt": "string",
+          "version": "number",
+          "displayName": "string",
+          "fullName": "string"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/providers/1",
+      "status": 200,
+      "content_type": "application/json",
+      "body_shape": {
+        "id": "number",
+        "npi": "string",
+        "firstName": "string",
+        "middleName": "null",
+        "lastName": "string",
+        "suffix": "null",
+        "credentials": "string",
+        "providerType": "string",
+        "specialty": "string",
+        "subspecialty": "null",
+        "department": "string",
+        "email": "string",
+        "phoneOffice": "string",
+        "phoneMobile": "null",
+        "pager": "null",
+        "fax": "null",
+        "licenses": {
+          "array_length": 0,
+          "item": null
+        },
+        "hireDate": "null",
+        "terminationDate": "null",
+        "active": "boolean",
+        "acceptingPatients": "boolean",
+        "createdAt": "string",
+        "updatedAt": "string",
+        "version": "number",
+        "displayName": "string",
+        "fullName": "string"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/providers/999999",
+      "status": 404,
+      "content_type": null,
+      "body": null
+    },
+    {
+      "method": "GET",
+      "path": "/v1/providers/npi/1234567890",
+      "status": 200,
+      "content_type": "application/json",
+      "body_shape": {
+        "id": "number",
+        "npi": "string",
+        "firstName": "string",
+        "middleName": "null",
+        "lastName": "string",
+        "suffix": "null",
+        "credentials": "string",
+        "providerType": "string",
+        "specialty": "string",
+        "subspecialty": "null",
+        "department": "string",
+        "email": "string",
+        "phoneOffice": "string",
+        "phoneMobile": "null",
+        "pager": "null",
+        "fax": "null",
+        "licenses": {
+          "array_length": 0,
+          "item": null
+        },
+        "hireDate": "null",
+        "terminationDate": "null",
+        "active": "boolean",
+        "acceptingPatients": "boolean",
+        "createdAt": "string",
+        "updatedAt": "string",
+        "version": "number",
+        "displayName": "string",
+        "fullName": "string"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/providers/npi/0000000000",
+      "status": 404,
+      "content_type": null,
+      "body": null
+    },
+    {
+      "method": "GET",
+      "path": "/v1/providers/department/Primary%20Care",
+      "status": 200,
+      "content_type": "application/json",
+      "body_shape": {
+        "array_length": 3,
+        "item": {
+          "id": "number",
+          "npi": "string",
+          "firstName": "string",
+          "middleName": "null",
+          "lastName": "string",
+          "suffix": "null",
+          "credentials": "string",
+          "providerType": "string",
+          "specialty": "string",
+          "subspecialty": "null",
+          "department": "string",
+          "email": "string",
+          "phoneOffice": "string",
+          "phoneMobile": "null",
+          "pager": "null",
+          "fax": "null",
+          "licenses": {
+            "array_length": 0,
+            "item": null
+          },
+          "hireDate": "null",
+          "terminationDate": "null",
+          "active": "boolean",
+          "acceptingPatients": "boolean",
+          "createdAt": "string",
+          "updatedAt": "string",
+          "version": "number",
+          "displayName": "string",
+          "fullName": "string"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/providers/specialty/Internal%20Medicine",
+      "status": 200,
+      "content_type": "application/json",
+      "body_shape": {
+        "array_length": 1,
+        "item": {
+          "id": "number",
+          "npi": "string",
+          "firstName": "string",
+          "middleName": "null",
+          "lastName": "string",
+          "suffix": "null",
+          "credentials": "string",
+          "providerType": "string",
+          "specialty": "string",
+          "subspecialty": "null",
+          "department": "string",
+          "email": "string",
+          "phoneOffice": "string",
+          "phoneMobile": "null",
+          "pager": "null",
+          "fax": "null",
+          "licenses": {
+            "array_length": 0,
+            "item": null
+          },
+          "hireDate": "null",
+          "terminationDate": "null",
+          "active": "boolean",
+          "acceptingPatients": "boolean",
+          "createdAt": "string",
+          "updatedAt": "string",
+          "version": "number",
+          "displayName": "string",
+          "fullName": "string"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/providers/departments",
+      "status": 200,
+      "content_type": "application/json",
+      "body_shape": {
+        "array_length": 5,
+        "item": "string"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/providers/specialties",
+      "status": 200,
+      "content_type": "application/json",
+      "body_shape": {
+        "array_length": 6,
+        "item": "string"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/providers/search?lastName=a",
+      "status": 200,
+      "content_type": "application/json",
+      "body_shape": {
+        "array_length": 3,
+        "item": {
+          "id": "number",
+          "npi": "string",
+          "firstName": "string",
+          "middleName": "null",
+          "lastName": "string",
+          "suffix": "null",
+          "credentials": "string",
+          "providerType": "string",
+          "specialty": "string",
+          "subspecialty": "null",
+          "department": "string",
+          "email": "string",
+          "phoneOffice": "string",
+          "phoneMobile": "null",
+          "pager": "null",
+          "fax": "null",
+          "licenses": {
+            "array_length": 0,
+            "item": null
+          },
+          "hireDate": "null",
+          "terminationDate": "null",
+          "active": "boolean",
+          "acceptingPatients": "boolean",
+          "createdAt": "string",
+          "updatedAt": "string",
+          "version": "number",
+          "displayName": "string",
+          "fullName": "string"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/providers/search",
+      "status": 400,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 400,
+        "error": "Bad Request",
+        "path": "/api/v1/providers/search"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/encounters/1",
+      "status": 200,
+      "content_type": "application/json",
+      "body_shape": {
+        "id": "number",
+        "encounterNumber": "string",
+        "patient": {
+          "id": "number",
+          "mrn": "string",
+          "ssn": "string",
+          "firstName": "string",
+          "middleName": "string",
+          "lastName": "string",
+          "dateOfBirth": "string",
+          "gender": "string",
+          "maritalStatus": "null",
+          "email": "string",
+          "phoneHome": "null",
+          "phoneMobile": "null",
+          "phoneWork": "null",
+          "address": {
+            "street1": "string",
+            "street2": "string",
+            "city": "string",
+            "state": "string",
+            "zipCode": "string",
+            "country": "null",
+            "formattedAddress": "string"
+          },
+          "mailingAddress": "null",
+          "preferredLanguage": "null",
+          "ethnicity": "null",
+          "race": "null",
+          "religion": "null",
+          "identifiers": {
+            "array_length": 0,
+            "item": null
+          },
+          "emergencyContacts": {
+            "array_length": 0,
+            "item": null
+          },
+          "active": "boolean",
+          "deceased": "boolean",
+          "deceasedDate": "null",
+          "createdAt": "string",
+          "updatedAt": "string",
+          "createdBy": "null",
+          "updatedBy": "null",
+          "version": "number",
+          "fullName": "string"
+        },
+        "attendingProvider": {
+          "id": "number",
+          "npi": "string",
+          "firstName": "string",
+          "middleName": "null",
+          "lastName": "string",
+          "suffix": "null",
+          "credentials": "string",
+          "providerType": "string",
+          "specialty": "string",
+          "subspecialty": "null",
+          "department": "string",
+          "email": "string",
+          "phoneOffice": "string",
+          "phoneMobile": "null",
+          "pager": "null",
+          "fax": "null",
+          "licenses": {
+            "array_length": 0,
+            "item": null
+          },
+          "hireDate": "null",
+          "terminationDate": "null",
+          "active": "boolean",
+          "acceptingPatients": "boolean",
+          "createdAt": "string",
+          "updatedAt": "string",
+          "version": "number",
+          "displayName": "string",
+          "fullName": "string"
+        },
+        "encounterType": "string",
+        "status": "string",
+        "encounterDateTime": "string",
+        "admitDateTime": "null",
+        "dischargeDateTime": "null",
+        "department": "null",
+        "room": "null",
+        "bed": "null",
+        "chiefComplaint": "string",
+        "priority": "null",
+        "visitType": "null",
+        "diagnoses": {
+          "array_length": 0,
+          "item": null
+        },
+        "notes": "string",
+        "createdAt": "string",
+        "updatedAt": "string",
+        "createdBy": "null",
+        "version": "number"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/encounters/15",
+      "status": 500,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 500,
+        "error": "Internal Server Error",
+        "path": "/api/v1/encounters/15"
+      },
+      "note": "seed row 15 has encounter_type 'IN_PROGRESS', not an EncounterType"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/encounters/999999",
+      "status": 404,
+      "content_type": null,
+      "body": null
+    },
+    {
+      "method": "GET",
+      "path": "/v1/encounters/number/ENC-2024-000001",
+      "status": 500,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 500,
+        "error": "Internal Server Error",
+        "path": "/api/v1/encounters/number/ENC-2024-000001"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/encounters/number/ENC-0000-000000",
+      "status": 404,
+      "content_type": null,
+      "body": null
+    },
+    {
+      "method": "GET",
+      "path": "/v1/encounters/patient/1",
+      "status": 500,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 500,
+        "error": "Internal Server Error",
+        "path": "/api/v1/encounters/patient/1"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/encounters/patient/1/paged?page=0&size=5",
+      "status": 500,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 500,
+        "error": "Internal Server Error",
+        "path": "/api/v1/encounters/patient/1/paged"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/encounters/provider/1",
+      "status": 500,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 500,
+        "error": "Internal Server Error",
+        "path": "/api/v1/encounters/provider/1"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/encounters/provider/2/schedule?date=2024-03-20",
+      "status": 500,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 500,
+        "error": "Internal Server Error",
+        "path": "/api/v1/encounters/provider/2/schedule"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/encounters/provider/2/schedule",
+      "status": 400,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 400,
+        "error": "Bad Request",
+        "path": "/api/v1/encounters/provider/2/schedule"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/encounters/date-range?startDate=2024-01-01&endDate=2024-12-31",
+      "status": 500,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 500,
+        "error": "Internal Server Error",
+        "path": "/api/v1/encounters/date-range"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/encounters/date-range?startDate=2024-01-01&endDate=2024-01-31",
+      "status": 500,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 500,
+        "error": "Internal Server Error",
+        "path": "/api/v1/encounters/date-range"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/encounters/status/SCHEDULED",
+      "status": 500,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 500,
+        "error": "Internal Server Error",
+        "path": "/api/v1/encounters/status/SCHEDULED"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/encounters/status/COMPLETED",
+      "status": 500,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 500,
+        "error": "Internal Server Error",
+        "path": "/api/v1/encounters/status/COMPLETED"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/encounters/status/BOGUS",
+      "status": 400,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 400,
+        "error": "Bad Request",
+        "path": "/api/v1/encounters/status/BOGUS"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/export/encounters?startDate=2024-01-01&endDate=2024-12-31",
+      "status": 200,
+      "content_type": "text/csv",
+      "content_disposition": "attachment; filename=encounters_export.csv",
+      "body_first_line": "EncounterId,EncounterNumber,PatientMRN,PatientName,DOB,EncounterDate,Type,Status",
+      "body_lines": 19
+    },
+    {
+      "method": "GET",
+      "path": "/v1/export/encounters",
+      "status": 400,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 400,
+        "error": "Bad Request",
+        "path": "/api/v1/export/encounters"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/export/patient/1/encounters",
+      "status": 200,
+      "content_type": "text/plain",
+      "content_disposition": "attachment; filename=patient_encounters.txt",
+      "body_first_line": "Patient Encounter History Report",
+      "body_line_labels": [
+        "Generated",
+        "Patient",
+        "MRN",
+        "SSN",
+        "DOB",
+        "Encounters",
+        "Encounter #",
+        "Date",
+        "Type",
+        "Status"
+      ],
+      "body_lines": 20
+    },
+    {
+      "method": "GET",
+      "path": "/v1/export/reports/patient-roster",
+      "status": 200,
+      "content_type": "application/json",
+      "body_text": "Report generated at: /tmp/patient_roster_20260930_191843.csv",
+      "body_is_json": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/export/reports/encounter-summary?startDate=2024-01-01T00:00:00&endDate=2024-12-31T23:59:59",
+      "status": 200,
+      "content_type": "application/json",
+      "body_text": "Report generated at: /tmp/encounter_summary_20260930_191843.txt",
+      "body_is_json": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/export/reports/daily",
+      "status": 200,
+      "content_type": "text/csv",
+      "content_disposition": "attachment; filename=daily_report.csv",
+      "body_first_line": "ID,MRN,SSN,FirstName,LastName,DOB,PhoneHome,PhoneMobile,Email,Address,City,State,Zip,Insurance,MemberID",
+      "body_lines": 15
+    },
+    {
+      "method": "POST",
+      "path": "/auth/register",
+      "request_body": {
+        "username": "baseline_probe",
+        "email": "baseline.probe@example.invalid",
+        "password": "Baseline-Probe-1",
+        "firstName": "Baseline",
+        "lastName": "Probe"
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 404,
+        "error": "Not Found",
+        "path": "/api/auth/register"
+      },
+      "note": "not mapped: the controller is at /api/auth under the context path"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/register",
+      "request_body": {
+        "username": "baseline_probe",
+        "email": "baseline.probe@example.invalid",
+        "password": "Baseline-Probe-1",
+        "firstName": "Baseline",
+        "lastName": "Probe"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "body_text": "User registered successfully",
+      "body_is_json": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/register",
+      "request_body": {
+        "username": "baseline_probe",
+        "email": "baseline.probe@example.invalid",
+        "password": "Baseline-Probe-1",
+        "firstName": "Baseline",
+        "lastName": "Probe"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "body_text": "Username is already taken!",
+      "body_is_json": false,
+      "note": "duplicate username"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "request_body": {
+        "username": "baseline_probe",
+        "password": "Baseline-Probe-1"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "body_shape": {
+        "type": "string",
+        "token": "string"
+      },
+      "note": "needs an HS512-sized medchart.security.jwt.secret; the application.yml default fails with WeakKeyException"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "request_body": {
+        "username": "baseline_probe",
+        "password": "wrong-password"
+      },
+      "status": 403,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 403,
+        "error": "Forbidden",
+        "path": "/api/api/auth/login"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/auth/login",
+      "request_body": {
+        "username": "baseline_probe",
+        "password": "Baseline-Probe-1"
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 404,
+        "error": "Not Found",
+        "path": "/api/auth/login"
+      },
+      "note": "not mapped: the controller is at /api/auth under the context path"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/patients",
+      "request_body": {
+        "firstName": "Synthetic",
+        "lastName": "Baseline",
+        "dateOfBirth": "1980-01-01",
+        "gender": "UNKNOWN",
+        "email": "synthetic.baseline@example.invalid",
+        "active": true,
+        "deceased": false
+      },
+      "status": 500,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 500,
+        "error": "Internal Server Error",
+        "path": "/api/v1/patients"
+      },
+      "note": "the entity inserts NULL for active and deceased instead of the column defaults: NOT NULL violation"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/patients",
+      "request_body": {
+        "firstName": "Synthetic",
+        "lastName": "Baseline",
+        "dateOfBirth": "1980-01-01",
+        "gender": "UNKNOWN",
+        "email": "synthetic.baseline@example.invalid",
+        "active": true,
+        "deceased": false
+      },
+      "status": 201,
+      "content_type": "application/json",
+      "body_shape": {
+        "id": "number",
+        "mrn": "string",
+        "firstName": "string",
+        "middleName": "null",
+        "lastName": "string",
+        "dateOfBirth": "string",
+        "gender": "string",
+        "maritalStatus": "null",
+        "email": "string",
+        "phoneHome": "null",
+        "phoneMobile": "null",
+        "phoneWork": "null",
+        "address": "null",
+        "mailingAddress": "null",
+        "preferredLanguage": "null",
+        "ethnicity": "null",
+        "race": "null",
+        "religion": "null",
+        "identifiers": "null",
+        "emergencyContacts": "null",
+        "active": "boolean",
+        "deceased": "boolean",
+        "deceasedDate": "null",
+        "createdAt": "string",
+        "updatedAt": "string",
+        "fullName": "string",
+        "age": "number"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/patients",
+      "request_body": {
+        "firstName": "",
+        "lastName": ""
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 400,
+        "error": "Bad Request",
+        "path": "/api/v1/patients"
+      },
+      "note": "bean validation failure"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/patients/17",
+      "request_body": {
+        "firstName": "Synthetic",
+        "lastName": "Baseline",
+        "dateOfBirth": "1980-01-01",
+        "gender": "UNKNOWN",
+        "email": "synthetic.baseline@example.invalid",
+        "active": true,
+        "deceased": false,
+        "middleName": "Updated"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "body_shape": {
+        "id": "number",
+        "mrn": "string",
+        "firstName": "string",
+        "middleName": "string",
+        "lastName": "string",
+        "dateOfBirth": "string",
+        "gender": "string",
+        "maritalStatus": "null",
+        "email": "string",
+        "phoneHome": "null",
+        "phoneMobile": "null",
+        "phoneWork": "null",
+        "address": "null",
+        "mailingAddress": "null",
+        "preferredLanguage": "null",
+        "ethnicity": "null",
+        "race": "null",
+        "religion": "null",
+        "identifiers": {
+          "array_length": 0,
+          "item": null
+        },
+        "emergencyContacts": {
+          "array_length": 0,
+          "item": null
+        },
+        "active": "boolean",
+        "deceased": "boolean",
+        "deceasedDate": "null",
+        "createdAt": "string",
+        "updatedAt": "string",
+        "fullName": "string",
+        "age": "number"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/patients/999999",
+      "request_body": {
+        "firstName": "Synthetic",
+        "lastName": "Baseline",
+        "dateOfBirth": "1980-01-01",
+        "gender": "UNKNOWN",
+        "email": "synthetic.baseline@example.invalid",
+        "active": true,
+        "deceased": false
+      },
+      "status": 500,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 500,
+        "error": "Internal Server Error",
+        "path": "/api/v1/patients/999999"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/providers",
+      "request_body": {
+        "npi": "9999999901",
+        "firstName": "Synthetic",
+        "lastName": "Provider",
+        "providerType": "PHYSICIAN",
+        "specialty": "Baseline",
+        "department": "Baseline"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "body_shape": {
+        "id": "number",
+        "npi": "string",
+        "firstName": "string",
+        "middleName": "null",
+        "lastName": "string",
+        "suffix": "null",
+        "credentials": "null",
+        "providerType": "string",
+        "specialty": "string",
+        "subspecialty": "null",
+        "department": "string",
+        "email": "null",
+        "phoneOffice": "null",
+        "phoneMobile": "null",
+        "pager": "null",
+        "fax": "null",
+        "licenses": {
+          "array_length": 0,
+          "item": null
+        },
+        "hireDate": "null",
+        "terminationDate": "null",
+        "active": "boolean",
+        "acceptingPatients": "boolean",
+        "createdAt": "string",
+        "updatedAt": "string",
+        "version": "number",
+        "displayName": "string",
+        "fullName": "string"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/providers/9",
+      "request_body": {
+        "npi": "9999999901",
+        "firstName": "Synthetic",
+        "lastName": "Provider",
+        "providerType": "PHYSICIAN",
+        "specialty": "Baseline",
+        "department": "Baseline",
+        "credentials": "MD"
+      },
+      "status": 500,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 500,
+        "error": "Internal Server Error",
+        "path": "/api/v1/providers/9"
+      },
+      "note": "without version the entity is treated as new and re-inserted: unique violation on providers.npi"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/providers/9",
+      "request_body": {
+        "npi": "9999999901",
+        "firstName": "Synthetic",
+        "lastName": "Provider",
+        "providerType": "PHYSICIAN",
+        "specialty": "Baseline",
+        "department": "Baseline",
+        "credentials": "MD",
+        "version": 0
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "body_shape": {
+        "id": "number",
+        "npi": "string",
+        "firstName": "string",
+        "middleName": "null",
+        "lastName": "string",
+        "suffix": "null",
+        "credentials": "string",
+        "providerType": "string",
+        "specialty": "string",
+        "subspecialty": "null",
+        "department": "string",
+        "email": "null",
+        "phoneOffice": "null",
+        "phoneMobile": "null",
+        "pager": "null",
+        "fax": "null",
+        "licenses": {
+          "array_length": 0,
+          "item": null
+        },
+        "hireDate": "null",
+        "terminationDate": "null",
+        "active": "boolean",
+        "acceptingPatients": "boolean",
+        "createdAt": "null",
+        "updatedAt": "string",
+        "version": "number",
+        "displayName": "string",
+        "fullName": "string"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/providers/9",
+      "status": 204,
+      "content_type": null,
+      "body": null
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/providers/999999",
+      "request_body": {
+        "npi": "9999999901",
+        "firstName": "Synthetic",
+        "lastName": "Provider",
+        "providerType": "PHYSICIAN",
+        "specialty": "Baseline",
+        "department": "Baseline"
+      },
+      "status": 404,
+      "content_type": null,
+      "body": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/encounters",
+      "request_body": {
+        "patient": {
+          "id": 1,
+          "version": 0
+        },
+        "attendingProvider": {
+          "id": 1,
+          "version": 0
+        },
+        "encounterType": "OFFICE_VISIT",
+        "encounterDateTime": "2030-01-02T09:00:00",
+        "chiefComplaint": "Synthetic baseline visit"
+      },
+      "status": 500,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 500,
+        "error": "Internal Server Error",
+        "path": "/api/v1/encounters"
+      },
+      "note": "patient/provider references without version are treated as transient entities (HHH000437)"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/encounters",
+      "request_body": {
+        "patient": {
+          "id": 1,
+          "version": 0
+        },
+        "attendingProvider": {
+          "id": 1,
+          "version": 0
+        },
+        "encounterType": "OFFICE_VISIT",
+        "encounterDateTime": "2030-01-02T09:00:00",
+        "chiefComplaint": "Synthetic baseline visit"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "body_shape": {
+        "id": "number",
+        "encounterNumber": "string",
+        "patient": {
+          "id": "number",
+          "mrn": "null",
+          "ssn": "null",
+          "firstName": "null",
+          "middleName": "null",
+          "lastName": "null",
+          "dateOfBirth": "null",
+          "gender": "null",
+          "maritalStatus": "null",
+          "email": "null",
+          "phoneHome": "null",
+          "phoneMobile": "null",
+          "phoneWork": "null",
+          "address": "null",
+          "mailingAddress": "null",
+          "preferredLanguage": "null",
+          "ethnicity": "null",
+          "race": "null",
+          "religion": "null",
+          "identifiers": {
+            "array_length": 0,
+            "item": null
+          },
+          "emergencyContacts": {
+            "array_length": 0,
+            "item": null
+          },
+          "active": "boolean",
+          "deceased": "boolean",
+          "deceasedDate": "null",
+          "createdAt": "null",
+          "updatedAt": "null",
+          "createdBy": "null",
+          "updatedBy": "null",
+          "version": "number",
+          "fullName": "string"
+        },
+        "attendingProvider": {
+          "id": "number",
+          "npi": "null",
+          "firstName": "null",
+          "middleName": "null",
+          "lastName": "null",
+          "suffix": "null",
+          "credentials": "null",
+          "providerType": "null",
+          "specialty": "null",
+          "subspecialty": "null",
+          "department": "null",
+          "email": "null",
+          "phoneOffice": "null",
+          "phoneMobile": "null",
+          "pager": "null",
+          "fax": "null",
+          "licenses": {
+            "array_length": 0,
+            "item": null
+          },
+          "hireDate": "null",
+          "terminationDate": "null",
+          "active": "boolean",
+          "acceptingPatients": "boolean",
+          "createdAt": "null",
+          "updatedAt": "null",
+          "version": "number",
+          "displayName": "string",
+          "fullName": "string"
+        },
+        "encounterType": "string",
+        "status": "string",
+        "encounterDateTime": "string",
+        "admitDateTime": "null",
+        "dischargeDateTime": "null",
+        "department": "null",
+        "room": "null",
+        "bed": "null",
+        "chiefComplaint": "string",
+        "priority": "null",
+        "visitType": "null",
+        "diagnoses": {
+          "array_length": 0,
+          "item": null
+        },
+        "notes": "null",
+        "createdAt": "string",
+        "updatedAt": "string",
+        "createdBy": "null",
+        "version": "number"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/encounters/19",
+      "request_body": {
+        "patient": {
+          "id": 1,
+          "version": 0
+        },
+        "attendingProvider": {
+          "id": 1,
+          "version": 0
+        },
+        "encounterType": "OFFICE_VISIT",
+        "encounterDateTime": "2030-01-02T09:00:00",
+        "chiefComplaint": "Synthetic baseline visit",
+        "encounterNumber": "ENC-2026-000102",
+        "status": "SCHEDULED",
+        "location": "Room 1"
+      },
+      "status": 500,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 500,
+        "error": "Internal Server Error",
+        "path": "/api/v1/encounters/19"
+      },
+      "note": "without version the entity is re-inserted: unique violation on encounters.encounter_number"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/encounters/19",
+      "request_body": {
+        "patient": {
+          "id": 1,
+          "version": 0
+        },
+        "attendingProvider": {
+          "id": 1,
+          "version": 0
+        },
+        "encounterType": "OFFICE_VISIT",
+        "encounterDateTime": "2030-01-02T09:00:00",
+        "chiefComplaint": "Synthetic baseline visit",
+        "encounterNumber": "ENC-2026-000102",
+        "status": "SCHEDULED",
+        "location": "Room 1",
+        "version": 0
+      },
+      "status": 500,
+      "content_type": "application/json",
+      "body": {
+        "timestamp": "string",
+        "status": 500,
+        "error": "Internal Server Error",
+        "path": "/api/v1/encounters/19"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/encounters/999999",
+      "request_body": {
+        "patient": {
+          "id": 1,
+          "version": 0
+        },
+        "attendingProvider": {
+          "id": 1,
+          "version": 0
+        },
+        "encounterType": "OFFICE_VISIT",
+        "encounterDateTime": "2030-01-02T09:00:00",
+        "chiefComplaint": "Synthetic baseline visit"
+      },
+      "status": 404,
+      "content_type": null,
+      "body": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/encounters/16/check-in",
+      "status": 200,
+      "content_type": null,
+      "body": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/encounters/16/start",
+      "status": 200,
+      "content_type": null,
+      "body": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/encounters/16/complete",
+      "request_body_text": "Synthetic completion note",
+      "status": 200,
+      "content_type": null,
+      "body": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/encounters/17/cancel",
+      "status": 200,
+      "content_type": null,
+      "body": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/encounters/18/no-show",
+      "status": 200,
+      "content_type": null,
+      "body": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/encounters/999999/check-in",
+      "status": 200,
+      "content_type": null,
+      "body": null,
+      "note": "unknown ids are ignored: 200 with no body"
+    }
+  ]
+}

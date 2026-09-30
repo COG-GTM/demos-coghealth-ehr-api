@@ -1,0 +1,7 @@
+run,flyway,wall_ms_to_healthy,started_in_s,jvm_running_for_s,application_ready_time_s
+0,migrate_empty_schema,5329,4.634,4.912,4.659
+1,schema_up_to_date,4789,4.108,4.362,4.132
+2,schema_up_to_date,4910,4.249,4.509,4.274
+3,schema_up_to_date,4673,4.088,4.338,4.116
+4,schema_up_to_date,4774,4.118,4.376,4.142
+5,schema_up_to_date,4940,4.238,4.494,4.266
