@@ -16,7 +16,9 @@ prefix. GET requests run first; the mutating requests at the end create their ow
 or use the SCHEDULED seed encounters 16-18, so run this after the load test, against a
 disposable database.
 """
+import copy
 import json
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -77,7 +79,15 @@ def view(status, ctype, payload):
         return {'body_first_line': lines[0], 'body_lines': len(lines)}
     if len(lines) == 1 and len(text) < 200:
         return {'body_text': text, 'body_is_json': False}
-    labels = list(dict.fromkeys(l.split(':')[0].strip() for l in lines if ':' in l))
+    labels = []
+    for line in lines:
+        if ':' not in line:
+            continue
+        label = line.split(':')[0].strip()
+        if not re.fullmatch(r'([A-Z][a-z]+( #)?|[A-Z]{2,5})', label):
+            label = '<other>'
+        if label not in labels:
+            labels.append(label)
     return {'body_first_line': lines[0], 'body_line_labels': labels, 'body_lines': len(lines)}
 
 
@@ -89,7 +99,7 @@ def record(method, path, body=None, raw_body=None, content_type='application/jso
     ctype = headers.get('Content-Type')
     entry = {'method': method, 'path': path}
     if body is not None:
-        entry['request_body'] = body
+        entry['request_body'] = copy.deepcopy(body)
     if raw_body is not None:
         entry['request_body_text'] = raw_body
     entry.update({'status': status, 'content_type': ctype})

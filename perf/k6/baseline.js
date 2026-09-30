@@ -98,6 +98,14 @@ export function setup() {
     if (res.status !== 200) fail(`setup: GET /v1/patients/${id} returned ${res.status}`);
     mrns.push(res.json('mrn'));
   }
+  for (const id of ENCOUNTER_IDS) {
+    const res = http.get(`${BASE_URL}/v1/encounters/${id}`, params('setup'));
+    if (res.status !== 200) fail(`setup: GET /v1/encounters/${id} returned ${res.status}`);
+  }
+  for (const id of PROVIDER_IDS) {
+    const res = http.get(`${BASE_URL}/v1/providers/${id}`, params('setup'));
+    if (res.status !== 200) fail(`setup: GET /v1/providers/${id} returned ${res.status}`);
+  }
   const data = { mrns };
   for (const e of ENDPOINTS) {
     const res = http.get(`${BASE_URL}${e.path(data)}`, params('setup'));

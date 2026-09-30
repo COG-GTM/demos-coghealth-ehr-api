@@ -3132,7 +3132,7 @@
       "path": "/v1/export/reports/patient-roster",
       "status": 200,
       "content_type": "application/json",
-      "body_text": "Report generated at: /tmp/patient_roster_20260930_191843.csv",
+      "body_text": "Report generated at: /tmp/patient_roster_20260930_193258.csv",
       "body_is_json": false
     },
     {
@@ -3140,7 +3140,7 @@
       "path": "/v1/export/reports/encounter-summary?startDate=2024-01-01T00:00:00&endDate=2024-12-31T23:59:59",
       "status": 200,
       "content_type": "application/json",
-      "body_text": "Report generated at: /tmp/encounter_summary_20260930_191843.txt",
+      "body_text": "Report generated at: /tmp/encounter_summary_20260930_193258.txt",
       "body_is_json": false
     },
     {
@@ -3259,9 +3259,7 @@
         "lastName": "Baseline",
         "dateOfBirth": "1980-01-01",
         "gender": "UNKNOWN",
-        "email": "synthetic.baseline@example.invalid",
-        "active": true,
-        "deceased": false
+        "email": "synthetic.baseline@example.invalid"
       },
       "status": 500,
       "content_type": "application/json",
@@ -3547,12 +3545,10 @@
       "path": "/v1/encounters",
       "request_body": {
         "patient": {
-          "id": 1,
-          "version": 0
+          "id": 1
         },
         "attendingProvider": {
-          "id": 1,
-          "version": 0
+          "id": 1
         },
         "encounterType": "OFFICE_VISIT",
         "encounterDateTime": "2030-01-02T09:00:00",

@@ -29,12 +29,27 @@ REDIS_CONTAINER=ehr-baseline-redis
 BASE_URL="http://localhost:$PORT/api"
 LOG_DIR="$ROOT/target/baseline-logs/$LABEL"
 APP_PID=""
+INFRA_CREATED=0
+
+for p in "$PORT" "$PG_PORT" "$REDIS_PORT"; do
+  listener="$(ss -ltnH "sport = :$p")"
+  if [ -n "$listener" ]; then
+    echo "port $p is already in use; stop its listener before running the baseline" >&2
+    exit 1
+  fi
+done
+
+existing_containers="$(docker ps -a --format '{{.Names}}' | awk -v pg="$PG_CONTAINER" -v redis="$REDIS_CONTAINER" '$0 == pg || $0 == redis')"
+if [ -n "$existing_containers" ]; then
+  echo "refusing to run: existing baseline container(s) $existing_containers may be left over from KEEP_INFRA=1; remove them manually before rerunning" >&2
+  exit 1
+fi
 
 mkdir -p "$OUT"
 
 cleanup() {
   stop_app
-  if [ "$KEEP_INFRA" != "1" ]; then
+  if [ "$INFRA_CREATED" = "1" ] && [ "$KEEP_INFRA" != "1" ]; then
     docker rm -f "$PG_CONTAINER" "$REDIS_CONTAINER" >/dev/null 2>&1 || true
   fi
 }
@@ -69,13 +84,22 @@ start_app() {
     "$JAVA_HOME/bin/java" $JAVA_OPTS -jar "$JAR" >"$log" 2>&1 &
   APP_PID=$!
   for _ in $(seq 1 1200); do
+    if ! kill -0 "$APP_PID" 2>/dev/null; then
+      echo "app exited during startup; last 20 lines of $log:" >&2
+      tail -n 20 "$log" >&2
+      return 1
+    fi
     if curl -sf -o /dev/null "$BASE_URL/actuator/health"; then
+      if ! kill -0 "$APP_PID" 2>/dev/null; then
+        echo "app exited during startup; last 20 lines of $log:" >&2
+        tail -n 20 "$log" >&2
+        return 1
+      fi
       WALL_MS=$(($(now_ms) - t0))
       read -r STARTED_S JVM_S < <(grep -m1 -oE 'Started MedchartEhrApplication in [0-9.]+ seconds \(JVM running for [0-9.]+\)' "$log" \
         | sed -E 's/.* in ([0-9.]+) seconds \(JVM running for ([0-9.]+)\)/\1 \2/')
       return 0
     fi
-    kill -0 "$APP_PID" 2>/dev/null || { echo "app exited during startup, see $log" >&2; return 1; }
     sleep 0.1
   done
   echo "app not healthy after 120s, see $log" >&2
@@ -105,6 +129,7 @@ PY
 }
 
 gc_snapshot() {
+  # MAX is Micrometer's rolling-window max, not per phase; it can include pauses from before the phase started.
   curl -sf "$BASE_URL/actuator/metrics/jvm.gc.pause" | jq -c '{count: (.measurements[] | select(.statistic=="COUNT") | .value), total_s: (.measurements[] | select(.statistic=="TOTAL_TIME") | .value), max_s: (.measurements[] | select(.statistic=="MAX") | .value)}'
 }
 
@@ -153,9 +178,9 @@ fi
 JAR="$(ls "$ROOT"/target/medchart-ehr-api-*.jar | grep -v '\.original$' | head -1)"
 mkdir -p "$LOG_DIR"
 
-docker rm -f "$PG_CONTAINER" "$REDIS_CONTAINER" >/dev/null 2>&1 || true
 docker run -d --name "$PG_CONTAINER" -e POSTGRES_DB=coghealth -e POSTGRES_USER=coghealth \
   -e POSTGRES_PASSWORD="$PG_PASSWORD" -p "127.0.0.1:$PG_PORT:5432" postgres:14-alpine >/dev/null
+INFRA_CREATED=1
 docker run -d --name "$REDIS_CONTAINER" -p "127.0.0.1:$REDIS_PORT:6379" redis:7-alpine >/dev/null
 until docker exec "$PG_CONTAINER" pg_isready -U coghealth -d coghealth >/dev/null 2>&1; do sleep 0.5; done
 sleep 2
