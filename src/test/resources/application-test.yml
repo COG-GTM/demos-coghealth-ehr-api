@@ -1,0 +1,10 @@
+medchart:
+  security:
+    jwt:
+      # HS512 needs a >= 512-bit key; the application default is too short (see JwtTokenProviderTest).
+      secret: test-only-hs512-signing-key-0123456789abcdefghijklmnopqrstuvwxyzABCDEFGH
+
+logging:
+  level:
+    com.medchart: INFO
+    org.hibernate.SQL: WARN

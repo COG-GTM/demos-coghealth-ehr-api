@@ -35,12 +35,8 @@ Jackson 2.13.5, PostgreSQL JDBC 42.3.8, springdoc-openapi-ui 1.7.0, jjwt 0.11.5,
 
 ## Tests
 
-- **There are no tests in the repository.** `src/test` does not exist; Surefire (2.22.2) reports `No tests to run.`
-- `h2` and `spring-boot-starter-test` / `spring-security-test` are declared with `test` scope but nothing uses them.
-  (The environment note "`mvn test` uses H2" describes intent, not current state.)
-- Consequence: the green CI status below proves the code **compiles and packages** on Java 11; it says
-  nothing about behaviour. Closing this gap is the job of the "close test gaps on critical order flows"
-  step and should happen before any upgrade step relies on CI as a safety net.
+At the `s1.1` baseline there were **no tests** (`src/test` did not exist). Step `s1.3` added the
+characterization suite described in [Characterization test suite](#characterization-test-suite-s13) below.
 
 ## CI
 
@@ -58,7 +54,8 @@ Triggers: `push` and `pull_request` to `main`.
 
 Notes:
 - `NEON_DB_URL` / `NEON_DB_USERNAME` / `NEON_DB_PASSWORD` are set as `env` on the **setup-java step only**, so no
-  later step sees them. Nothing in CI needs a database today (no tests), so this has no effect yet.
+  later step sees them. The test suite does not use Neon: it starts its own Postgres/Redis with Testcontainers
+  (Docker is available on `ubuntu-latest`).
 - CI annotations warn that `actions/checkout@v4` and `actions/setup-java@v4` run on the deprecated Node.js 20 runtime.
 - No artifact upload, image build, or deploy job.
 - Recent `main` history: the last 5 pushes to `main` (latest run
@@ -140,4 +137,83 @@ Note that #110 targets Boot 3.5.3, not the plan's 3.3. They should be reconciled
 ```bash
 export JAVA_HOME=/path/to/jdk-11
 mvn clean compile -B && mvn test -B && mvn verify -B -DskipTests
+```
+
+## Characterization test suite (s1.3)
+
+Added by "Close test gaps on critical order flows". Tests pin **current** behaviour on Java 11 / Boot 2.7.18 —
+including bugs — so an upgrade step that changes any of it fails loudly. No production code was changed.
+
+Stack: JUnit 5, `@SpringBootTest(RANDOM_PORT)` + `TestRestTemplate` (real HTTP through Tomcat, context path `/api`),
+`@SpringBootTest` + MockMvc (security filter chain / CORS), `@DataJpaTest` with `replace = NONE`, and Testcontainers
+`postgres:14-alpine` + `redis:7-alpine` shared across the run (`support/TestContainers`). Flyway V1–V3 runs against
+the container, so tests see the real schema and seed data. `src/test/resources/application-test.yml` supplies a
+512-bit JWT secret (see finding 3).
+
+| Area | Test class | What is pinned |
+|---|---|---|
+| Flyway | `persistence/FlywayMigrationTest` | V1–V3 applied in order, expected tables/constraints, seed counts |
+| JPA mapping | `persistence/SchemaValidationTest` | `ddl-auto=validate` (the `dev` profile setting) fails today, with the exact Hibernate message |
+| Lab orders | `persistence/LabOrderPersistenceTest` | LabOrder insert/select fail (finding 1); LabResult round-trip; lab_orders constraints and status lifecycle at SQL level; `addResult`, `isAbnormal` |
+| Patient queries | `persistence/PatientRepositoryTest` | round-trip incl. embedded address, `findByMrn/Ssn`, JPQL `searchPatients` (case, MRN fragment, paging), derived queries, active queries/count |
+| Encounter queries | `persistence/EncounterRepositoryTest` | `findByEncounterNumber`, fetch-join `findByIdWithDetails` vs lazy `findById`, date range, `findTodaysSchedule` status filter, count by patient, enum failure on seed row 15 |
+| Users | `persistence/UserRepositoryTest` | seeded admin roles/authorities; admin hash matches neither `admin123` nor `password` |
+| Patient HTTP | `api/PatientApiTest` | GET by id/MRN, search page JSON, POST 201 (MRN generation), PUT partial merge + version bump, 400s for Bean Validation / bad JSON / bad enum, 500s for not-found / duplicate MRN / DB NOT NULL, 405, Boot error body shape, async audit rows |
+| Encounter HTTP | `api/EncounterApiTest` | entity JSON shape (incl. patient SSN), 404 on unknown id, lazy-proxy 500s, 400s, create/update 500s, check-in → start → complete (text/plain notes) → cancel / no-show, transitions on unknown ids return 200 |
+| Actuator | `api/ActuatorApiTest` | health `{"status":"UP"}` with no details; only health/info/metrics exposed |
+| JWT provider | `security/JwtTokenProviderTest` | HS512, subject/expiry/roles claims, subject check, expired/tampered/foreign/malformed tokens throw, default secret is a `WeakKeyException` |
+| Auth HTTP | `security/AuthApiTest` | register → login → Bearer token, BCrypt + default `PROVIDER` role, duplicate username/email 400 plain text, bad credentials 403, admin cannot log in, path is `/api/api/auth/**` |
+| Security chain | `security/SecurityFilterChainTest` | anonymous requests allowed; valid token populates SecurityContext; invalid/expired/foreign/unknown-user/wrong-scheme tokens silently fall back to anonymous; disabled users still authenticate; JWT filter sits outside `FilterChainProxy`; CORS allow-list; stateless, no session cookie |
+
+**Messaging / outbound HTTP:** none on the order path. RabbitMQ is configured but the AMQP starter is commented out;
+the insurance/pharmacy clients are not reachable from any order, patient, encounter or auth flow, so they are not covered here.
+
+### Coverage (JaCoCo 0.8.12, `mvn test`, 79 tests, all passing)
+
+Report: `target/site/jacoco/index.html` locally; uploaded as the `jacoco-report` artifact by CI.
+
+| Scope | Line | Branch |
+|---|---|---|
+| Whole module | 45.1% (704/1562) | 26.8% (89/332) |
+| `config` (SecurityConfig, JwtTokenProvider, JwtAuthenticationFilter, CustomUserDetailsService) | 100% | 83.3% |
+| `domain.order` (LabOrder, LabResult) | 100% | 100% |
+| `PatientController` / `PatientService` | 100% / 96.3% | – / 100% |
+| `EncounterController` / `EncounterService` | 83.9% / 83.6% | – / 100% |
+| `AuthController` | 100% | 100% |
+
+Largest uncovered areas are outside the order/patient/security flows: `legacy` (5%), `service.chronic` (6%), `audit` (27%), MapStruct mappers.
+
+### Findings from characterization (current behaviour, not fixed)
+
+1. **Lab orders cannot be read or written through JPA.** `LabOrder.icd10Code` is mapped by Spring's
+   `CamelCaseToUnderscoresNamingStrategy` to column `icd10code`, but V1 creates `icd10_code`. Every LabOrder
+   INSERT/SELECT fails with `column "icd10code" ... does not exist`. Combined with there being **no LabOrder
+   repository, service or controller**, there is no order create/read/update/cancel over HTTP to test; the
+   ticket's HTTP order-flow coverage is therefore provided for the nearest existing flows (patients, encounter
+   lifecycle incl. cancel) plus lab-order persistence at SQL/JPA level.
+2. **`ddl-auto=validate` fails** on the Flyway schema (first mismatch: `audit_events.resource_id` varchar vs `Long`),
+   so the `dev` profile cannot start against a Flyway-built schema. The default profile uses `none`.
+3. **Default JWT secret is too short for HS512** (280 bits) → login returns 500 (`WeakKeyException`) unless `JWT_SECRET`
+   is set. jjwt 0.12 keeps this rule.
+4. **Security is permit-all, and the JWT filter never rejects.** It is registered as a plain servlet filter that runs
+   after Spring Security's authorization, swallows all token errors, and ignores `enabled=false`.
+5. **`AuthController` is served at `/api/api/auth/**`** (controller mapping `/api/auth` + context path `/api`).
+6. **Seed admin cannot log in** — the V2 hash does not match `admin123` (the documented password).
+7. **Error handling:** no `@ControllerAdvice`; not-found / duplicate MRN / DB constraint errors are 500 with Boot's
+   default error body (`timestamp,status,error,path`); Bean Validation errors are 400 without field details
+   (`server.error.include-binding-errors` unset). Boot 3 changes the default error attributes and adds
+   ProblemDetail support, so these assertions are expected to need re-baselining.
+8. **Encounter endpoints serialize JPA entities.** Endpoints that return lazily loaded associations 500 on Hibernate
+   proxy serialization; `GET /v1/encounters/{id}` exposes the patient's SSN. Seed encounter `ENC-2024-000015` is
+   column-shifted in V3 (`encounter_type = 'IN_PROGRESS'`) and fails enum mapping.
+9. **Encounter create/update with `{"patient":{"id":..}}` references 500** (transient associations); lifecycle
+   transitions on unknown ids return 200 (the service ignores missing encounters).
+
+### Running
+
+Requires Docker for Testcontainers.
+
+```bash
+export JAVA_HOME=/path/to/jdk-11
+mvn test -B        # tests + target/site/jacoco
 ```
