@@ -29,7 +29,7 @@ REDIS_CONTAINER=ehr-baseline-redis
 BASE_URL="http://localhost:$PORT/api"
 LOG_DIR="$ROOT/target/baseline-logs/$LABEL"
 APP_PID=""
-INFRA_CREATED=0
+CREATED_CONTAINERS=()
 
 for p in "$PORT" "$PG_PORT" "$REDIS_PORT"; do
   listener="$(ss -ltnH "sport = :$p")"
@@ -49,8 +49,8 @@ mkdir -p "$OUT"
 
 cleanup() {
   stop_app
-  if [ "$INFRA_CREATED" = "1" ] && [ "$KEEP_INFRA" != "1" ]; then
-    docker rm -f "$PG_CONTAINER" "$REDIS_CONTAINER" >/dev/null 2>&1 || true
+  if [ "${#CREATED_CONTAINERS[@]}" -gt 0 ] && [ "$KEEP_INFRA" != "1" ]; then
+    docker rm -f "${CREATED_CONTAINERS[@]}" >/dev/null 2>&1 || true
   fi
 }
 trap cleanup EXIT
@@ -178,10 +178,11 @@ fi
 JAR="$(ls "$ROOT"/target/medchart-ehr-api-*.jar | grep -v '\.original$' | head -1)"
 mkdir -p "$LOG_DIR"
 
-INFRA_CREATED=1
-docker run -d --name "$PG_CONTAINER" -e POSTGRES_DB=coghealth -e POSTGRES_USER=coghealth \
-  -e POSTGRES_PASSWORD="$PG_PASSWORD" -p "127.0.0.1:$PG_PORT:5432" postgres:14-alpine >/dev/null
-docker run -d --name "$REDIS_CONTAINER" -p "127.0.0.1:$REDIS_PORT:6379" redis:7-alpine >/dev/null
+# docker create returns the id before anything can fail to start, so cleanup removes exactly what this run created.
+CREATED_CONTAINERS+=("$(docker create --name "$PG_CONTAINER" -e POSTGRES_DB=coghealth -e POSTGRES_USER=coghealth \
+  -e POSTGRES_PASSWORD="$PG_PASSWORD" -p "127.0.0.1:$PG_PORT:5432" postgres:14-alpine)")
+CREATED_CONTAINERS+=("$(docker create --name "$REDIS_CONTAINER" -p "127.0.0.1:$REDIS_PORT:6379" redis:7-alpine)")
+docker start "${CREATED_CONTAINERS[@]}" >/dev/null
 until docker exec "$PG_CONTAINER" pg_isready -U coghealth -d coghealth >/dev/null 2>&1; do sleep 0.5; done
 sleep 2
 
