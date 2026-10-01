@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityNotFoundException;
+import java.security.SecureRandom;
 import java.util.Optional;
 
 @Service
@@ -21,6 +22,12 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PatientService {
+
+    /** Crockford base32 alphabet: no ambiguous characters, safe in URLs and on paper. */
+    private static final char[] MRN_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ".toCharArray();
+    private static final int MRN_RANDOM_LENGTH = 13;
+    private static final int MRN_MAX_ATTEMPTS = 5;
+    private static final SecureRandom MRN_RANDOM = new SecureRandom();
 
     private final PatientRepository patientRepository;
     private final PatientMapper patientMapper;
@@ -57,7 +64,7 @@ public class PatientService {
 
         Patient patient = patientMapper.toEntity(patientDTO);
         if (patient.getMrn() == null) {
-            patient.setMrn(generateMrn());
+            patient.setMrn(generateUniqueMrn());
         }
 
         Patient saved = patientRepository.save(patient);
@@ -88,7 +95,21 @@ public class PatientService {
             "Use MRN or name-based search instead.");
     }
 
-    private String generateMrn() {
-        return "MRN" + System.currentTimeMillis();
+    private String generateUniqueMrn() {
+        for (int attempt = 0; attempt < MRN_MAX_ATTEMPTS; attempt++) {
+            String candidate = generateMrn();
+            if (!patientRepository.findByMrn(candidate).isPresent()) {
+                return candidate;
+            }
+        }
+        throw new IllegalStateException("Unable to allocate a unique MRN");
+    }
+
+    String generateMrn() {
+        StringBuilder mrn = new StringBuilder("MRN");
+        for (int i = 0; i < MRN_RANDOM_LENGTH; i++) {
+            mrn.append(MRN_ALPHABET[MRN_RANDOM.nextInt(MRN_ALPHABET.length)]);
+        }
+        return mrn.toString();
     }
 }
