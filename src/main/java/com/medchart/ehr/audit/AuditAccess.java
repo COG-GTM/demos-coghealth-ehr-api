@@ -14,4 +14,10 @@ public @interface AuditAccess {
     String resourceType();
     
     String description() default "";
+
+    /**
+     * Whether the first Long argument identifies a patient. When false it is
+     * recorded as the audited resource id instead.
+     */
+    boolean patientIdFromArgs() default true;
 }
