@@ -25,6 +25,7 @@
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <springdoc.version>1.7.0</springdoc.version>
         <hapi.version>2.3</hapi.version>
+        <jjwt.version>0.12.6</jjwt.version>
     </properties>
 
     <dependencies>
@@ -99,6 +100,8 @@
             <version>${springdoc.version}</version>
         </dependency>
 
+        <!-- TODO: HAPI v2 dependencies appear unused. Commented out during Phase 1 pre-migration audit.
+             Remove entirely after confirming no runtime dependency exists.
         <dependency>
             <groupId>ca.uhn.hapi</groupId>
             <artifactId>hapi-base</artifactId>
@@ -110,24 +113,25 @@
             <artifactId>hapi-structures-v24</artifactId>
             <version>${hapi.version}</version>
         </dependency>
+        -->
 
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
-            <version>0.11.5</version>
+            <version>${jjwt.version}</version>
         </dependency>
 
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-impl</artifactId>
-            <version>0.11.5</version>
+            <version>${jjwt.version}</version>
             <scope>runtime</scope>
         </dependency>
 
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-jackson</artifactId>
-            <version>0.11.5</version>
+            <version>${jjwt.version}</version>
             <scope>runtime</scope>
         </dependency>
 
