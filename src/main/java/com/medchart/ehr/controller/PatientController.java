@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -22,18 +23,21 @@ public class PatientController {
     private final PatientService patientService;
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('PROVIDER', 'STAFF', 'ADMIN')")
     @Operation(summary = "Get patient by ID")
     public ResponseEntity<PatientDTO> getPatient(@PathVariable Long id) {
         return ResponseEntity.ok(patientService.getPatientById(id));
     }
 
     @GetMapping("/mrn/{mrn}")
+    @PreAuthorize("hasAnyRole('PROVIDER', 'STAFF', 'ADMIN')")
     @Operation(summary = "Get patient by MRN")
     public ResponseEntity<PatientDTO> getPatientByMrn(@PathVariable String mrn) {
         return ResponseEntity.ok(patientService.getPatientByMrn(mrn));
     }
 
     @GetMapping("/search")
+    @PreAuthorize("hasAnyRole('PROVIDER', 'STAFF', 'ADMIN')")
     @Operation(summary = "Search patients")
     public ResponseEntity<Page<PatientDTO>> searchPatients(
             @RequestParam String q,
@@ -42,6 +46,7 @@ public class PatientController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('PROVIDER', 'ADMIN')")
     @Operation(summary = "Create new patient")
     public ResponseEntity<PatientDTO> createPatient(@Valid @RequestBody PatientDTO patientDTO) {
         PatientDTO created = patientService.createPatient(patientDTO);
@@ -49,6 +54,7 @@ public class PatientController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('PROVIDER', 'ADMIN')")
     @Operation(summary = "Update patient")
     public ResponseEntity<PatientDTO> updatePatient(
             @PathVariable Long id,

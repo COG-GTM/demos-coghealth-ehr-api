@@ -55,7 +55,7 @@ logging:
 medchart:
   security:
     jwt:
-      secret: ${JWT_SECRET:dev-secret-key-change-in-production}
+      secret: ${JWT_SECRET:local-development-only-jwt-signing-key-change-in-production-0123456789abcdef}
       expiration: 86400000
   audit:
     enabled: true
