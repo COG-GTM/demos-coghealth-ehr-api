@@ -24,10 +24,9 @@ These are intentionally planted for HIPAA audit demo:
 
 1. **PatientService.java:85** - Logs full SSN in error messages
 2. **EncounterExportService.java** - No audit logging on batch exports
-3. **LegacyPatientLookup.java** - Direct JDBC bypasses audit layer
-4. **InsuranceCache.java** - Caches SSN with no TTL/expiration
-5. **ReportGenerator.java** - Writes PHI to temp files without cleanup
-6. **15+ endpoints** - Missing access logging
+3. **InsuranceCache.java** - Caches SSN with no TTL/expiration
+4. **ReportGenerator.java** - Writes PHI to temp files without cleanup
+5. **15+ endpoints** - Missing access logging
 
 ## Patterns to Follow
 
