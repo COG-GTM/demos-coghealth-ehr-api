@@ -3,6 +3,7 @@ import { Plus, TrendingUp, TrendingDown, Minus, Activity } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Card, CardHeader, CardBody, Badge, Button, Modal, Input, EmptyState } from '../common';
 import { formatDate, formatDateTime, formatBloodPressure, cn } from '../../utils';
+import { getLatestVital, getVitalStatus, sortVitalsByRecordedAt } from '../../utils/vitals';
 import type { Vital } from '../../types';
 
 interface VitalsListProps {
@@ -16,28 +17,8 @@ export function VitalsList({ vitals, onAdd, isLoading, compact }: VitalsListProp
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedVital, setSelectedVital] = useState<string>('bloodPressure');
 
-  const latestVitals = vitals[0];
-  const sortedVitals = [...vitals].sort((a, b) => 
-    new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime()
-  );
-
-  const getVitalStatus = (type: string, value: number | undefined): 'normal' | 'high' | 'low' | 'critical' => {
-    if (value === undefined) return 'normal';
-    const ranges: Record<string, { low: number; high: number; criticalLow: number; criticalHigh: number }> = {
-      systolic: { low: 90, high: 140, criticalLow: 80, criticalHigh: 180 },
-      diastolic: { low: 60, high: 90, criticalLow: 50, criticalHigh: 120 },
-      heartRate: { low: 60, high: 100, criticalLow: 40, criticalHigh: 150 },
-      temperature: { low: 97, high: 99.5, criticalLow: 95, criticalHigh: 103 },
-      oxygenSaturation: { low: 95, high: 100, criticalLow: 90, criticalHigh: 101 },
-      respiratoryRate: { low: 12, high: 20, criticalLow: 8, criticalHigh: 30 },
-    };
-    const range = ranges[type];
-    if (!range) return 'normal';
-    if (value <= range.criticalLow || value >= range.criticalHigh) return 'critical';
-    if (value < range.low) return 'low';
-    if (value > range.high) return 'high';
-    return 'normal';
-  };
+  const sortedVitals = sortVitalsByRecordedAt(vitals);
+  const latestVitals = getLatestVital(vitals);
 
   const statusColors = {
     normal: 'text-success-600',
@@ -234,7 +215,7 @@ export function VitalsList({ vitals, onAdd, isLoading, compact }: VitalsListProp
                 </tr>
               </thead>
               <tbody>
-                {vitals.slice(0, 10).map((v) => (
+                {[...sortedVitals].reverse().slice(0, 10).map((v) => (
                   <tr key={v.id}>
                     <td className="text-sm">{formatDateTime(v.recordedAt)}</td>
                     <td className={cn('text-sm', statusColors[getVitalStatus('systolic', v.bloodPressureSystolic)])}>
