@@ -24,6 +24,12 @@ import java.util.Set;
 @Slf4j
 public class AuthController {
 
+    /**
+     * Least-privileged role granted to self-service registrations. Clinical (PROVIDER) and
+     * administrative (ADMIN) roles are only assigned by an administrator.
+     */
+    static final User.Role SELF_SERVICE_ROLE = User.Role.STAFF;
+
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -67,8 +73,8 @@ public class AuthController {
             .firstName(signUpRequest.getFirstName())
             .lastName(signUpRequest.getLastName())
             .password(passwordEncoder.encode(signUpRequest.getPassword()))
-            .roles(Set.of(User.Role.PROVIDER)) // Default role
-            .enabled(true)
+            .roles(Set.of(SELF_SERVICE_ROLE))
+            .enabled(false)
             .accountNonExpired(true)
             .accountNonLocked(true)
             .credentialsNonExpired(true)
@@ -76,9 +82,10 @@ public class AuthController {
 
         userRepository.save(user);
 
-        log.info("Registered new user: {}", signUpRequest.getUsername());
-        
-        return ResponseEntity.ok("User registered successfully");
+        log.info("Registered new user pending activation: {}", signUpRequest.getUsername());
+
+        return ResponseEntity.ok("User registered successfully. The account is disabled until an administrator "
+            + "activates it and assigns the appropriate role.");
     }
 
     public static class LoginRequest {
