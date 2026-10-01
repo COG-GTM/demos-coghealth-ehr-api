@@ -13,6 +13,12 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Spring Data repository for {@link Encounter} entities.
+ *
+ * Provides queries by patient, provider, date range, status, and
+ * a provider's daily schedule with eager-fetched associations.
+ */
 @Repository
 public interface EncounterRepository extends JpaRepository<Encounter, Long> {
 

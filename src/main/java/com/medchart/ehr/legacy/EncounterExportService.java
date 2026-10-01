@@ -14,6 +14,12 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+/**
+ * Legacy export service for encounter and patient data.
+ *
+ * Produces CSV and text exports via native SQL for integration
+ * with external billing and reporting systems.
+ */
 @Service
 @Slf4j
 public class EncounterExportService {

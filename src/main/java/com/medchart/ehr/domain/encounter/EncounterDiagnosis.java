@@ -5,6 +5,12 @@ import lombok.*;
 
 import javax.persistence.*;
 
+/**
+ * Join entity linking a {@link Diagnosis} to an {@link Encounter}.
+ *
+ * Captures the role of the diagnosis (e.g., admission, billing),
+ * its rank order, and whether it is the primary diagnosis.
+ */
 @Entity
 @Table(name = "encounter_diagnoses")
 @Getter

@@ -1,5 +1,8 @@
 package com.medchart.ehr.domain.clinical;
 
+/**
+ * Classification of clinical note content (e.g., progress note, H&amp;P, discharge summary).
+ */
 public enum NoteType {
     PROGRESS_NOTE,
     HISTORY_AND_PHYSICAL,

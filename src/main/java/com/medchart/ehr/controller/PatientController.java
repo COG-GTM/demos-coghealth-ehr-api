@@ -13,6 +13,13 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 
+/**
+ * REST controller for patient record management.
+ *
+ * Exposes endpoints for creating, retrieving, updating, and searching
+ * patient demographics. All operations are audit-logged via
+ * {@link com.medchart.ehr.audit.AuditAccess} for HIPAA compliance.
+ */
 @RestController
 @RequestMapping("/v1/patients")
 @RequiredArgsConstructor

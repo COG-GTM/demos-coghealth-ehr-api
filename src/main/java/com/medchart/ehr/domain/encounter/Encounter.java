@@ -11,6 +11,13 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Clinical encounter entity representing a patient visit or admission.
+ *
+ * Tracks the lifecycle of a patient–provider interaction from scheduling
+ * through discharge, including diagnoses, location, and chief complaint.
+ * Uses optimistic locking via {@code @Version}.
+ */
 @Entity
 @Table(name = "encounters", indexes = {
     @Index(name = "idx_encounter_patient", columnList = "patient_id"),

@@ -1,5 +1,8 @@
 package com.medchart.ehr.domain.provider;
 
+/**
+ * Classification of healthcare provider roles within the organization.
+ */
 public enum ProviderType {
     PHYSICIAN,
     NURSE_PRACTITIONER,

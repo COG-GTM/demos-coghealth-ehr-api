@@ -18,6 +18,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * REST controller for user authentication and registration.
+ *
+ * Provides JWT-based login and account creation endpoints.
+ * New users are assigned the PROVIDER role by default.
+ */
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor

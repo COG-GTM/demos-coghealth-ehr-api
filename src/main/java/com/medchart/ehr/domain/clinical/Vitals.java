@@ -9,6 +9,12 @@ import javax.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * Vital signs measurement recorded during a patient encounter.
+ *
+ * Captures temperature, heart rate, blood pressure, respiratory rate,
+ * oxygen saturation, height, weight, BMI, and pain level.
+ */
 @Entity
 @Table(name = "vitals", indexes = {
     @Index(name = "idx_vitals_patient", columnList = "patient_id"),

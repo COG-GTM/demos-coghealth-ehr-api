@@ -6,6 +6,13 @@ import org.mapstruct.*;
 
 import java.util.List;
 
+/**
+ * MapStruct mapper for converting between {@link Patient} entities and
+ * {@link PatientDTO} transfer objects.
+ *
+ * Null properties in the DTO are ignored during updates to support
+ * partial-update semantics.
+ */
 @Mapper(componentModel = "spring", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
 public interface PatientMapper {
 

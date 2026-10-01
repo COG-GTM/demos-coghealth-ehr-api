@@ -11,6 +11,12 @@ import javax.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * Prescription order linking a patient, medication, and prescriber.
+ *
+ * Captures dosage, frequency, refill counts, pharmacy routing,
+ * and discontinuation details. Audit-logged for HIPAA and DEA compliance.
+ */
 @Entity
 @Table(name = "medication_orders", indexes = {
     @Index(name = "idx_med_order_patient", columnList = "patient_id"),

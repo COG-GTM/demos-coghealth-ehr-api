@@ -10,6 +10,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Service for healthcare provider CRUD operations and search.
+ *
+ * Supports lookup by NPI, department, specialty, and name,
+ * as well as provider deactivation.
+ */
 @Service
 @Transactional
 public class ProviderService {

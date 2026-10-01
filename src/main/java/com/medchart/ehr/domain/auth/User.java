@@ -10,6 +10,12 @@ import java.util.Collection;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Application user entity implementing Spring Security's {@link UserDetails}.
+ *
+ * Represents an authenticated user (e.g., provider, nurse, admin) with
+ * role-based access control. Passwords are stored as BCrypt hashes.
+ */
 @Entity
 @Table(name = "users")
 @Getter

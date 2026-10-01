@@ -6,6 +6,12 @@ import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import java.time.LocalDate;
 
+/**
+ * Embeddable value object representing a provider's professional license.
+ *
+ * Tracks license type, number, issuing state, and validity period
+ * as part of a {@link Provider}'s credentials.
+ */
 @Embeddable
 @Getter
 @Setter

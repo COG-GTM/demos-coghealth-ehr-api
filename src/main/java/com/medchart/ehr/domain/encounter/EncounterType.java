@@ -1,5 +1,8 @@
 package com.medchart.ehr.domain.encounter;
 
+/**
+ * Classification of encounter setting (e.g., office visit, inpatient, telehealth).
+ */
 public enum EncounterType {
     OFFICE_VISIT,
     OUTPATIENT,

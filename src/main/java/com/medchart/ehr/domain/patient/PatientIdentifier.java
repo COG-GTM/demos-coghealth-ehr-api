@@ -5,6 +5,12 @@ import lombok.*;
 import javax.persistence.*;
 import java.time.LocalDate;
 
+/**
+ * External identifier associated with a patient (e.g., MRN, SSN, insurance ID).
+ *
+ * Supports multiple identifier types per patient with optional
+ * issuing authority and validity period.
+ */
 @Entity
 @Table(name = "patient_identifiers", indexes = {
     @Index(name = "idx_patient_identifier_value", columnList = "identifierValue"),

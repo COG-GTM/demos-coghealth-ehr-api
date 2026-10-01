@@ -5,6 +5,9 @@ import lombok.*;
 
 import java.time.LocalDate;
 
+/**
+ * Data transfer object for a patient identifier (MRN, SSN, insurance ID, etc.).
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

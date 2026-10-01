@@ -9,6 +9,12 @@ import javax.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * Patient insurance coverage entity with payer, plan, and subscriber details.
+ *
+ * Tracks coverage dates, cost-sharing amounts (copay, deductible,
+ * out-of-pocket), and eligibility verification status.
+ */
 @Entity
 @Table(name = "insurance_coverages", indexes = {
     @Index(name = "idx_coverage_patient", columnList = "patient_id"),

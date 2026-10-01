@@ -9,6 +9,12 @@ import org.hibernate.annotations.CreationTimestamp;
 import javax.persistence.*;
 import java.time.LocalDateTime;
 
+/**
+ * Record of a medication being given (or withheld) to a patient.
+ *
+ * Links the administering provider, scheduled and actual times,
+ * dose, route, and site. Includes reason if the dose was not given.
+ */
 @Entity
 @Table(name = "medication_administrations", indexes = {
     @Index(name = "idx_med_admin_patient", columnList = "patient_id"),

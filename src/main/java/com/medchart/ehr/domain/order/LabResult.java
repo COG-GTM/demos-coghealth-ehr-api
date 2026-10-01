@@ -7,6 +7,12 @@ import javax.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * Individual lab test result within a {@link LabOrder}.
+ *
+ * Stores the measured value, reference range, abnormal flag,
+ * and verification details from the performing laboratory.
+ */
 @Entity
 @Table(name = "lab_results", indexes = {
     @Index(name = "idx_lab_result_order", columnList = "lab_order_id"),

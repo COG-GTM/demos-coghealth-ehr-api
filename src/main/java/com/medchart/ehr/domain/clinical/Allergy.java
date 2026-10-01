@@ -8,6 +8,12 @@ import javax.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * Patient allergy record including allergen, reaction, and severity.
+ *
+ * Tracks drug, food, environmental, and other allergies with coded
+ * allergen references and verification status.
+ */
 @Entity
 @Table(name = "allergies", indexes = {
     @Index(name = "idx_allergy_patient", columnList = "patient_id"),

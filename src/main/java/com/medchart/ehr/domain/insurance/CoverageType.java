@@ -1,5 +1,8 @@
 package com.medchart.ehr.domain.insurance;
 
+/**
+ * Type of insurance benefit coverage (medical, dental, vision, etc.).
+ */
 public enum CoverageType {
     MEDICAL,
     DENTAL,

@@ -1,5 +1,8 @@
 package com.medchart.ehr.domain.clinical;
 
+/**
+ * Lifecycle status of a clinical note from draft through signature.
+ */
 public enum NoteStatus {
     DRAFT,
     PENDING_SIGNATURE,

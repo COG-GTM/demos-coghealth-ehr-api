@@ -10,6 +10,11 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Spring Security {@link UserDetailsService} backed by the {@link UserRepository}.
+ *
+ * Loads user credentials and granted authorities for JWT authentication.
+ */
 @Service
 @Slf4j
 public class CustomUserDetailsService implements UserDetailsService {

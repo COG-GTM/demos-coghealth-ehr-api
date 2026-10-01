@@ -2,6 +2,9 @@ package com.medchart.ehr.dto;
 
 import lombok.*;
 
+/**
+ * Data transfer object for a patient's emergency contact.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

@@ -9,6 +9,12 @@ import javax.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * Patient diagnosis entity coded with ICD-10.
+ *
+ * Records the diagnosing provider, onset/abatement dates, severity,
+ * and whether the condition is chronic or the principal diagnosis.
+ */
 @Entity
 @Table(name = "diagnoses", indexes = {
     @Index(name = "idx_diagnosis_patient", columnList = "patient_id"),

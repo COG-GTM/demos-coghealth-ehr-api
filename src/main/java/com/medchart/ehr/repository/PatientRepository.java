@@ -11,6 +11,12 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Spring Data repository for {@link Patient} entities.
+ *
+ * Provides lookup by MRN, SSN, name, and date of birth, as well as
+ * free-text search across patient demographics.
+ */
 @Repository
 public interface PatientRepository extends JpaRepository<Patient, Long> {
 

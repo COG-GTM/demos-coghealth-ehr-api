@@ -12,6 +12,13 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * REST controller for clinical encounter management.
+ *
+ * Provides CRUD operations and workflow transitions (check-in, start,
+ * complete, cancel, no-show) for patient encounters. All access to
+ * encounter data is audit-logged for HIPAA compliance.
+ */
 @RestController
 @RequestMapping("/v1/encounters")
 public class EncounterController {

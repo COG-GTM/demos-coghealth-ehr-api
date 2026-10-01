@@ -4,6 +4,13 @@ import lombok.*;
 
 import javax.persistence.*;
 
+/**
+ * Drug catalog entity identified by NDC and RxNorm codes.
+ *
+ * Stores generic/brand names, strength, form, route, DEA schedule,
+ * and clinical warnings. Controlled-substance flag triggers additional
+ * audit logging per DEA requirements.
+ */
 @Entity
 @Table(name = "medications", indexes = {
     @Index(name = "idx_medication_ndc", columnList = "ndcCode"),

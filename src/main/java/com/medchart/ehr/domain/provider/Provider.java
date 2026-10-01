@@ -10,6 +10,12 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * Healthcare provider entity (physician, nurse practitioner, etc.).
+ *
+ * Identified by a unique NPI (National Provider Identifier). Tracks
+ * credentials, specialty, department, and associated state licenses.
+ */
 @Entity
 @Table(name = "providers", indexes = {
     @Index(name = "idx_provider_npi", columnList = "npi"),
