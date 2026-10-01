@@ -1,5 +1,7 @@
 package com.medchart.ehr.service;
 
+import com.medchart.ehr.audit.AuditAccess;
+import com.medchart.ehr.audit.AuditAction;
 import com.medchart.ehr.domain.encounter.Encounter;
 import com.medchart.ehr.domain.encounter.EncounterStatus;
 import com.medchart.ehr.repository.EncounterRepository;
@@ -37,31 +39,37 @@ public class EncounterService {
     }
 
     @Transactional(readOnly = true)
+    @AuditAccess(action = AuditAction.READ, resourceType = "Encounter", description = "View encounter with details")
     public Optional<Encounter> findByIdWithDetails(Long id) {
         return encounterRepository.findByIdWithDetails(id);
     }
 
     @Transactional(readOnly = true)
+    @AuditAccess(action = AuditAction.READ, resourceType = "Encounter", description = "View encounter by number")
     public Optional<Encounter> findByEncounterNumber(String encounterNumber) {
         return encounterRepository.findByEncounterNumber(encounterNumber);
     }
 
     @Transactional(readOnly = true)
+    @AuditAccess(action = AuditAction.READ, resourceType = "Encounter", description = "View patient encounters")
     public List<Encounter> findByPatientId(Long patientId) {
         return encounterRepository.findByPatientId(patientId);
     }
 
     @Transactional(readOnly = true)
+    @AuditAccess(action = AuditAction.READ, resourceType = "Encounter", description = "View patient encounters paged")
     public Page<Encounter> findByPatientId(Long patientId, Pageable pageable) {
         return encounterRepository.findByPatientId(patientId, pageable);
     }
 
     @Transactional(readOnly = true)
+    @AuditAccess(action = AuditAction.READ, resourceType = "Encounter", description = "View provider encounters")
     public List<Encounter> findByProviderId(Long providerId) {
         return encounterRepository.findByAttendingProviderId(providerId);
     }
 
     @Transactional(readOnly = true)
+    @AuditAccess(action = AuditAction.READ, resourceType = "Encounter", description = "View provider schedule")
     public List<Encounter> getProviderSchedule(Long providerId, LocalDate date) {
         LocalDateTime startOfDay = date.atStartOfDay();
         LocalDateTime endOfDay = date.plusDays(1).atStartOfDay();
@@ -69,15 +77,18 @@ public class EncounterService {
     }
 
     @Transactional(readOnly = true)
+    @AuditAccess(action = AuditAction.SEARCH, resourceType = "Encounter", description = "Search encounters by date range")
     public List<Encounter> findByDateRange(LocalDate startDate, LocalDate endDate) {
         return encounterRepository.findByDateRange(startDate.atStartOfDay(), endDate.plusDays(1).atStartOfDay());
     }
 
     @Transactional(readOnly = true)
+    @AuditAccess(action = AuditAction.SEARCH, resourceType = "Encounter", description = "Search encounters by status")
     public List<Encounter> findByStatus(EncounterStatus status) {
         return encounterRepository.findByStatus(status);
     }
 
+    @AuditAccess(action = AuditAction.CREATE, resourceType = "Encounter", description = "Create encounter")
     public Encounter create(Encounter encounter) {
         String encNumber = generateEncounterNumber();
         encounter.setEncounterNumber(encNumber);
@@ -88,11 +99,13 @@ public class EncounterService {
         return saved;
     }
 
+    @AuditAccess(action = AuditAction.UPDATE, resourceType = "Encounter", description = "Update encounter")
     public Encounter update(Encounter encounter) {
         log.info("Updating encounter {}", encounter.getEncounterNumber());
         return encounterRepository.save(encounter);
     }
 
+    @AuditAccess(action = AuditAction.UPDATE, resourceType = "Encounter", description = "Patient check-in")
     public void checkIn(Long encounterId) {
         encounterRepository.findById(encounterId).ifPresent(enc -> {
             enc.setStatus(EncounterStatus.CHECKED_IN);
@@ -101,6 +114,7 @@ public class EncounterService {
         });
     }
 
+    @AuditAccess(action = AuditAction.UPDATE, resourceType = "Encounter", description = "Start encounter")
     public void startEncounter(Long encounterId) {
         encounterRepository.findById(encounterId).ifPresent(enc -> {
             enc.setStatus(EncounterStatus.IN_PROGRESS);
@@ -109,6 +123,7 @@ public class EncounterService {
         });
     }
 
+    @AuditAccess(action = AuditAction.UPDATE, resourceType = "Encounter", description = "Complete encounter")
     public void completeEncounter(Long encounterId, String notes) {
         encounterRepository.findById(encounterId).ifPresent(enc -> {
             enc.setStatus(EncounterStatus.COMPLETED);
@@ -120,6 +135,7 @@ public class EncounterService {
         });
     }
 
+    @AuditAccess(action = AuditAction.UPDATE, resourceType = "Encounter", description = "Cancel encounter")
     public void cancelEncounter(Long encounterId) {
         encounterRepository.findById(encounterId).ifPresent(enc -> {
             enc.setStatus(EncounterStatus.CANCELLED);
@@ -128,6 +144,7 @@ public class EncounterService {
         });
     }
 
+    @AuditAccess(action = AuditAction.UPDATE, resourceType = "Encounter", description = "Mark no-show")
     public void markNoShow(Long encounterId) {
         encounterRepository.findById(encounterId).ifPresent(enc -> {
             enc.setStatus(EncounterStatus.NO_SHOW);
