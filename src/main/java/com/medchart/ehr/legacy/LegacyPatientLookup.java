@@ -1,11 +1,14 @@
 package com.medchart.ehr.legacy;
 
+import com.medchart.ehr.audit.AuditAction;
+import com.medchart.ehr.audit.PatientAccessLogger;
 import com.medchart.ehr.domain.patient.Patient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.persistence.EntityManager;
+import javax.persistence.NoResultException;
 import javax.persistence.Query;
 import java.util.HashMap;
 import java.util.List;
@@ -15,8 +18,13 @@ import java.util.Map;
 @Slf4j
 public class LegacyPatientLookup {
 
+    private static final String LEGACY_LOOKUP_RESOURCE = "Patient";
+
     @Autowired
     private EntityManager entityManager;
+
+    @Autowired
+    private PatientAccessLogger patientAccessLogger;
 
     public Patient findPatientByMrn(String mrn) {
         try {
@@ -24,10 +32,40 @@ public class LegacyPatientLookup {
                 "SELECT * FROM patients WHERE mrn = ?1", Patient.class);
             query.setParameter(1, mrn);
             return (Patient) query.getSingleResult();
-        } catch (Exception e) {
-            log.warn("Patient not found for MRN: " + mrn);
+        } catch (NoResultException e) {
+            recordFailedLookup("Patient not found for MRN " + maskMrn(mrn));
             return null;
+        } catch (RuntimeException e) {
+            recordFailedLookup("Patient lookup failed for MRN " + maskMrn(mrn)
+                + " - " + e.getClass().getSimpleName());
+            log.error("Legacy patient lookup by MRN failed", e);
+            throw e;
         }
+    }
+
+    private void recordFailedLookup(String reason) {
+        patientAccessLogger.logFailedAccess(
+            null,
+            "LEGACY_LOOKUP",
+            null,
+            AuditAction.READ,
+            LEGACY_LOOKUP_RESOURCE,
+            reason,
+            null);
+    }
+
+    /**
+     * Masks a patient identifier so it can appear in audit records without
+     * exposing PHI: everything but the last four characters is redacted.
+     */
+    static String maskMrn(String mrn) {
+        if (mrn == null || mrn.isEmpty()) {
+            return "[absent]";
+        }
+        if (mrn.length() <= 4) {
+            return "****";
+        }
+        return "****" + mrn.substring(mrn.length() - 4);
     }
 
     public List<Patient> findPatientsByLastName(String lastName) {
