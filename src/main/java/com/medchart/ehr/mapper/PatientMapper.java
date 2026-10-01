@@ -15,6 +15,8 @@ public interface PatientMapper {
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "version", ignore = true)
+    @Mapping(target = "active", source = "active", defaultValue = "true")
+    @Mapping(target = "deceased", source = "deceased", defaultValue = "false")
     Patient toEntity(PatientDTO dto);
 
     @Mapping(target = "id", ignore = true)
