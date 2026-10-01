@@ -44,7 +44,6 @@ public class InsuranceGateway {
             .planName("Premium Health Plan")
             .copayRequired(new BigDecimal("25.00"))
             .deductibleRemaining(new BigDecimal("500.00"))
-            .patientSsn("XXX-XX-" + patientMrn.substring(Math.max(0, patientMrn.length() - 4)))
             .build();
     }
 
