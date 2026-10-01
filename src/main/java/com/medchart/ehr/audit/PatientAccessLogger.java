@@ -107,21 +107,89 @@ public class PatientAccessLogger {
             String reason,
             String ipAddress) {
         
+        logBulkAccess(String.valueOf(userId), userRole, action, resourceType, null,
+            recordCount, reason, ipAddress, null);
+    }
+
+    /**
+     * Log bulk data access for a named principal.
+     * Used by report and export flows, where the actor is resolved from the security context.
+     */
+    public void logBulkAccess(
+            String userId,
+            String userRole,
+            AuditAction action,
+            String resourceType,
+            Long patientId,
+            int recordCount,
+            String reason,
+            String ipAddress,
+            String sessionId) {
+        
         log.warn("AUDIT BULK: User {} ({}) accessed {} {} records - Reason: {}", 
             userId, userRole, recordCount, resourceType, reason);
         
-        // Create audit event for bulk access
+        auditEventRepository.save(
+            bulkEvent(userId, userRole, action, resourceType, patientId, reason, ipAddress, sessionId,
+                " [BULK: " + recordCount + " records]", true, null));
+    }
+
+    /**
+     * Log a bulk access attempt that failed, so aborted exports stay reconstructable.
+     */
+    public void logFailedBulkAccess(
+            String userId,
+            String userRole,
+            AuditAction action,
+            String resourceType,
+            Long patientId,
+            String reason,
+            String ipAddress,
+            String sessionId,
+            String errorMessage) {
+        
+        log.warn("AUDIT BULK FAILURE: User {} ({}) failed bulk {} of {} - Reason: {}", 
+            userId, userRole, action, resourceType, reason);
+        
+        auditEventRepository.save(
+            bulkEvent(userId, userRole, action, resourceType, patientId, reason, ipAddress, sessionId,
+                " [BULK: failed]", false, errorMessage));
+    }
+
+    private AuditEvent bulkEvent(
+            String userId,
+            String userRole,
+            AuditAction action,
+            String resourceType,
+            Long patientId,
+            String reason,
+            String ipAddress,
+            String sessionId,
+            String descriptionSuffix,
+            boolean success,
+            String errorMessage) {
+        
         AuditEvent event = new AuditEvent();
-        event.setUserId(String.valueOf(userId));
+        event.setUserId(userId);
         event.setUserName(userRole);
+        event.setPatientId(patientId);
         event.setAction(action);
         event.setResourceType(resourceType);
-        event.setDescription(reason + " [BULK: " + recordCount + " records]");
+        event.setDescription(truncate(reason + descriptionSuffix, 500));
         event.setIpAddress(ipAddress);
+        event.setSessionId(sessionId);
         event.setTimestamp(LocalDateTime.now());
-        event.setSuccess(true);
+        event.setSuccess(success);
+        event.setErrorMessage(truncate(errorMessage, 500));
         
-        auditEventRepository.save(event);
+        return event;
+    }
+
+    private String truncate(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, maxLength);
     }
 
     /**

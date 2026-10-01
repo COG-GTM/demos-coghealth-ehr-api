@@ -1,5 +1,6 @@
 package com.medchart.ehr.legacy;
 
+import com.medchart.ehr.audit.BulkExportAuditor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,9 +21,16 @@ public class ReportGenerator {
     @Autowired
     private EntityManager entityManager;
 
+    @Autowired
+    private BulkExportAuditor bulkExportAuditor;
+
     private static final String TEMP_DIR = System.getProperty("java.io.tmpdir");
 
     public String generatePatientRoster() {
+        return writePatientRoster("Patient roster report");
+    }
+
+    private String writePatientRoster(String reason) {
         String sql = "SELECT p.id, p.mrn, p.ssn, p.first_name, p.last_name, p.date_of_birth, " +
                      "p.phone_home, p.phone_mobile, p.email, " +
                      "p.street1, p.city, p.state, p.zip_code, " +
@@ -31,8 +39,16 @@ public class ReportGenerator {
                      "LEFT JOIN insurance_coverages ic ON p.id = ic.patient_id AND ic.active = true " +
                      "WHERE p.active = true";
         
-        Query query = entityManager.createNativeQuery(sql);
-        List<Object[]> results = query.getResultList();
+        List<Object[]> results;
+        try {
+            Query query = entityManager.createNativeQuery(sql);
+            results = query.getResultList();
+        } catch (RuntimeException e) {
+            bulkExportAuditor.recordFailedExport("Patient", null, reason, e);
+            throw e;
+        }
+        
+        bulkExportAuditor.recordExport("Patient", null, results.size(), reason);
         
         String filename = "patient_roster_" + 
             LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".csv";
@@ -50,6 +66,7 @@ public class ReportGenerator {
             }
         } catch (IOException e) {
             log.error("Failed to generate patient roster", e);
+            bulkExportAuditor.recordFailedExport("Patient", null, reason, e);
             throw new RuntimeException("Report generation failed", e);
         }
         
@@ -58,6 +75,7 @@ public class ReportGenerator {
     }
 
     public String generateEncounterSummary(LocalDateTime startDate, LocalDateTime endDate) {
+        String reason = "Encounter summary report for " + startDate + " to " + endDate;
         String sql = "SELECT e.id, e.encounter_number, e.encounter_date_time, e.encounter_type, e.status, " +
                      "p.mrn, p.first_name, p.last_name, p.ssn, p.date_of_birth, " +
                      "pr.first_name as provider_first, pr.last_name as provider_last " +
@@ -66,10 +84,18 @@ public class ReportGenerator {
                      "LEFT JOIN providers pr ON e.attending_provider_id = pr.id " +
                      "WHERE e.encounter_date_time BETWEEN ?1 AND ?2";
         
-        Query query = entityManager.createNativeQuery(sql);
-        query.setParameter(1, startDate);
-        query.setParameter(2, endDate);
-        List<Object[]> results = query.getResultList();
+        List<Object[]> results;
+        try {
+            Query query = entityManager.createNativeQuery(sql);
+            query.setParameter(1, startDate);
+            query.setParameter(2, endDate);
+            results = query.getResultList();
+        } catch (RuntimeException e) {
+            bulkExportAuditor.recordFailedExport("Encounter", null, reason, e);
+            throw e;
+        }
+        
+        bulkExportAuditor.recordExport("Encounter", null, results.size(), reason);
         
         String filename = "encounter_summary_" + 
             LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".txt";
@@ -94,6 +120,7 @@ public class ReportGenerator {
             }
         } catch (IOException e) {
             log.error("Failed to generate encounter summary", e);
+            bulkExportAuditor.recordFailedExport("Encounter", null, reason, e);
             throw new RuntimeException("Report generation failed", e);
         }
         
@@ -102,12 +129,14 @@ public class ReportGenerator {
     }
 
     public byte[] generateDailyReport() {
-        String tempFile = generatePatientRoster();
+        String reason = "Daily patient roster report download";
+        String tempFile = writePatientRoster(reason);
         try {
             byte[] content = Files.readAllBytes(Path.of(tempFile));
             return content;
         } catch (IOException e) {
             log.error("Failed to read temp file", e);
+            bulkExportAuditor.recordFailedExport("Patient", null, reason, e);
             throw new RuntimeException(e);
         }
     }

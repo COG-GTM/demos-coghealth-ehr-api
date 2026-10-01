@@ -1,5 +1,6 @@
 package com.medchart.ehr.legacy;
 
+import com.medchart.ehr.audit.BulkExportAuditor;
 import com.medchart.ehr.domain.encounter.Encounter;
 import com.medchart.ehr.domain.patient.Patient;
 import lombok.extern.slf4j.Slf4j;
@@ -21,18 +22,29 @@ public class EncounterExportService {
     @Autowired
     private EntityManager entityManager;
 
+    @Autowired
+    private BulkExportAuditor bulkExportAuditor;
+
     public byte[] exportEncountersForDateRange(LocalDate startDate, LocalDate endDate) {
+        String reason = "Encounter export for date range " + startDate + " to " + endDate;
         String sql = "SELECT e.id, e.encounter_number, e.encounter_type, e.status, e.encounter_date_time, " +
                      "p.mrn, p.first_name, p.last_name, p.date_of_birth " +
                      "FROM encounters e " +
                      "JOIN patients p ON e.patient_id = p.id " +
                      "WHERE e.encounter_date_time BETWEEN ?1 AND ?2";
         
-        Query query = entityManager.createNativeQuery(sql);
-        query.setParameter(1, startDate.atStartOfDay());
-        query.setParameter(2, endDate.plusDays(1).atStartOfDay());
+        List<Object[]> results;
+        try {
+            Query query = entityManager.createNativeQuery(sql);
+            query.setParameter(1, startDate.atStartOfDay());
+            query.setParameter(2, endDate.plusDays(1).atStartOfDay());
+            results = query.getResultList();
+        } catch (RuntimeException e) {
+            bulkExportAuditor.recordFailedExport("Encounter", null, reason, e);
+            throw e;
+        }
         
-        List<Object[]> results = query.getResultList();
+        bulkExportAuditor.recordExport("Encounter", null, results.size(), reason);
         
         StringBuilder csv = new StringBuilder();
         csv.append("EncounterId,EncounterNumber,PatientMRN,PatientName,DOB,EncounterDate,Type,Status\n");
@@ -53,15 +65,25 @@ public class EncounterExportService {
     }
 
     public byte[] exportPatientEncounterHistory(Long patientId) {
-        Query patientQuery = entityManager.createNativeQuery(
-            "SELECT mrn, first_name, last_name, ssn, date_of_birth FROM patients WHERE id = ?1");
-        patientQuery.setParameter(1, patientId);
-        Object[] patientData = (Object[]) patientQuery.getSingleResult();
+        String reason = "Patient encounter history export";
+        Object[] patientData;
+        List<Object[]> encounters;
+        try {
+            Query patientQuery = entityManager.createNativeQuery(
+                "SELECT mrn, first_name, last_name, ssn, date_of_birth FROM patients WHERE id = ?1");
+            patientQuery.setParameter(1, patientId);
+            patientData = (Object[]) patientQuery.getSingleResult();
+            
+            Query encounterQuery = entityManager.createNativeQuery(
+                "SELECT * FROM encounters WHERE patient_id = ?1 ORDER BY encounter_date_time DESC");
+            encounterQuery.setParameter(1, patientId);
+            encounters = encounterQuery.getResultList();
+        } catch (RuntimeException e) {
+            bulkExportAuditor.recordFailedExport("Encounter", patientId, reason, e);
+            throw e;
+        }
         
-        Query encounterQuery = entityManager.createNativeQuery(
-            "SELECT * FROM encounters WHERE patient_id = ?1 ORDER BY encounter_date_time DESC");
-        encounterQuery.setParameter(1, patientId);
-        List<Object[]> encounters = encounterQuery.getResultList();
+        bulkExportAuditor.recordExport("Encounter", patientId, encounters.size(), reason);
         
         StringBuilder export = new StringBuilder();
         export.append("Patient Encounter History Report\n");
@@ -85,12 +107,20 @@ public class EncounterExportService {
     }
 
     public void exportAllPatientsToFile(String filePath) {
-        Query query = entityManager.createNativeQuery(
-            "SELECT id, mrn, first_name, last_name, date_of_birth, " +
-            "email, phone_home, phone_mobile, street1, city, state, zip_code " +
-            "FROM patients WHERE active = true");
+        String reason = "Full patient roster export to file";
+        List<Object[]> patients;
+        try {
+            Query query = entityManager.createNativeQuery(
+                "SELECT id, mrn, first_name, last_name, date_of_birth, " +
+                "email, phone_home, phone_mobile, street1, city, state, zip_code " +
+                "FROM patients WHERE active = true");
+            patients = query.getResultList();
+        } catch (RuntimeException e) {
+            bulkExportAuditor.recordFailedExport("Patient", null, reason, e);
+            throw e;
+        }
         
-        List<Object[]> patients = query.getResultList();
+        bulkExportAuditor.recordExport("Patient", null, patients.size(), reason);
         
         try (PrintWriter writer = new PrintWriter(new FileWriter(filePath))) {
             writer.println("ID,MRN,FirstName,LastName,DOB,Email,PhoneHome,PhoneMobile,Street,City,State,Zip");
@@ -104,6 +134,7 @@ public class EncounterExportService {
             log.info("Exported {} patients to file: {}", patients.size(), filePath);
         } catch (IOException e) {
             log.error("Failed to export patients to file", e);
+            bulkExportAuditor.recordFailedExport("Patient", null, reason, e);
             throw new RuntimeException("Export failed", e);
         }
     }
