@@ -45,9 +45,28 @@ public class PatientAccessLogger {
             String reason,
             String ipAddress,
             String sessionId) {
+
+        logAccess(String.valueOf(userId), userRole, patientId, patientMrn, action,
+                resourceType, reason, ipAddress, sessionId);
+    }
+
+    /**
+     * Variant for callers whose user identity is a username rather than a numeric id
+     * (e.g. JWT-authenticated requests).
+     */
+    public void logAccess(
+            String userId,
+            String userRole,
+            Long patientId,
+            String patientMrn,
+            AuditAction action,
+            String resourceType,
+            String reason,
+            String ipAddress,
+            String sessionId) {
         
         AuditEvent event = new AuditEvent();
-        event.setUserId(String.valueOf(userId));
+        event.setUserId(userId);
         event.setUserName(userRole);
         event.setPatientId(patientId);
         event.setPatientMrn(patientMrn);
@@ -76,9 +95,25 @@ public class PatientAccessLogger {
             String resourceType,
             String reason,
             String ipAddress) {
+
+        logFailedAccess(String.valueOf(userId), userRole, patientId, action,
+                resourceType, reason, ipAddress);
+    }
+
+    /**
+     * Variant for callers whose user identity is a username rather than a numeric id.
+     */
+    public void logFailedAccess(
+            String userId,
+            String userRole,
+            Long patientId,
+            AuditAction action,
+            String resourceType,
+            String reason,
+            String ipAddress) {
         
         AuditEvent event = new AuditEvent();
-        event.setUserId(String.valueOf(userId));
+        event.setUserId(userId);
         event.setUserName(userRole);
         event.setPatientId(patientId);
         event.setAction(action);
@@ -106,13 +141,29 @@ public class PatientAccessLogger {
             int recordCount,
             String reason,
             String ipAddress) {
+
+        logBulkAccess(String.valueOf(userId), userRole, action, resourceType,
+                recordCount, reason, ipAddress);
+    }
+
+    /**
+     * Variant for callers whose user identity is a username rather than a numeric id.
+     */
+    public void logBulkAccess(
+            String userId,
+            String userRole,
+            AuditAction action,
+            String resourceType,
+            int recordCount,
+            String reason,
+            String ipAddress) {
         
         log.warn("AUDIT BULK: User {} ({}) accessed {} {} records - Reason: {}", 
             userId, userRole, recordCount, resourceType, reason);
         
         // Create audit event for bulk access
         AuditEvent event = new AuditEvent();
-        event.setUserId(String.valueOf(userId));
+        event.setUserId(userId);
         event.setUserName(userRole);
         event.setAction(action);
         event.setResourceType(resourceType);
