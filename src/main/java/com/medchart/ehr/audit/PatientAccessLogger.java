@@ -27,6 +27,7 @@ import java.util.Map;
 public class PatientAccessLogger {
 
     private final AuditEventRepository auditEventRepository;
+    private final AuditService auditService;
 
     /**
      * PATTERN: Log PHI access
@@ -122,6 +123,45 @@ public class PatientAccessLogger {
         event.setSuccess(true);
         
         auditEventRepository.save(event);
+    }
+
+    /**
+     * Log a patient data export (creation, download, or denied attempt) for HIPAA compliance.
+     * Captures who exported, when, how many records, why, and whether it succeeded.
+     *
+     * Persisted via {@link AuditService#saveAuditEventAsync} (REQUIRES_NEW) so the audit
+     * record survives even if the caller's transaction rolls back (e.g. on a denied access).
+     */
+    public void logExport(
+            String userId,
+            String userName,
+            String resourceType,
+            int recordCount,
+            String description,
+            String ipAddress,
+            String requestDetails,
+            boolean success) {
+
+        if (success) {
+            log.info("AUDIT EXPORT: User {} exported {} {} records - {}",
+                userId, recordCount, resourceType, description);
+        } else {
+            log.warn("AUDIT EXPORT DENIED: User {} attempt on {} - {}",
+                userId, resourceType, description);
+        }
+
+        AuditEvent event = new AuditEvent();
+        event.setUserId(userId);
+        event.setUserName(userName);
+        event.setAction(AuditAction.EXPORT);
+        event.setResourceType(resourceType);
+        event.setDescription(description);
+        event.setIpAddress(ipAddress);
+        event.setRequestDetails(requestDetails);
+        event.setTimestamp(LocalDateTime.now());
+        event.setSuccess(success);
+
+        auditService.saveAuditEventAsync(event);
     }
 
     /**

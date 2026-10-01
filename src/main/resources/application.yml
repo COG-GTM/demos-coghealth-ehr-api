@@ -60,6 +60,11 @@ medchart:
   audit:
     enabled: true
     async: true
+  export:
+    temp-dir: ${EXPORT_TEMP_DIR:/tmp/medchart-exports}
+    ttl-hours: 24
+    cleanup-interval-ms: 3600000
+    encryption-key: ${EXPORT_ENCRYPTION_KEY:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
   integration:
     insurance:
       base-url: ${INSURANCE_API_URL:http://localhost:8081}
