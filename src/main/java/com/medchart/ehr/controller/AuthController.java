@@ -1,6 +1,7 @@
 package com.medchart.ehr.controller;
 
 import com.medchart.ehr.domain.auth.User;
+import com.medchart.ehr.dto.auth.*;
 import com.medchart.ehr.repository.UserRepository;
 import com.medchart.ehr.config.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
@@ -9,14 +10,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -30,7 +31,7 @@ public class AuthController {
     private final JwtTokenProvider tokenProvider;
 
     @PostMapping("/login")
-    public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<AuthResponse> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
         Authentication authentication = authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(
                 loginRequest.getUsername(),
@@ -41,33 +42,30 @@ public class AuthController {
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = tokenProvider.generateToken(authentication);
 
-        Map<String, String> response = new HashMap<>();
-        response.put("token", jwt);
-        response.put("type", "Bearer");
-        
-        return ResponseEntity.ok(response);
+        User user = (User) authentication.getPrincipal();
+
+        return ResponseEntity.ok(buildAuthResponse(jwt, user));
     }
 
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignUpRequest signUpRequest) {
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {
             return ResponseEntity.badRequest()
-                .body("Username is already taken!");
+                .body(new ErrorResponse("Username is already taken"));
         }
 
         if (userRepository.existsByEmail(signUpRequest.getEmail())) {
             return ResponseEntity.badRequest()
-                .body("Email is already in use!");
+                .body(new ErrorResponse("Email is already in use"));
         }
 
-        // Create user's account
         User user = User.builder()
             .username(signUpRequest.getUsername())
             .email(signUpRequest.getEmail())
             .firstName(signUpRequest.getFirstName())
             .lastName(signUpRequest.getLastName())
             .password(passwordEncoder.encode(signUpRequest.getPassword()))
-            .roles(Set.of(User.Role.PROVIDER)) // Default role
+            .roles(Set.of(User.Role.PROVIDER))
             .enabled(true)
             .accountNonExpired(true)
             .accountNonLocked(true)
@@ -77,38 +75,76 @@ public class AuthController {
         userRepository.save(user);
 
         log.info("Registered new user: {}", signUpRequest.getUsername());
-        
-        return ResponseEntity.ok("User registered successfully");
+
+        Authentication authentication = authenticationManager.authenticate(
+            new UsernamePasswordAuthenticationToken(
+                signUpRequest.getUsername(),
+                signUpRequest.getPassword()
+            )
+        );
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        String jwt = tokenProvider.generateToken(authentication);
+
+        return ResponseEntity.ok(buildAuthResponse(jwt, user));
     }
 
-    public static class LoginRequest {
-        private String username;
-        private String password;
-
-        // Getters and setters
-        public String getUsername() { return username; }
-        public void setUsername(String username) { this.username = username; }
-        public String getPassword() { return password; }
-        public void setPassword(String password) { this.password = password; }
+    @GetMapping("/me")
+    public ResponseEntity<UserInfoResponse> getCurrentUser(@AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(UserInfoResponse.builder()
+            .id(user.getId())
+            .username(user.getUsername())
+            .email(user.getEmail())
+            .firstName(user.getFirstName())
+            .lastName(user.getLastName())
+            .roles(user.getRoles().stream()
+                .map(Enum::name)
+                .collect(Collectors.toSet()))
+            .build());
     }
 
-    public static class SignUpRequest {
-        private String username;
-        private String email;
-        private String password;
-        private String firstName;
-        private String lastName;
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refreshToken(@AuthenticationPrincipal User user) {
+        String jwt = tokenProvider.generateTokenForUser(user);
 
-        // Getters and setters
-        public String getUsername() { return username; }
-        public void setUsername(String username) { this.username = username; }
-        public String getEmail() { return email; }
-        public void setEmail(String email) { this.email = email; }
-        public String getPassword() { return password; }
-        public void setPassword(String password) { this.password = password; }
-        public String getFirstName() { return firstName; }
-        public void setFirstName(String firstName) { this.firstName = firstName; }
-        public String getLastName() { return lastName; }
-        public void setLastName(String lastName) { this.lastName = lastName; }
+        return ResponseEntity.ok(buildAuthResponse(jwt, user));
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody ChangePasswordRequest request) {
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            return ResponseEntity.badRequest()
+                .body(new ErrorResponse("Current password is incorrect"));
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        log.info("Password changed for user: {}", user.getUsername());
+
+        String jwt = tokenProvider.generateTokenForUser(user);
+        return ResponseEntity.ok(buildAuthResponse(jwt, user));
+    }
+
+    private AuthResponse buildAuthResponse(String jwt, User user) {
+        return AuthResponse.builder()
+            .token(jwt)
+            .username(user.getUsername())
+            .email(user.getEmail())
+            .firstName(user.getFirstName())
+            .lastName(user.getLastName())
+            .roles(user.getRoles().stream()
+                .map(Enum::name)
+                .collect(Collectors.toSet()))
+            .build();
+    }
+
+    @lombok.Getter
+    @lombok.AllArgsConstructor
+    static class ErrorResponse {
+        private String message;
     }
 }
