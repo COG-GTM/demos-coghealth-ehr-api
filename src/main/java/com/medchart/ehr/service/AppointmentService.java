@@ -80,11 +80,10 @@ public class AppointmentService {
         log.info("Checking eligibility with payer {} for patient {}", payerId, patientMrn);
         EligibilityResult result = insuranceGateway.verifyEligibility(patientMrn, payerId);
         
-        // Cache the result (NOTE: This caches PII - see InsuranceCache for HIPAA issue)
+        // Cache the result (SSN excluded for HIPAA compliance)
         if (result.isEligible()) {
             insuranceCache.cacheEligibility(
                 patientMrn, 
-                result.getPatientSsn(), // HIPAA ISSUE: SSN should not be cached
                 payerId,
                 result.getMemberId(),
                 result.isEligible(),
@@ -98,9 +97,11 @@ public class AppointmentService {
     }
 
     private boolean isStale(InsuranceCache.CachedEligibility cached) {
-        // HIPAA ISSUE: No TTL check - cached data lives forever
-        // Should expire after 24 hours per payer requirements
-        return false;
+        if (cached.cachedAt == null) {
+            return true;
+        }
+        return java.time.Duration.between(cached.cachedAt, java.time.LocalDateTime.now())
+                .compareTo(java.time.Duration.ofHours(24)) > 0;
     }
 
     @lombok.Data
@@ -108,7 +109,6 @@ public class AppointmentService {
     public static class EligibilityResult {
         private boolean eligible;
         private String reason;
-        private String patientSsn;
         private String memberId;
         private String planName;
         private java.math.BigDecimal copayRequired;
@@ -117,7 +117,6 @@ public class AppointmentService {
         public static EligibilityResult fromCache(InsuranceCache.CachedEligibility cached) {
             return EligibilityResult.builder()
                 .eligible(cached.eligible)
-                .patientSsn(cached.patientSsn)
                 .memberId(cached.memberId)
                 .planName(cached.planName)
                 .copayRequired(cached.copay != null ? new java.math.BigDecimal(cached.copay) : null)

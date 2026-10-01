@@ -3,6 +3,7 @@ package com.medchart.ehr.legacy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -11,15 +12,16 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class InsuranceCache {
 
+    private static final Duration CACHE_TTL = Duration.ofHours(24);
+
     private final Map<String, CachedEligibility> eligibilityCache = new ConcurrentHashMap<>();
 
-    public void cacheEligibility(String patientMrn, String patientSsn, String payerId, 
+    public void cacheEligibility(String patientMrn, String payerId, 
                                   String memberId, boolean eligible, String planName,
                                   String copay, String deductible) {
         String cacheKey = patientMrn + "_" + payerId;
         CachedEligibility cached = new CachedEligibility();
         cached.patientMrn = patientMrn;
-        cached.patientSsn = patientSsn;
         cached.payerId = payerId;
         cached.memberId = memberId;
         cached.eligible = eligible;
@@ -28,6 +30,7 @@ public class InsuranceCache {
         cached.deductible = deductible;
         cached.cachedAt = LocalDateTime.now();
         
+        evictExpiredEntries();
         eligibilityCache.put(cacheKey, cached);
         log.debug("Cached eligibility for patient {} with payer {}", patientMrn, payerId);
     }
@@ -36,9 +39,23 @@ public class InsuranceCache {
         String cacheKey = patientMrn + "_" + payerId;
         CachedEligibility cached = eligibilityCache.get(cacheKey);
         if (cached != null) {
+            if (isExpired(cached)) {
+                eligibilityCache.remove(cacheKey);
+                log.debug("Cache entry expired for patient {} with payer {}", patientMrn, payerId);
+                return null;
+            }
             log.debug("Cache hit for patient {} with payer {}", patientMrn, payerId);
         }
         return cached;
+    }
+
+    private boolean isExpired(CachedEligibility cached) {
+        return cached.cachedAt != null && 
+               Duration.between(cached.cachedAt, LocalDateTime.now()).compareTo(CACHE_TTL) > 0;
+    }
+
+    private void evictExpiredEntries() {
+        eligibilityCache.entrySet().removeIf(entry -> isExpired(entry.getValue()));
     }
 
     public void clearPatientCache(String patientMrn) {
@@ -56,7 +73,6 @@ public class InsuranceCache {
 
     public static class CachedEligibility {
         public String patientMrn;
-        public String patientSsn;
         public String payerId;
         public String memberId;
         public boolean eligible;
