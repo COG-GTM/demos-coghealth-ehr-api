@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -23,9 +24,14 @@ public class LegacyExportController {
     @GetMapping("/encounters")
     public ResponseEntity<byte[]> exportEncounters(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            HttpServletRequest request) {
         
-        byte[] data = encounterExportService.exportEncountersForDateRange(startDate, endDate);
+        Long userId = getUserId(request);
+        String userRole = getUserRole(request);
+        String ipAddress = request.getRemoteAddr();
+        
+        byte[] data = encounterExportService.exportEncountersForDateRange(startDate, endDate, userId, userRole, ipAddress);
         
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=encounters_export.csv")
@@ -34,8 +40,13 @@ public class LegacyExportController {
     }
 
     @GetMapping("/patient/{patientId}/encounters")
-    public ResponseEntity<byte[]> exportPatientEncounters(@PathVariable Long patientId) {
-        byte[] data = encounterExportService.exportPatientEncounterHistory(patientId);
+    public ResponseEntity<byte[]> exportPatientEncounters(@PathVariable Long patientId, HttpServletRequest request) {
+        Long userId = getUserId(request);
+        String userRole = getUserRole(request);
+        String ipAddress = request.getRemoteAddr();
+        String sessionId = request.getSession(false) != null ? request.getSession(false).getId() : null;
+        
+        byte[] data = encounterExportService.exportPatientEncounterHistory(patientId, userId, userRole, ipAddress, sessionId);
         
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=patient_encounters.txt")
@@ -66,5 +77,21 @@ public class LegacyExportController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=daily_report.csv")
                 .contentType(MediaType.parseMediaType("text/csv"))
                 .body(data);
+    }
+
+    private Long getUserId(HttpServletRequest request) {
+        Object userId = request.getAttribute("userId");
+        if (userId instanceof Long) {
+            return (Long) userId;
+        }
+        return null;
+    }
+
+    private String getUserRole(HttpServletRequest request) {
+        Object userRole = request.getAttribute("userRole");
+        if (userRole instanceof String) {
+            return (String) userRole;
+        }
+        return "UNKNOWN";
     }
 }
