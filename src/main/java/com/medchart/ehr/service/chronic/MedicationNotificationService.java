@@ -4,6 +4,7 @@ import com.medchart.ehr.audit.AuditAccess;
 import com.medchart.ehr.audit.AuditAction;
 import com.medchart.ehr.audit.PatientAccessLogger;
 import com.medchart.ehr.service.ProviderNotificationService;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -31,8 +32,11 @@ import java.util.concurrent.CompletableFuture;
 @RequiredArgsConstructor
 public class MedicationNotificationService {
 
+    private static final String ALERT_METRIC = "chronic.alert";
+
     private final ProviderNotificationService providerNotificationService;
     private final PatientAccessLogger accessLogger;
+    private final MeterRegistry meterRegistry;
 
     /**
      * Alert provider about medication non-adherence.
@@ -66,6 +70,7 @@ public class MedicationNotificationService {
             )
         ).thenAccept(result -> {
             log.info("Non-adherence alert sent to provider {}: success={}", providerId, result.isSuccess());
+            countAlert("NON_ADHERENCE", result.isSuccess() ? "success" : "failure");
         });
     }
 
@@ -100,6 +105,7 @@ public class MedicationNotificationService {
             )
         ).thenAccept(result -> {
             log.info("Care gap alert sent to provider {}: success={}", providerId, result.isSuccess());
+            countAlert("CARE_GAP", result.isSuccess() ? "success" : "failure");
         });
     }
 
@@ -109,6 +115,8 @@ public class MedicationNotificationService {
      * PATTERN: Follow critical alert escalation pattern
      */
     @Async
+    @AuditAccess(action = AuditAction.CREATE, resourceType = "Alert",
+                 description = "Send critical lab alert")
     public CompletableFuture<Void> sendCriticalLabAlert(Long providerId, Long patientId,
                                                          String patientMrn, String patientName,
                                                          String labName, String labValue,
@@ -121,7 +129,17 @@ public class MedicationNotificationService {
             "CRITICAL_LAB",
             String.format("%s result %s exceeds critical threshold %s", labName, labValue, criticalThreshold),
             "HIGH"
-        );
+        ).whenComplete((ignored, error) -> {
+            if (error == null) {
+                log.info("Critical lab alert sent to provider {} for patient {}: success=true",
+                        providerId, patientMrn);
+                countAlert("CRITICAL_LAB", "success");
+            } else {
+                log.error("Critical lab alert failed for provider {} and patient {}",
+                        providerId, patientMrn, error);
+                countAlert("CRITICAL_LAB", "failure");
+            }
+        });
     }
 
     /**
@@ -137,7 +155,11 @@ public class MedicationNotificationService {
         // TODO: Implement patient notification
         // 1. Check patient communication preferences
         // 2. Send via preferred channel (SMS, email, portal)
-        // 3. Log notification for audit
+        // 3. Record the delivery outcome below instead of the not_delivered signal
+        
+        log.warn("Refill reminder for patient {} and {} was not delivered: patient notification is not implemented",
+                patientMrn, medicationName);
+        countAlert("REFILL_REMINDER", "not_delivered");
         
         return CompletableFuture.completedFuture(null);
     }
@@ -176,6 +198,11 @@ public class MedicationNotificationService {
             Map.of("alertType", "DAILY_DIGEST")
         ).thenAccept(result -> {
             log.info("Daily digest sent to provider {}: success={}", providerId, result.isSuccess());
+            countAlert("DAILY_DIGEST", result.isSuccess() ? "success" : "failure");
         });
+    }
+
+    private void countAlert(String alertType, String outcome) {
+        meterRegistry.counter(ALERT_METRIC, "type", alertType, "outcome", outcome).increment();
     }
 }
