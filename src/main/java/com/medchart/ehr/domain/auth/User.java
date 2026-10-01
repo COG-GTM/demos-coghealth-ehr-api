@@ -86,6 +86,7 @@ public class User implements UserDetails {
     public enum Role {
         PROVIDER,
         ADMIN,
-        STAFF
+        STAFF,
+        PHI_EXPORT
     }
 }
