@@ -26,6 +26,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PatientAccessLogger {
 
+    private static final String UNKNOWN_USER_ID = "unauthenticated";
+
     private final AuditEventRepository auditEventRepository;
 
     /**
@@ -47,7 +49,7 @@ public class PatientAccessLogger {
             String sessionId) {
         
         AuditEvent event = new AuditEvent();
-        event.setUserId(String.valueOf(userId));
+        event.setUserId(formatUserId(userId));
         event.setUserName(userRole);
         event.setPatientId(patientId);
         event.setPatientMrn(patientMrn);
@@ -78,7 +80,7 @@ public class PatientAccessLogger {
             String ipAddress) {
         
         AuditEvent event = new AuditEvent();
-        event.setUserId(String.valueOf(userId));
+        event.setUserId(formatUserId(userId));
         event.setUserName(userRole);
         event.setPatientId(patientId);
         event.setAction(action);
@@ -112,7 +114,7 @@ public class PatientAccessLogger {
         
         // Create audit event for bulk access
         AuditEvent event = new AuditEvent();
-        event.setUserId(String.valueOf(userId));
+        event.setUserId(formatUserId(userId));
         event.setUserName(userRole);
         event.setAction(action);
         event.setResourceType(resourceType);
@@ -122,6 +124,10 @@ public class PatientAccessLogger {
         event.setSuccess(true);
         
         auditEventRepository.save(event);
+    }
+
+    private String formatUserId(Long userId) {
+        return userId != null ? String.valueOf(userId) : UNKNOWN_USER_ID;
     }
 
     /**
