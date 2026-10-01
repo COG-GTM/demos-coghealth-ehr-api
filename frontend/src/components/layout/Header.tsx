@@ -49,8 +49,9 @@ export function Header({ onMenuClick }: HeaderProps) {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/patients?q=${encodeURIComponent(searchQuery)}`);
+    const query = searchQuery.trim();
+    if (query) {
+      navigate(`/patients?q=${encodeURIComponent(query)}`);
       setShowSearch(false);
       setSearchQuery('');
     }
@@ -202,6 +203,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                 <button
                   onClick={() => {
                     setShowProfile(false);
+                    localStorage.removeItem('auth_token');
                     navigate('/login');
                   }}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-md"
