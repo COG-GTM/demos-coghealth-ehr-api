@@ -83,7 +83,15 @@ export function ResultsView({ labPanels, imagingResults, onMarkReviewed, isLoadi
                         {panel.status}
                       </Badge>
                       {panel.results.some((r) => !r.reviewedAt) && onMarkReviewed && (
-                        <Button size="sm" variant="secondary">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() =>
+                            panel.results
+                              .filter((r) => !r.reviewedAt)
+                              .forEach((r) => onMarkReviewed('lab', r.id))
+                          }
+                        >
                           <Check className="w-4 h-4" />
                           Mark Reviewed
                         </Button>
