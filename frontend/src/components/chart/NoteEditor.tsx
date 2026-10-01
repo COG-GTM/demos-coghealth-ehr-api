@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Save, Send, FileText, Clock, User } from 'lucide-react';
 import { Card, CardHeader, CardBody, Button, Input, Badge, Modal } from '../common';
 import { formatDateTime, cn } from '../../utils';
@@ -41,16 +41,14 @@ export function NoteEditor({ note, patient, encounterId, onSave, onSign, isLoadi
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isDirty, setIsDirty] = useState(false);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (isDirty && onSave) {
-        handleSave(true);
-      }
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [isDirty]);
+  const autosaveRef = useRef<() => void>(() => {});
 
-  const handleSave = (autosave = false) => {
+  useEffect(() => {
+    const interval = setInterval(() => autosaveRef.current(), 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleSave = () => {
     onSave?.({
       noteType,
       chiefComplaint,
@@ -63,6 +61,14 @@ export function NoteEditor({ note, patient, encounterId, onSave, onSign, isLoadi
     setLastSaved(new Date());
     setIsDirty(false);
   };
+
+  useEffect(() => {
+    autosaveRef.current = () => {
+      if (isDirty && onSave) {
+        handleSave();
+      }
+    };
+  });
 
   const handleSign = () => {
     if (note?.id) {
