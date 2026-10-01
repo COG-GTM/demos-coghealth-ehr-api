@@ -8,11 +8,11 @@ Spring Boot REST API for the CogHealth EHR system.
 
 No local database setup required. The `dev` profile connects to a shared Neon PostgreSQL instance with pre-seeded test data.
 
-**Prerequisites:** Java 11 (required — later versions are incompatible)
+**Prerequisites:** Java 21 (required)
 
 ```bash
 # On macOS with Homebrew
-export JAVA_HOME=/opt/homebrew/opt/openjdk@11
+export JAVA_HOME=/opt/homebrew/opt/openjdk@21
 export PATH="$JAVA_HOME/bin:$PATH"
 
 # Set Neon credentials (get these from your team lead or .env file)
@@ -36,8 +36,8 @@ mvn spring-boot:run
 
 ## Tech Stack
 
-- Java 11
-- Spring Boot 2.7.x
+- Java 21
+- Spring Boot 3.3.x
 - PostgreSQL (Neon cloud or local)
 - Flyway (schema migrations)
 - JJWT (authentication tokens)

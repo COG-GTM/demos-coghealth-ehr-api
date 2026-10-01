@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.lang.reflect.Method;
 
 @Aspect
@@ -55,8 +55,8 @@ public class AuditAspect {
 
     private Long extractPatientId(Object[] args) {
         for (Object arg : args) {
-            if (arg instanceof Long) {
-                return (Long) arg;
+            if (arg instanceof Long id) {
+                return id;
             }
         }
         return null;

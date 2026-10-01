@@ -77,19 +77,6 @@ public class InsuranceGateway {
         return new ClaimStatus(claimReference, "PENDING", "Awaiting payer review");
     }
 
-    public static class ClaimStatus {
-        private final String claimReference;
-        private final String status;
-        private final String message;
-
-        public ClaimStatus(String claimReference, String status, String message) {
-            this.claimReference = claimReference;
-            this.status = status;
-            this.message = message;
-        }
-
-        public String getClaimReference() { return claimReference; }
-        public String getStatus() { return status; }
-        public String getMessage() { return message; }
+    public record ClaimStatus(String claimReference, String status, String message) {
     }
 }

@@ -10,14 +10,18 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        java-version: ['21']
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Java
+      - name: Setup Java ${{ matrix.java-version }}
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '11'
+          java-version: ${{ matrix.java-version }}
           cache: 'maven'
         env:
           NEON_DB_URL: ${{ secrets.NEON_DB_URL }}
