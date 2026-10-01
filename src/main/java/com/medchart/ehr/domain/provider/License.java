@@ -4,6 +4,7 @@ import lombok.*;
 
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
+import java.io.Serializable;
 import java.time.LocalDate;
 
 @Embeddable
@@ -12,7 +13,9 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class License {
+public class License implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     @Column(length = 50)
     private String licenseType;

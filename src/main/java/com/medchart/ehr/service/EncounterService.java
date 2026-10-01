@@ -1,10 +1,16 @@
 package com.medchart.ehr.service;
 
+import com.medchart.ehr.audit.AuditAccess;
+import com.medchart.ehr.audit.AuditAction;
 import com.medchart.ehr.domain.encounter.Encounter;
 import com.medchart.ehr.domain.encounter.EncounterStatus;
 import com.medchart.ehr.repository.EncounterRepository;
+import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -32,23 +38,38 @@ public class EncounterService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "encounters", key = "#id", unless = "!#result.isPresent()")
+    @AuditAccess(action = AuditAction.READ, resourceType = "Encounter", description = "View encounter by ID")
     public Optional<Encounter> findById(Long id) {
-        return encounterRepository.findById(id);
+        Optional<Encounter> encounter = encounterRepository.findById(id);
+        encounter.ifPresent(this::initializeLazyCollections);
+        return encounter;
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "encounters", key = "'details-' + #id", unless = "!#result.isPresent()")
+    @AuditAccess(action = AuditAction.READ, resourceType = "Encounter", description = "View encounter with details")
     public Optional<Encounter> findByIdWithDetails(Long id) {
-        return encounterRepository.findByIdWithDetails(id);
+        Optional<Encounter> encounter = encounterRepository.findByIdWithDetails(id);
+        encounter.ifPresent(this::initializeLazyCollections);
+        return encounter;
     }
 
     @Transactional(readOnly = true)
+    @AuditAccess(action = AuditAction.READ, resourceType = "Encounter", description = "View encounter by number")
     public Optional<Encounter> findByEncounterNumber(String encounterNumber) {
-        return encounterRepository.findByEncounterNumber(encounterNumber);
+        Optional<Encounter> encounter = encounterRepository.findByEncounterNumber(encounterNumber);
+        encounter.ifPresent(this::initializeLazyCollections);
+        return encounter;
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "encountersByPatient", key = "#patientId")
+    @AuditAccess(action = AuditAction.READ, resourceType = "Encounter", description = "View encounters by patient")
     public List<Encounter> findByPatientId(Long patientId) {
-        return encounterRepository.findByPatientId(patientId);
+        List<Encounter> encounters = encounterRepository.findByPatientId(patientId);
+        encounters.forEach(this::initializeLazyCollections);
+        return encounters;
     }
 
     @Transactional(readOnly = true)
@@ -57,15 +78,23 @@ public class EncounterService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "encountersByProvider", key = "#providerId")
+    @AuditAccess(action = AuditAction.READ, resourceType = "Encounter", description = "View encounters by provider")
     public List<Encounter> findByProviderId(Long providerId) {
-        return encounterRepository.findByAttendingProviderId(providerId);
+        List<Encounter> encounters = encounterRepository.findByAttendingProviderId(providerId);
+        encounters.forEach(this::initializeLazyCollections);
+        return encounters;
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "providerSchedule", key = "#providerId + '-' + #date.toString()")
+    @AuditAccess(action = AuditAction.READ, resourceType = "Encounter", description = "View provider schedule")
     public List<Encounter> getProviderSchedule(Long providerId, LocalDate date) {
         LocalDateTime startOfDay = date.atStartOfDay();
         LocalDateTime endOfDay = date.plusDays(1).atStartOfDay();
-        return encounterRepository.findTodaysSchedule(providerId, startOfDay, endOfDay);
+        List<Encounter> encounters = encounterRepository.findTodaysSchedule(providerId, startOfDay, endOfDay);
+        encounters.forEach(this::initializeLazyCollections);
+        return encounters;
     }
 
     @Transactional(readOnly = true)
@@ -78,6 +107,12 @@ public class EncounterService {
         return encounterRepository.findByStatus(status);
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "encounters", allEntries = true),
+            @CacheEvict(value = "encountersByPatient", allEntries = true),
+            @CacheEvict(value = "encountersByProvider", allEntries = true),
+            @CacheEvict(value = "providerSchedule", allEntries = true)
+    })
     public Encounter create(Encounter encounter) {
         String encNumber = generateEncounterNumber();
         encounter.setEncounterNumber(encNumber);
@@ -88,11 +123,23 @@ public class EncounterService {
         return saved;
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "encounters", allEntries = true),
+            @CacheEvict(value = "encountersByPatient", allEntries = true),
+            @CacheEvict(value = "encountersByProvider", allEntries = true),
+            @CacheEvict(value = "providerSchedule", allEntries = true)
+    })
     public Encounter update(Encounter encounter) {
         log.info("Updating encounter {}", encounter.getEncounterNumber());
         return encounterRepository.save(encounter);
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "encounters", allEntries = true),
+            @CacheEvict(value = "encountersByPatient", allEntries = true),
+            @CacheEvict(value = "encountersByProvider", allEntries = true),
+            @CacheEvict(value = "providerSchedule", allEntries = true)
+    })
     public void checkIn(Long encounterId) {
         encounterRepository.findById(encounterId).ifPresent(enc -> {
             enc.setStatus(EncounterStatus.CHECKED_IN);
@@ -101,6 +148,12 @@ public class EncounterService {
         });
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "encounters", allEntries = true),
+            @CacheEvict(value = "encountersByPatient", allEntries = true),
+            @CacheEvict(value = "encountersByProvider", allEntries = true),
+            @CacheEvict(value = "providerSchedule", allEntries = true)
+    })
     public void startEncounter(Long encounterId) {
         encounterRepository.findById(encounterId).ifPresent(enc -> {
             enc.setStatus(EncounterStatus.IN_PROGRESS);
@@ -109,6 +162,12 @@ public class EncounterService {
         });
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "encounters", allEntries = true),
+            @CacheEvict(value = "encountersByPatient", allEntries = true),
+            @CacheEvict(value = "encountersByProvider", allEntries = true),
+            @CacheEvict(value = "providerSchedule", allEntries = true)
+    })
     public void completeEncounter(Long encounterId, String notes) {
         encounterRepository.findById(encounterId).ifPresent(enc -> {
             enc.setStatus(EncounterStatus.COMPLETED);
@@ -120,6 +179,12 @@ public class EncounterService {
         });
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "encounters", allEntries = true),
+            @CacheEvict(value = "encountersByPatient", allEntries = true),
+            @CacheEvict(value = "encountersByProvider", allEntries = true),
+            @CacheEvict(value = "providerSchedule", allEntries = true)
+    })
     public void cancelEncounter(Long encounterId) {
         encounterRepository.findById(encounterId).ifPresent(enc -> {
             enc.setStatus(EncounterStatus.CANCELLED);
@@ -128,6 +193,12 @@ public class EncounterService {
         });
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "encounters", allEntries = true),
+            @CacheEvict(value = "encountersByPatient", allEntries = true),
+            @CacheEvict(value = "encountersByProvider", allEntries = true),
+            @CacheEvict(value = "providerSchedule", allEntries = true)
+    })
     public void markNoShow(Long encounterId) {
         encounterRepository.findById(encounterId).ifPresent(enc -> {
             enc.setStatus(EncounterStatus.NO_SHOW);
@@ -139,6 +210,24 @@ public class EncounterService {
     @Transactional(readOnly = true)
     public long getPatientEncounterCount(Long patientId) {
         return encounterRepository.countByPatientId(patientId);
+    }
+
+    private void initializeLazyCollections(Encounter encounter) {
+        Hibernate.initialize(encounter.getDiagnoses());
+        encounter.getDiagnoses().forEach(ed -> {
+            if (ed.getDiagnosis() != null) {
+                Hibernate.initialize(ed.getDiagnosis());
+                Hibernate.initialize(ed.getDiagnosis().getPatient());
+                Hibernate.initialize(ed.getDiagnosis().getDiagnosedBy());
+            }
+        });
+        if (encounter.getPatient() != null) {
+            Hibernate.initialize(encounter.getPatient().getIdentifiers());
+            Hibernate.initialize(encounter.getPatient().getEmergencyContacts());
+        }
+        if (encounter.getAttendingProvider() != null) {
+            Hibernate.initialize(encounter.getAttendingProvider().getLicenses());
+        }
     }
 
     private String generateEncounterNumber() {

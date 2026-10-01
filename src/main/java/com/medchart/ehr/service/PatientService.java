@@ -8,6 +8,9 @@ import com.medchart.ehr.mapper.PatientMapper;
 import com.medchart.ehr.repository.PatientRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -26,6 +29,7 @@ public class PatientService {
     private final PatientMapper patientMapper;
 
     @AuditAccess(action = AuditAction.READ, resourceType = "Patient", description = "View patient record")
+    @Cacheable(value = "patients", key = "#id")
     public PatientDTO getPatientById(Long id) {
         Patient patient = patientRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Patient not found with id: " + id));
@@ -33,6 +37,7 @@ public class PatientService {
     }
 
     @AuditAccess(action = AuditAction.READ, resourceType = "Patient", description = "View patient by MRN")
+    @Cacheable(value = "patientsByMrn", key = "#mrn")
     public PatientDTO getPatientByMrn(String mrn) {
         Patient patient = patientRepository.findByMrn(mrn)
                 .orElseThrow(() -> new EntityNotFoundException("Patient not found with MRN: " + mrn));
@@ -40,6 +45,7 @@ public class PatientService {
     }
 
     @AuditAccess(action = AuditAction.SEARCH, resourceType = "Patient", description = "Search patients")
+    @Cacheable(value = "patientSearch", key = "#searchTerm + '-' + #pageable.pageNumber + '-' + #pageable.pageSize + '-' + #pageable.sort.toString()")
     public Page<PatientDTO> searchPatients(String searchTerm, Pageable pageable) {
         return patientRepository.searchPatients(searchTerm, pageable)
                 .map(patientMapper::toDto);
@@ -47,6 +53,7 @@ public class PatientService {
 
     @Transactional
     @AuditAccess(action = AuditAction.CREATE, resourceType = "Patient", description = "Create patient record")
+    @CacheEvict(value = "patientSearch", allEntries = true)
     public PatientDTO createPatient(PatientDTO patientDTO) {
         if (patientDTO.getMrn() != null) {
             Optional<Patient> existing = patientRepository.findByMrn(patientDTO.getMrn());
@@ -67,6 +74,11 @@ public class PatientService {
 
     @Transactional
     @AuditAccess(action = AuditAction.UPDATE, resourceType = "Patient", description = "Update patient record")
+    @Caching(evict = {
+            @CacheEvict(value = "patients", key = "#id"),
+            @CacheEvict(value = "patientsByMrn", allEntries = true),
+            @CacheEvict(value = "patientSearch", allEntries = true)
+    })
     public PatientDTO updatePatient(Long id, PatientDTO patientDTO) {
         Patient existing = patientRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Patient not found with id: " + id));
