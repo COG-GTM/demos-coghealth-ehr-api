@@ -146,11 +146,6 @@ public class FhirPatientMapper {
                 "system", MRN_SYSTEM,
                 "value", patient.getMrn(),
                 "use", "official"
-            ),
-            Map.of(
-                "system", SSN_SYSTEM,
-                "value", patient.getSsn() != null ? patient.getSsn() : "",
-                "use", "secondary"
             )
         );
     }

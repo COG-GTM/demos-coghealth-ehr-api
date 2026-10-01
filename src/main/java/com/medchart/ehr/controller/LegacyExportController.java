@@ -44,18 +44,26 @@ public class LegacyExportController {
     }
 
     @GetMapping("/reports/patient-roster")
-    public ResponseEntity<String> generatePatientRoster() {
-        String filePath = reportGenerator.generatePatientRoster();
-        return ResponseEntity.ok("Report generated at: " + filePath);
+    public ResponseEntity<byte[]> generatePatientRoster() {
+        byte[] data = reportGenerator.generatePatientRoster();
+        
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=patient_roster.csv")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(data);
     }
 
     @GetMapping("/reports/encounter-summary")
-    public ResponseEntity<String> generateEncounterSummary(
+    public ResponseEntity<byte[]> generateEncounterSummary(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
         
-        String filePath = reportGenerator.generateEncounterSummary(startDate, endDate);
-        return ResponseEntity.ok("Report generated at: " + filePath);
+        byte[] data = reportGenerator.generateEncounterSummary(startDate, endDate);
+        
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=encounter_summary.txt")
+                .contentType(MediaType.TEXT_PLAIN)
+                .body(data);
     }
 
     @GetMapping("/reports/daily")

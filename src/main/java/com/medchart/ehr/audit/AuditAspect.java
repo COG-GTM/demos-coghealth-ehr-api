@@ -27,7 +27,7 @@ public class AuditAspect {
         Method method = signature.getMethod();
         AuditAccess auditAccess = method.getAnnotation(AuditAccess.class);
 
-        Long patientId = extractPatientId(joinPoint.getArgs());
+        Long patientId = extractPatientId(signature, joinPoint.getArgs());
         String userId = getCurrentUserId();
 
         AuditEvent.AuditEventBuilder eventBuilder = AuditEvent.builder()
@@ -53,10 +53,13 @@ public class AuditAspect {
         }
     }
 
-    private Long extractPatientId(Object[] args) {
-        for (Object arg : args) {
-            if (arg instanceof Long) {
-                return (Long) arg;
+    private Long extractPatientId(MethodSignature signature, Object[] args) {
+        String[] paramNames = signature.getParameterNames();
+        if (paramNames != null) {
+            for (int i = 0; i < paramNames.length; i++) {
+                if ("patientId".equals(paramNames[i]) && args[i] instanceof Long) {
+                    return (Long) args[i];
+                }
             }
         }
         return null;
