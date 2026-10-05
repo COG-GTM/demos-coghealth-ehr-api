@@ -32,3 +32,44 @@ jobs:
 
       - name: Verify
         run: mvn verify -B -DskipTests
+
+  notify-devin:
+    needs: build
+    if: failure()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Notify Devin automation webhook
+        env:
+          DEVIN_WEBHOOK_URL: ${{ secrets.DEVIN_WEBHOOK_URL }}
+          DEVIN_WEBHOOK_SECRET: ${{ secrets.DEVIN_WEBHOOK_SECRET }}
+          REPOSITORY: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.head_ref || github.ref_name }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          if [ -z "$DEVIN_WEBHOOK_URL" ]; then
+            echo "DEVIN_WEBHOOK_URL is not set; skipping Devin notification."
+            exit 0
+          fi
+          payload=$(jq -n \
+            --arg repository "$REPOSITORY" \
+            --arg event "$EVENT" \
+            --arg ref "$REF" \
+            --arg sha "$SHA" \
+            --arg pr_number "$PR_NUMBER" \
+            --arg run_url "$RUN_URL" \
+            --arg actor "$ACTOR" \
+            --arg workflow "$GITHUB_WORKFLOW" \
+            --arg run_id "$GITHUB_RUN_ID" \
+            --arg run_attempt "$GITHUB_RUN_ATTEMPT" \
+            '{type: "ci_failure", repository: $repository, workflow: $workflow, event: $event,
+              ref: $ref, sha: $sha, pr_number: $pr_number, actor: $actor,
+              run_id: $run_id, run_attempt: $run_attempt, run_url: $run_url}')
+          curl -sS --fail-with-body -X POST "$DEVIN_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -H "X-Webhook-Secret: $DEVIN_WEBHOOK_SECRET" \
+            --data "$payload"
