@@ -3,6 +3,7 @@ package com.medchart.ehr.service;
 import com.medchart.ehr.domain.patient.Patient;
 import com.medchart.ehr.dto.PatientDTO;
 import com.medchart.ehr.mapper.PatientMapper;
+import com.medchart.ehr.mapper.PatientMapperImpl;
 import com.medchart.ehr.repository.PatientRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -87,16 +88,21 @@ class PatientServiceTest {
     }
 
     @Test
-    void updatePatientAppliesDtoToExistingEntity() {
-        Patient existing = Patient.builder().id(7L).mrn("MRN007").build();
+    void updatePatientAppliesNonNullDtoFieldsToExistingEntity() {
+        PatientService serviceWithRealMapper = new PatientService(patientRepository, new PatientMapperImpl());
+        Patient existing = Patient.builder().id(7L).mrn("MRN007").firstName("Ada").lastName("Old").build();
         PatientDTO update = PatientDTO.builder().lastName("Updated").build();
         when(patientRepository.findById(7L)).thenReturn(Optional.of(existing));
-        when(patientRepository.save(existing)).thenReturn(existing);
+        when(patientRepository.save(any(Patient.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        patientService.updatePatient(7L, update);
+        PatientDTO result = serviceWithRealMapper.updatePatient(7L, update);
 
-        verify(patientMapper).updateEntityFromDto(update, existing);
-        verify(patientRepository).save(existing);
+        ArgumentCaptor<Patient> saved = ArgumentCaptor.forClass(Patient.class);
+        verify(patientRepository).save(saved.capture());
+        assertThat(saved.getValue().getLastName()).isEqualTo("Updated");
+        assertThat(saved.getValue().getFirstName()).isEqualTo("Ada");
+        assertThat(saved.getValue().getMrn()).isEqualTo("MRN007");
+        assertThat(result.getLastName()).isEqualTo("Updated");
     }
 
     @Test

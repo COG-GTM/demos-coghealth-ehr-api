@@ -64,7 +64,7 @@ class FhirPatientMapperTest {
     }
 
     @Test
-    void roundTripPreservesNameAndGender() {
+    void roundTripPreservesFieldsThatFromFhirResourceMaps() {
         Patient original = Patient.builder()
                 .id(1L).mrn("MRN100").firstName("Katherine").lastName("Johnson")
                 .gender(Gender.FEMALE).dateOfBirth(LocalDate.of(1918, 8, 26)).active(true)
