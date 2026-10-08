@@ -20,6 +20,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -32,7 +34,9 @@ jobs:
         run: mvn -B -q compile
 
       - name: Interface contract
-        run: mvn -B test -Dgroups=interface-contract -Dhr.export.date=${{ inputs.export_date }}
+        env:
+          EXPORT_DATE: ${{ inputs.export_date }}
+        run: mvn -B test -Dgroups=interface-contract -Dhr.export.date="${EXPORT_DATE}"
 
       - name: Upload contract report
         if: always()
