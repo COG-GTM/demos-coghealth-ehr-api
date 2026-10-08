@@ -1,0 +1,6 @@
+employee_id,last_name,first_name,npi,cost_center,pto_start,pto_end,pto_type,status,notes
+E104422,Marquez,Elena,1932405817,CC-230-5410,10/13-10/17 vacation,,Vacation,Approved,approved by dept admin 09/22
+E119901,MARQUEZ,ELENA,,CC-230-5410,10/13-10/17 vacation,,Vacation,Approved,legacy record - see E104422
+E108913,Okafor,Samuel,1750389264,CC-240-5412,2026-10-14,2026-10-14,Vacation,Approved,
+E101177,Raman,Priya,1487296350,CC-230-5411,"Thu 10/22, half day AM",,Vacation,Approved,half day - clinic covered by locum
+E109640,Whitfield,Daniel,1619072483,CC-240-5420,,,,,no approved time off in period
