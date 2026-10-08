@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -27,6 +28,8 @@ import java.util.Set;
 @Service
 @Slf4j
 public class FhirR4ExportService {
+
+    private static final DateTimeFormatter SLOT_ID_TS = DateTimeFormatter.ofPattern("yyyyMMddHHmm");
 
     public static final String NPI_SYSTEM = "http://hl7.org/fhir/sid/us-npi";
     public static final String HR_EMPLOYEE_ID_SYSTEM = "urn:coghealth:workday:employee-id";
@@ -58,7 +61,7 @@ public class FhirR4ExportService {
                     continue;
                 }
                 if (periods.add(period.startInstant() + "/" + period.endInstant())) {
-                    String id = p.employeeId + "-pto" + (periods.size() > 1 ? "-" + periods.size() : "");
+                    String id = p.employeeId + "-pto-" + period.start.format(SLOT_ID_TS);
                     out.add(slot(id, p, r, period));
                 }
             }

@@ -26,6 +26,10 @@ public final class PtoPeriodParser {
     private static final Pattern ISO_DATE = Pattern.compile("\\d{4}-\\d{2}-\\d{2}");
     private static final Pattern MONTH_DAY = Pattern.compile(
             "(?<![\\d/])(\\d{1,2})/(\\d{1,2})(?:\\s*-\\s*(\\d{1,2})/(\\d{1,2}))?(?![\\d/])");
+    /** Workflow timestamps in notes ("approved by dept admin 09/22") are not leave dates. */
+    private static final Pattern AUDIT_DATE = Pattern.compile(
+            "\\b(approved|submitted|requested|entered|updated|reviewed|cancell?ed|denied)\\b[^,;]*?\\d{1,2}/\\d{1,2}(/\\d{2,4})?",
+            Pattern.CASE_INSENSITIVE);
     private static final Pattern HALF_DAY = Pattern.compile("half[\\s-]*day\\s*(AM|PM)?", Pattern.CASE_INSENSITIVE);
     private static final LocalTime END_OF_DAY = LocalTime.of(23, 59, 59);
     private static final LocalTime NOON = LocalTime.NOON;
@@ -71,7 +75,7 @@ public final class PtoPeriodParser {
             }
             return parseFreeText((start + " " + end).trim(), ref, Source.COLUMNS);
         }
-        return parseFreeText(trim(r.notes), ref, Source.NOTES);
+        return parseFreeText(AUDIT_DATE.matcher(trim(r.notes)).replaceAll(""), ref, Source.NOTES);
     }
 
     static PtoPeriod parseFreeText(String text, LocalDate ref, Source source) {

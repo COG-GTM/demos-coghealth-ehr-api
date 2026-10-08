@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.Map;
 
 @Component
@@ -82,6 +84,7 @@ public class HrPtoSyncJob implements CommandLineRunner {
         int rejected = 0;
         int skipped = 0;
         List<String> errors = new ArrayList<String>();
+        Set<String> holds = new HashSet<String>();
 
         for (HrPtoRecord r : records) {
             Integer dept = departmentMapping.lookupForExport(r.costCenter, exportDate);
@@ -100,7 +103,8 @@ public class HrPtoSyncJob implements CommandLineRunner {
             List<OrBlock> blocks = loadOrBlocks(r.employeeId);
             for (LocalDate day : days) {
                 for (OrBlock b : blocks) {
-                    if (weekdayOf(day).equals(b.weekday)) {
+                    if (weekdayOf(day).equals(b.weekday)
+                            && holds.add(b.providerId + "|" + b.startTime + "|" + b.room + "|" + day)) {
                         String ctl = nextControlId(exportDate);
                         String msg = buildSiuS15(r, dept, b, day, ctl);
                         writeOutbound(exportDate, ctl, msg);

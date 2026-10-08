@@ -75,4 +75,15 @@ class PractitionerDeduplicatorTest {
         assertEquals("E104422", PractitionerDeduplicator.crossReference(row("E2", "", "", "", "Legacy record - SEE e104422")));
         assertNull(PractitionerDeduplicator.crossReference(row("E3", "", "", "", "approved by dept admin")));
     }
+
+    @Test
+    void doesNotMergeConflictingNpisThroughRowWithoutNpi() {
+        List<PractitionerGroup> g = dedup.group(Arrays.asList(
+                row("E1", "Doe", "Jane", "1111111111", ""),
+                row("E2", "Doe", "Jane", "2222222222", "see E3"),
+                row("E3", "Doe", "Jane", "", "legacy record - see E1")));
+        assertEquals(2, g.size());
+        assertEquals(Arrays.asList("E1"), g.get(0).employeeIds());
+        assertEquals(Arrays.asList("E2", "E3"), g.get(1).employeeIds());
+    }
 }

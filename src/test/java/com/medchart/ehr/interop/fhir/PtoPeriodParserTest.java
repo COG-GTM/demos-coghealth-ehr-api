@@ -88,4 +88,17 @@ class PtoPeriodParserTest {
         PtoPeriod jan = PtoPeriodParser.parse(row("01/05 vacation", "", ""), LocalDate.of(2026, 12, 15));
         assertEquals("2027-01-05T00:00:00-05:00", jan.startInstant());
     }
+
+    @Test
+    void notesApprovalDateIsNotLeave() {
+        assertNull(PtoPeriodParser.parse(row("", "", "approved by dept admin 09/22"), EXPORT_DAY));
+    }
+
+    @Test
+    void notesLeaveDateParsedAroundApprovalDate() {
+        PtoPeriod p = PtoPeriodParser.parse(row("", "", "approved by dept admin 09/22; vacation 10/13-10/17"), EXPORT_DAY);
+        assertEquals("2026-10-13T00:00:00-04:00", p.startInstant());
+        assertEquals("2026-10-17T23:59:59-04:00", p.endInstant());
+        assertEquals(Source.NOTES, p.source);
+    }
 }

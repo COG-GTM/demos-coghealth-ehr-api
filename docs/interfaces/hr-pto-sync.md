@@ -71,10 +71,10 @@ FHIR export rules (`FhirR4ExportService`):
   (`http://hl7.org/fhir/sid/us-npi`) and every HR employee id (`urn:coghealth:workday:employee-id`).
 - PractitionerRole.organization = `Organization/dept-<department_id>` effective on the export date.
 - Schedule.actor = the PractitionerRole.
-- one Slot (`busy-unavailable`) per distinct approved PTO period, instants in America/New_York
+- one Slot (`busy-unavailable`, id `<employee_id>-pto-<start yyyyMMddHHmm>`) per distinct approved PTO period, instants in America/New_York
   (`PtoPeriodParser`): `pto_start`/`pto_end` as ISO dates (00:00:00 to 23:59:59); free text left in
   `pto_start` (`10/13-10/17 vacation`, `Thu 10/22, half day AM`; AM = 00:00-12:00, PM = 12:00-23:59:59);
-  `notes` are parsed only when both columns are empty. Month/day without year takes the export year,
+  `notes` are parsed only when both columns are empty, ignoring workflow dates (`approved by ... 09/22`). Month/day without year takes the export year,
   rolled forward when it would be more than 6 months before the export date.
 
 Checks (one JUnit test each, `HrPtoInterfaceContractTest`, tag `interface-contract`):

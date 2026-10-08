@@ -51,6 +51,10 @@ class FhirR4ExportServiceTest {
         throw new AssertionError("missing " + reference);
     }
 
+    private static long slots(String employeeId) {
+        return references().stream().filter(ref -> ref.startsWith("Slot/" + employeeId + "-pto-")).count();
+    }
+
     private static List<String> references() {
         List<String> refs = new ArrayList<>();
         for (ExportedResource r : resources) {
@@ -70,8 +74,8 @@ class FhirR4ExportServiceTest {
     @Test
     void duplicatePractitionerCollapsedWithBothHrIdentifiers() throws Exception {
         assertFalse(references().contains("Practitioner/E119901"));
-        assertFalse(references().contains("Slot/E119901-pto"));
-        assertFalse(references().contains("Slot/E104422-pto-2"));
+        assertEquals(0, slots("E119901"));
+        assertEquals(1, slots("E104422"));
         JsonNode ids = resource("Practitioner/E104422").path("identifier");
         assertEquals(3, ids.size());
         assertEquals("1932405817", ids.get(0).path("value").asText());
@@ -95,7 +99,7 @@ class FhirR4ExportServiceTest {
 
     @Test
     void slotIsBusyUnavailableWithNewYorkInstants() throws Exception {
-        JsonNode slot = resource("Slot/E104422-pto");
+        JsonNode slot = resource("Slot/E104422-pto-202610130000");
         assertEquals("busy-unavailable", slot.path("status").asText());
         assertEquals("2026-10-13T00:00:00-04:00", slot.path("start").asText());
         assertEquals("2026-10-17T23:59:59-04:00", slot.path("end").asText());
@@ -104,9 +108,9 @@ class FhirR4ExportServiceTest {
 
     @Test
     void noSlotWithoutApprovedPto() {
-        assertFalse(references().contains("Slot/E109640-pto"));
-        assertFalse(references().contains("Slot/E200001-pto"));
-        assertTrue(references().contains("Slot/E108913-pto"));
+        assertEquals(0, slots("E109640"));
+        assertEquals(0, slots("E200001"));
+        assertEquals(1, slots("E108913"));
     }
 
     @Test

@@ -89,7 +89,7 @@ public class PractitionerDeduplicator {
                 continue;
             }
             HrPtoRecord other = records.get(j);
-            if (normalizedName(r).equals(normalizedName(other)) && !conflictingNpi(r, other)) {
+            if (normalizedName(r).equals(normalizedName(other)) && !conflictingNpi(records, parent, i, j)) {
                 union(parent, i, j);
             }
         }
@@ -113,8 +113,20 @@ public class PractitionerDeduplicator {
         return m.find() ? m.group(1).toUpperCase(Locale.ROOT) : null;
     }
 
-    private static boolean conflictingNpi(HrPtoRecord a, HrPtoRecord b) {
-        return hasNpi(a) && hasNpi(b) && !a.npi.trim().equals(b.npi.trim());
+    /** True when the groups of a and b already carry different NPIs (checked per group, not per row). */
+    private static boolean conflictingNpi(List<HrPtoRecord> records, int[] parent, int a, int b) {
+        String npiA = groupNpi(records, parent, find(parent, a));
+        String npiB = groupNpi(records, parent, find(parent, b));
+        return npiA != null && npiB != null && !npiA.equals(npiB);
+    }
+
+    private static String groupNpi(List<HrPtoRecord> records, int[] parent, int root) {
+        for (int k = 0; k < records.size(); k++) {
+            if (hasNpi(records.get(k)) && find(parent, k) == root) {
+                return records.get(k).npi.trim();
+            }
+        }
+        return null;
     }
 
     static boolean hasNpi(HrPtoRecord r) {

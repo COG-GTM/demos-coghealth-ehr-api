@@ -1,9 +1,16 @@
 package com.medchart.ehr.legacy;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import java.io.File;
+import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -56,5 +63,35 @@ class HrPtoSyncJobTest {
         assertTrue(segments[3].startsWith("AIS|1||BLOCK^OR block^L|202610130700||480|MIN"));
         assertEquals("AIL|1||OR-4^^^2130|OR^Operating room", segments[4]);
         assertTrue(segments[5].startsWith("AIP|1||E104422^Marquez^Elena^^^Dr.^^^^^^^^NPI|SURGEON^Primary surgeon|202610130700||480|MIN"));
+    }
+
+    @Test
+    void sendsOneHoldPerBlockForMergedHrIdentities(@TempDir Path out) {
+        HrPtoSyncJob job = new HrPtoSyncJob() {
+            @Override
+            public List<OrBlock> loadOrBlocks(String employeeId) {
+                if ("E104422".equals(employeeId) || "E119901".equals(employeeId)) {
+                    return Arrays.asList(new OrBlock(1L, 2130, "TUE", "07:00", "15:00", "OR-4"));
+                }
+                return Collections.emptyList();
+            }
+        };
+        ReflectionTestUtils.setField(job, "hrExportReader", new HrExportReader());
+        ReflectionTestUtils.setField(job, "departmentMapping", new DepartmentMapping());
+        String previous = System.getProperty(HrPtoSyncJob.OUT_DIR_PROPERTY);
+        System.setProperty(HrPtoSyncJob.OUT_DIR_PROPERTY, out.toString());
+        try {
+            Map<String, Object> result = job.runForDate("20261008");
+            assertEquals(0, result.get("recordsRejected"));
+            assertEquals(1, result.get("messagesSent"));
+            File[] sent = new File(out.toFile(), HrPtoSyncJob.OUTBOUND_DIR + File.separator + "20261008").listFiles();
+            assertEquals(1, sent.length);
+        } finally {
+            if (previous == null) {
+                System.clearProperty(HrPtoSyncJob.OUT_DIR_PROPERTY);
+            } else {
+                System.setProperty(HrPtoSyncJob.OUT_DIR_PROPERTY, previous);
+            }
+        }
     }
 }
