@@ -84,7 +84,7 @@ public class HrPtoSyncJob implements CommandLineRunner {
         List<String> errors = new ArrayList<String>();
 
         for (HrPtoRecord r : records) {
-            Integer dept = departmentMapping.lookup(r.costCenter);
+            Integer dept = departmentMapping.lookupForExport(r.costCenter, exportDate);
             if (dept == null) {
                 String msg = "AE – Unknown department for cost center " + r.costCenter;
                 errors.add(msg);

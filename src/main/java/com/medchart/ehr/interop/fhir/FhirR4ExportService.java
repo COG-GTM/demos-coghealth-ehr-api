@@ -3,64 +3,87 @@ package com.medchart.ehr.interop.fhir;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.medchart.ehr.interop.fhir.PractitionerDeduplicator.PractitionerGroup;
+import com.medchart.ehr.interop.fhir.PtoPeriodParser.PtoPeriod;
 import com.medchart.ehr.legacy.DepartmentMapping;
 import com.medchart.ehr.legacy.HrPtoRecord;
-import com.medchart.ehr.legacy.HrPtoSyncJob;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
- * Converts the hr-pto-sync input (Workday export rows + cost center mapping) into FHIR R4
+ * Converts the hr-pto-sync input (Workday export rows + effective-dated cost center mapping) into FHIR R4
  * Practitioner / PractitionerRole / Schedule / Slot JSON, as the downstream Epic interface expects.
  *
- * Rows that resolve to a department are enriched from the EHR side (NPI identifier system, schedule
- * actor, PTO period as instants). Rows that do not resolve are passed through as received from HR so
- * IE-Prod can quarantine them.
+ * One Practitioner per person (see {@link PractitionerDeduplicator}) carrying the NPI and every HR employee id;
+ * PractitionerRole references the department the cost center maps to on the export date; Schedule.actor is the
+ * PractitionerRole; one busy-unavailable Slot per distinct approved PTO period, as America/New_York instants.
  */
 @Service
 @Slf4j
 public class FhirR4ExportService {
 
     public static final String NPI_SYSTEM = "http://hl7.org/fhir/sid/us-npi";
+    public static final String HR_EMPLOYEE_ID_SYSTEM = "urn:coghealth:workday:employee-id";
     public static final String ORGANIZATION_PREFIX = "Organization/dept-";
 
-    private static final String OFFSET = "-04:00";
-
     private final ObjectMapper mapper = new ObjectMapper();
+    private final PractitionerDeduplicator deduplicator = new PractitionerDeduplicator();
 
     public List<ExportedResource> export(List<HrPtoRecord> records, DepartmentMapping mapping, String exportDate) {
-        int year = Integer.parseInt(exportDate.substring(0, 4));
+        LocalDate exportDay = DepartmentMapping.exportDay(exportDate);
+        List<PractitionerGroup> groups = deduplicator.group(records);
         List<ExportedResource> out = new ArrayList<>();
-        for (HrPtoRecord r : records) {
-            Integer dept = mapping.lookup(r.costCenter);
-            boolean matched = dept != null;
-            out.add(practitioner(r, matched));
-            out.add(practitionerRole(r, dept, mapping));
-            out.add(schedule(r, matched));
-            if (r.hasPto()) {
-                out.add(matched ? slotFromParsedPeriod(r, year) : slotPassthrough(r));
+        for (PractitionerGroup g : groups) {
+            HrPtoRecord p = g.primary();
+            Integer dept = mapping.lookup(p.costCenter, exportDay);
+            out.add(practitioner(g));
+            out.add(practitionerRole(p, dept, mapping));
+            out.add(schedule(p));
+            Set<String> periods = new HashSet<>();
+            for (HrPtoRecord r : g.records()) {
+                if (!r.isApproved()) {
+                    continue;
+                }
+                PtoPeriod period = PtoPeriodParser.parse(r, exportDay);
+                if (period == null) {
+                    if (r.hasPto()) {
+                        log.warn("PTO period not parseable for employee {} (line {}); no Slot exported", r.employeeId, r.lineNumber);
+                    }
+                    continue;
+                }
+                if (periods.add(period.startInstant() + "/" + period.endInstant())) {
+                    String id = p.employeeId + "-pto" + (periods.size() > 1 ? "-" + periods.size() : "");
+                    out.add(slot(id, p, r, period));
+                }
             }
         }
-        log.info("Exported {} FHIR resources from {} HR records", out.size(), records.size());
+        log.info("Exported {} FHIR resources for {} practitioners from {} HR records", out.size(), groups.size(), records.size());
         return out;
     }
 
-    private ExportedResource practitioner(HrPtoRecord r, boolean matched) {
+    private ExportedResource practitioner(PractitionerGroup g) {
+        HrPtoRecord r = g.primary();
         ObjectNode p = mapper.createObjectNode();
         p.put("resourceType", "Practitioner");
         p.put("id", r.employeeId);
         ArrayNode ids = p.putArray("identifier");
-        ids.addObject().put("value", r.employeeId);
-        if (r.npi != null && r.npi.length() > 0) {
+        if (g.npi() != null) {
             ObjectNode npi = ids.addObject();
-            if (matched) {
-                npi.put("system", NPI_SYSTEM);
-            }
-            npi.put("value", r.npi);
+            npi.put("use", "official");
+            npi.put("system", NPI_SYSTEM);
+            npi.put("value", g.npi());
+        }
+        for (String employeeId : g.employeeIds()) {
+            ObjectNode hr = ids.addObject();
+            hr.put("use", employeeId.equals(r.employeeId) ? "usual" : "secondary");
+            hr.put("system", HR_EMPLOYEE_ID_SYSTEM);
+            hr.put("value", employeeId);
         }
         p.put("active", true);
         ObjectNode name = p.putArray("name").addObject();
@@ -86,53 +109,26 @@ public class FhirR4ExportService {
         return new ExportedResource("PractitionerRole", r.employeeId, r.employeeId, write(pr));
     }
 
-    private ExportedResource schedule(HrPtoRecord r, boolean matched) {
+    private ExportedResource schedule(HrPtoRecord r) {
         ObjectNode s = mapper.createObjectNode();
         s.put("resourceType", "Schedule");
         s.put("id", r.employeeId);
         s.put("active", true);
-        if (matched) {
-            s.putArray("actor").addObject().put("reference", "PractitionerRole/" + r.employeeId);
-        }
+        s.putArray("actor").addObject().put("reference", "PractitionerRole/" + r.employeeId);
         s.put("comment", "OR block schedule " + r.lastName + ", " + r.firstName + " (" + r.costCenter + ")");
         return new ExportedResource("Schedule", r.employeeId, r.employeeId, write(s));
     }
 
-    private ExportedResource slotFromParsedPeriod(HrPtoRecord r, int year) {
-        List<LocalDate> days = HrPtoSyncJob.parsePtoDays(r.ptoStart, r.ptoEnd, year);
-        ObjectNode s = slotBase(r);
-        if (days.isEmpty()) {
-            s.put("start", r.ptoStart);
-            s.put("end", r.ptoStart);
-        } else {
-            s.put("start", days.get(0) + "T00:00:00" + OFFSET);
-            s.put("end", days.get(days.size() - 1) + "T23:59:59" + OFFSET);
-        }
-        return new ExportedResource("Slot", r.employeeId + "-pto", r.employeeId, write(s));
-    }
-
-    private ExportedResource slotPassthrough(HrPtoRecord r) {
-        ObjectNode s = slotBase(r);
-        s.put("start", instant(r.ptoStart, "T00:00:00"));
-        s.put("end", instant(r.ptoEnd.length() > 0 ? r.ptoEnd : r.ptoStart, "T23:59:59"));
-        return new ExportedResource("Slot", r.employeeId + "-pto", r.employeeId, write(s));
-    }
-
-    private ObjectNode slotBase(HrPtoRecord r) {
+    private ExportedResource slot(String id, HrPtoRecord practitioner, HrPtoRecord r, PtoPeriod period) {
         ObjectNode s = mapper.createObjectNode();
         s.put("resourceType", "Slot");
-        s.put("id", r.employeeId + "-pto");
-        s.putObject("schedule").put("reference", "Schedule/" + r.employeeId);
+        s.put("id", id);
+        s.putObject("schedule").put("reference", "Schedule/" + practitioner.employeeId);
         s.put("status", "busy-unavailable");
+        s.put("start", period.startInstant());
+        s.put("end", period.endInstant());
         s.put("comment", (r.ptoType + " " + r.notes).trim());
-        return s;
-    }
-
-    private static String instant(String value, String timeSuffix) {
-        if (value.matches("\\d{4}-\\d{2}-\\d{2}")) {
-            return value + timeSuffix;
-        }
-        return value;
+        return new ExportedResource("Slot", id, r.employeeId, write(s));
     }
 
     private String write(ObjectNode node) {
