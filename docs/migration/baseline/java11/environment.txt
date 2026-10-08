@@ -1,0 +1,12 @@
+recorded_at: 2026-09-30T19:15:02Z
+git_commit: 8b5fd10
+java: openjdk version "11.0.32.1" 2026-08-18 OpenJDK Runtime Environment (build 11.0.32.1+1-post-1ubuntu1-22.04-Ubuntu) 
+java_opts: -Xmx1g
+maven: Apache Maven 3.6.3
+k6: k6 v0.54.0 (commit/baba871c8a, go1.23.1, linux/amd64)
+docker: Docker version 29.7.2, build a7dcaa6
+os: Ubuntu 22.04.5 LTS kernel 6.8.0-1061-aws
+cpu: 8 x INTEL(R) XEON(R) PLATINUM 8559C
+memory: 31 GiB
+load: rate=200 req/s (latency), vus=32 (throughput), duration=60s each, after 30s warmup at 50 req/s
+topology: app, Postgres and Redis containers, and k6 all on the same host (loopback)
