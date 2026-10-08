@@ -2,6 +2,7 @@ package com.medchart.ehr.interop.fhir;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.medchart.ehr.interop.fhir.PractitionerDeduplicator.PractitionerGroup;
 import com.medchart.ehr.legacy.DepartmentMapping;
 import com.medchart.ehr.legacy.HrExportReader;
 import com.medchart.ehr.legacy.HrPtoRecord;
@@ -55,20 +56,12 @@ public class InterfaceContractCheck {
         report.setRecords(records.size());
 
         for (HrPtoRecord r : records) {
-            if (departmentMapping.lookup(r.costCenter) == null) {
+            if (departmentMapping.lookupForExport(r.costCenter, exportDate) == null) {
                 report.getUnknownCostCenters().computeIfAbsent(r.costCenter, k -> new ArrayList<>()).add(r.employeeId);
             }
         }
 
-        Map<String, List<String>> byKey = new LinkedHashMap<>();
-        for (HrPtoRecord r : records) {
-            byKey.computeIfAbsent(practitionerKey(r), k -> new ArrayList<>()).add(r.employeeId);
-        }
-        for (Map.Entry<String, List<String>> e : byKey.entrySet()) {
-            if (e.getValue().size() > 1) {
-                report.getDuplicatePractitioners().put(e.getKey(), e.getValue());
-            }
-        }
+        report.getDuplicatePractitioners().putAll(duplicatePractitioners(new PractitionerDeduplicator().group(records)));
 
         List<ExportedResource> resources = exportService.export(records, departmentMapping, exportDate);
         report.setResources(resources.size());
@@ -82,11 +75,28 @@ public class InterfaceContractCheck {
     }
 
     /**
-     * Practitioners are matched by NPI when present, otherwise by normalized name, so that an HR record
-     * without NPI still collides with the NPI-bearing record for the same person.
+     * Practitioners left after de-duplication that still share an NPI or a normalized name, keyed by
+     * normalized name (or "NPI &lt;npi&gt;"), with every HR employee id involved.
      */
-    static String practitionerKey(HrPtoRecord r) {
-        return (r.lastName + " " + r.firstName).toUpperCase().replaceAll("[^A-Z ]", "").trim();
+    static Map<String, List<String>> duplicatePractitioners(List<PractitionerGroup> groups) {
+        Map<String, List<PractitionerGroup>> byKey = new LinkedHashMap<>();
+        for (PractitionerGroup g : groups) {
+            byKey.computeIfAbsent(g.normalizedName(), k -> new ArrayList<>()).add(g);
+            if (g.npi() != null) {
+                byKey.computeIfAbsent("NPI " + g.npi(), k -> new ArrayList<>()).add(g);
+            }
+        }
+        Map<String, List<String>> dups = new LinkedHashMap<>();
+        for (Map.Entry<String, List<PractitionerGroup>> e : byKey.entrySet()) {
+            if (e.getValue().size() > 1) {
+                List<String> ids = new ArrayList<>();
+                for (PractitionerGroup g : e.getValue()) {
+                    ids.addAll(g.employeeIds());
+                }
+                dups.put(e.getKey(), ids);
+            }
+        }
+        return dups;
     }
 
     public static Path reportDir() {
