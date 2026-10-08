@@ -1,0 +1,43 @@
+name: Nightly interface contract
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+    inputs:
+      export_date:
+        description: 'HR export date (yyyyMMdd); default = latest file'
+        required: false
+        default: ''
+  pull_request:
+    paths:
+      - 'src/main/resources/interfaces/**'
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+          cache: 'maven'
+
+      - name: Compile
+        run: mvn -B -q compile
+
+      - name: Interface contract
+        run: mvn -B test -Dgroups=interface-contract -Dhr.export.date=${{ inputs.export_date }}
+
+      - name: Upload contract report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: interface-contract
+          path: target/interface-contract/
+          if-no-files-found: warn

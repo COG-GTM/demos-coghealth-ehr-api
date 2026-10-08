@@ -1,0 +1,5 @@
+cost_center,department_id,department_name,effective_from,effective_to
+CC-200-5410,2130,Main OR - Tower,2019-01-01,
+CC-200-5411,2131,Ambulatory Surgery - North,2019-01-01,
+CC-200-5412,2132,Cardiac OR,2019-01-01,
+CC-200-5420,2140,Endoscopy Suite,2019-01-01,

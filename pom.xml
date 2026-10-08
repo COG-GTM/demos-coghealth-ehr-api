@@ -25,6 +25,10 @@
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <springdoc.version>1.7.0</springdoc.version>
         <hapi.version>2.3</hapi.version>
+        <hapi.fhir.version>6.10.5</hapi.fhir.version>
+        <jackson-bom.version>2.15.4</jackson-bom.version>
+        <surefire.excludedGroups>interface-contract</surefire.excludedGroups>
+        <hr.export.date></hr.export.date>
     </properties>
 
     <dependencies>
@@ -112,6 +116,30 @@
         </dependency>
 
         <dependency>
+            <groupId>ca.uhn.hapi.fhir</groupId>
+            <artifactId>hapi-fhir-base</artifactId>
+            <version>${hapi.fhir.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>ca.uhn.hapi.fhir</groupId>
+            <artifactId>hapi-fhir-structures-r4</artifactId>
+            <version>${hapi.fhir.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>ca.uhn.hapi.fhir</groupId>
+            <artifactId>hapi-fhir-validation</artifactId>
+            <version>${hapi.fhir.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>ca.uhn.hapi.fhir</groupId>
+            <artifactId>hapi-fhir-validation-resources-r4</artifactId>
+            <version>${hapi.fhir.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
             <version>0.11.5</version>
@@ -166,6 +194,16 @@
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <excludedGroups>${surefire.excludedGroups}</excludedGroups>
+                    <systemPropertyVariables>
+                        <hr.export.date>${hr.export.date}</hr.export.date>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
                 <configuration>
@@ -186,5 +224,20 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>interface-contract</id>
+            <activation>
+                <property>
+                    <name>groups</name>
+                    <value>interface-contract</value>
+                </property>
+            </activation>
+            <properties>
+                <surefire.excludedGroups>none</surefire.excludedGroups>
+            </properties>
+        </profile>
+    </profiles>
 
 </project>
