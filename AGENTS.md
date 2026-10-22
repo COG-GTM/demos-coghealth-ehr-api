@@ -7,7 +7,7 @@ CogHealth EHR is a healthcare Electronic Health Record system. This codebase con
 ## Repository Structure
 
 - `demos-coghealth-ehr-web` - React frontend (Vite, TypeScript, Tailwind)
-- `demos-coghealth-ehr-api` - Spring Boot backend (Java 11, PostgreSQL)
+- `demos-coghealth-ehr-api` - Spring Boot backend (Java 17, PostgreSQL)
 
 ## Critical: HIPAA Compliance
 
