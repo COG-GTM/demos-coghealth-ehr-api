@@ -1,6 +1,5 @@
 package com.medchart.ehr.config;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -19,11 +18,14 @@ import java.io.IOException;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    @Autowired
-    private JwtTokenProvider tokenProvider;
+    private final JwtTokenProvider tokenProvider;
 
-    @Autowired
-    private UserDetailsService userDetailsService;
+    private final UserDetailsService userDetailsService;
+
+    public JwtAuthenticationFilter(JwtTokenProvider tokenProvider, UserDetailsService userDetailsService) {
+        this.tokenProvider = tokenProvider;
+        this.userDetailsService = userDetailsService;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -32,10 +34,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String jwt = getJwtFromRequest(request);
 
-            if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt, loadUserByUsername(jwt))) {
-                String username = tokenProvider.getUsernameFromToken(jwt);
-                
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            if (StringUtils.hasText(jwt)) {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(tokenProvider.getUsernameFromToken(jwt));
+                if (!isUsable(userDetails) || !tokenProvider.validateToken(jwt, userDetails)) {
+                    throw new IllegalStateException("Rejected bearer token");
+                }
                 UsernamePasswordAuthenticationToken authentication = 
                     new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
@@ -43,10 +46,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception ex) {
-            logger.error("Could not set user authentication in security context", ex);
+            SecurityContextHolder.clearContext();
+            logger.warn("Could not set user authentication in security context: " + ex.getClass().getSimpleName());
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private static boolean isUsable(UserDetails userDetails) {
+        return userDetails.isEnabled()
+            && userDetails.isAccountNonLocked()
+            && userDetails.isAccountNonExpired()
+            && userDetails.isCredentialsNonExpired();
     }
 
     private String getJwtFromRequest(HttpServletRequest request) {
@@ -55,10 +66,5 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return bearerToken.substring(7);
         }
         return null;
-    }
-
-    private UserDetails loadUserByUsername(String jwt) {
-        String username = tokenProvider.getUsernameFromToken(jwt);
-        return userDetailsService.loadUserByUsername(username);
     }
 }
