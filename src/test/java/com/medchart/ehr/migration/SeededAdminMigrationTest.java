@@ -91,10 +91,11 @@ class SeededAdminMigrationTest {
 
         migrate(V5);
 
-        assertThat(count("SELECT COUNT(*) FROM users WHERE email = 'owner@clinic.test'")).isEqualTo(1);
-        assertThat(count("SELECT COUNT(*) FROM user_roles WHERE role = 'ADMIN'")).isEqualTo(1);
-        assertThat(count("SELECT COUNT(*) FROM users WHERE username = 'admin' AND enabled")).isZero();
+        assertThat(count("SELECT COUNT(*) FROM users WHERE id = 1 AND NOT enabled"
+                + " AND username = 'retired-seed-admin-1' AND email = 'retired-seed-admin-1@invalid'")).isEqualTo(1);
+        assertThat(count("SELECT COUNT(*) FROM user_roles WHERE user_id = 1 AND role = 'ADMIN'")).isEqualTo(1);
         assertThat(count("SELECT COUNT(*) FROM users WHERE password = ?", SEEDED_HASH)).isZero();
+        assertThat(count("SELECT COUNT(*) FROM users WHERE username = 'admin' OR email = 'owner@clinic.test'")).isZero();
     }
 
     @Test
@@ -105,7 +106,8 @@ class SeededAdminMigrationTest {
         migrate(V5);
 
         assertThat(count("SELECT COUNT(*) FROM user_roles WHERE user_id = 1")).isEqualTo(2);
-        assertThat(count("SELECT COUNT(*) FROM users WHERE username = 'admin' AND enabled")).isZero();
+        assertThat(count("SELECT COUNT(*) FROM users WHERE id = 1 AND NOT enabled")).isEqualTo(1);
+        assertThat(count("SELECT COUNT(*) FROM users WHERE username = 'admin'")).isZero();
         assertThat(count("SELECT COUNT(*) FROM users WHERE password = ?", SEEDED_HASH)).isZero();
     }
 }

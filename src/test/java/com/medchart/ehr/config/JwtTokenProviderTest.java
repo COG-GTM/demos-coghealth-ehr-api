@@ -1,0 +1,54 @@
+package com.medchart.ehr.config;
+
+import com.medchart.ehr.domain.auth.User;
+import org.junit.jupiter.api.Test;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import java.util.Set;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class JwtTokenProviderTest {
+
+    private final JwtTokenProvider provider = new JwtTokenProvider();
+
+    JwtTokenProviderTest() {
+        ReflectionTestUtils.setField(provider, "jwtSecret", "x".repeat(64));
+        ReflectionTestUtils.setField(provider, "jwtExpirationInMs", 60_000);
+    }
+
+    private User user(boolean enabled, boolean nonLocked) {
+        return User.builder()
+                .username("clinic.admin")
+                .password("unused")
+                .roles(Set.of(User.Role.ADMIN))
+                .enabled(enabled)
+                .accountNonExpired(true)
+                .accountNonLocked(nonLocked)
+                .credentialsNonExpired(true)
+                .build();
+    }
+
+    private String tokenFor(User user) {
+        return provider.generateToken(new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities()));
+    }
+
+    @Test
+    void acceptsTokenForEnabledUser() {
+        User user = user(true, true);
+        assertThat(provider.validateToken(tokenFor(user), user)).isTrue();
+    }
+
+    @Test
+    void rejectsTokenOnceUserIsDisabled() {
+        String token = tokenFor(user(true, true));
+        assertThat(provider.validateToken(token, user(false, true))).isFalse();
+    }
+
+    @Test
+    void rejectsTokenOnceUserIsLocked() {
+        String token = tokenFor(user(true, true));
+        assertThat(provider.validateToken(token, user(true, false))).isFalse();
+    }
+}

@@ -4,8 +4,9 @@
 --
 -- An untouched seed row is deleted (user_roles rows go with it via ON DELETE
 -- CASCADE). A row that was customised but still carries the V2 hash keeps its
--- data and roles, but is disabled and its password replaced with a value that
--- can never match, so the published credential no longer authenticates.
+-- id, roles and other data, but is disabled, its password replaced with a value
+-- that can never match, and its username/email moved to archival values so the
+-- original identity can be reused by the bootstrap administrator.
 --
 -- Create the first administrator with the one-time bootstrap instead: set
 -- BOOTSTRAP_ADMIN_USERNAME / BOOTSTRAP_ADMIN_PASSWORD / BOOTSTRAP_ADMIN_EMAIL
@@ -23,6 +24,8 @@ WHERE username = 'admin'
 
 UPDATE users
 SET enabled = FALSE,
+    username = 'retired-seed-admin-' || id,
+    email = 'retired-seed-admin-' || id || '@invalid',
     password = '{retired}seeded-admin-credential',
     updated_at = CURRENT_TIMESTAMP
 WHERE password = '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.';
