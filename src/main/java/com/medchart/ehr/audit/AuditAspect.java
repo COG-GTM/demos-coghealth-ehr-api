@@ -1,12 +1,13 @@
 package com.medchart.ehr.audit;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -16,10 +17,15 @@ import java.lang.reflect.Method;
 @Aspect
 @Component
 @Slf4j
-@RequiredArgsConstructor
 public class AuditAspect {
 
     private final AuditService auditService;
+    private final TransactionTemplate transactionTemplate;
+
+    public AuditAspect(AuditService auditService, PlatformTransactionManager transactionManager) {
+        this.auditService = auditService;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
+    }
 
     @Around("@annotation(com.medchart.ehr.audit.AuditAccess)")
     public Object auditAccess(ProceedingJoinPoint joinPoint) throws Throwable {
@@ -40,16 +46,39 @@ public class AuditAspect {
                 .ipAddress(getClientIpAddress())
                 .userAgent(getUserAgent());
 
+        // The protected call and its audit record share one transaction: the result is only
+        // returned (and any writes only committed) once the audit event has been persisted.
         try {
-            Object result = joinPoint.proceed();
-            eventBuilder.success(true);
-            auditService.saveAuditEventAsync(eventBuilder.build());
-            return result;
-        } catch (Exception e) {
+            return transactionTemplate.execute(status -> {
+                Object result = proceed(joinPoint);
+                eventBuilder.success(true);
+                auditService.record(eventBuilder.build());
+                return result;
+            });
+        } catch (InvocationFailure failure) {
+            Throwable cause = failure.getCause();
             eventBuilder.success(false);
-            eventBuilder.errorMessage(e.getMessage());
-            auditService.saveAuditEventAsync(eventBuilder.build());
-            throw e;
+            eventBuilder.errorMessage(cause.getMessage());
+            try {
+                auditService.recordInNewTransaction(eventBuilder.build());
+            } catch (AuditPersistenceException auditFailure) {
+                cause.addSuppressed(auditFailure);
+            }
+            throw cause;
+        }
+    }
+
+    private static Object proceed(ProceedingJoinPoint joinPoint) {
+        try {
+            return joinPoint.proceed();
+        } catch (Throwable t) {
+            throw new InvocationFailure(t);
+        }
+    }
+
+    private static final class InvocationFailure extends RuntimeException {
+        InvocationFailure(Throwable cause) {
+            super(cause);
         }
     }
 
