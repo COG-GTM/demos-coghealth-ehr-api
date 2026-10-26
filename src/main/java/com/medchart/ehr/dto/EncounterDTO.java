@@ -6,6 +6,7 @@ import com.medchart.ehr.domain.encounter.EncounterType;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -37,4 +38,8 @@ public class EncounterDTO {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    private List<EncounterDiagnosisDTO> diagnoses;
+
+    private Long version;
 }

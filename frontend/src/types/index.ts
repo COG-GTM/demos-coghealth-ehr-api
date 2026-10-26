@@ -88,6 +88,7 @@ export interface Encounter {
   room?: string;
   notes?: ClinicalNote[];
   diagnoses?: Diagnosis[];
+  version?: number;
 }
 
 export type EncounterType = 
