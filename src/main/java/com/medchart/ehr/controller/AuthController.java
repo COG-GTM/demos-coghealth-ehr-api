@@ -24,6 +24,9 @@ import java.util.Set;
 @Slf4j
 public class AuthController {
 
+    // Self-registered accounts get the least-privileged role and stay disabled until an admin activates them.
+    static final User.Role SELF_SERVICE_ROLE = User.Role.STAFF;
+
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -67,8 +70,8 @@ public class AuthController {
             .firstName(signUpRequest.getFirstName())
             .lastName(signUpRequest.getLastName())
             .password(passwordEncoder.encode(signUpRequest.getPassword()))
-            .roles(Set.of(User.Role.PROVIDER)) // Default role
-            .enabled(true)
+            .roles(Set.of(SELF_SERVICE_ROLE))
+            .enabled(false)
             .accountNonExpired(true)
             .accountNonLocked(true)
             .credentialsNonExpired(true)
@@ -78,7 +81,7 @@ public class AuthController {
 
         log.info("Registered new user: {}", signUpRequest.getUsername());
         
-        return ResponseEntity.ok("User registered successfully");
+        return ResponseEntity.ok("User registered successfully; account pending administrator activation");
     }
 
     public static class LoginRequest {
