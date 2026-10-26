@@ -14,6 +14,7 @@ class CsvEncoderTest {
         assertEquals("\"'@SUM(A1:A2)\"", CsvEncoder.cell("@SUM(A1:A2)"));
         assertEquals("\"'\tcmd\"", CsvEncoder.cell("\tcmd"));
         assertEquals("\"'\r=1\"", CsvEncoder.cell("\r=1"));
+        assertEquals("\"'\n=HYPERLINK(1)\"", CsvEncoder.cell("\n=HYPERLINK(1)"));
     }
 
     @Test

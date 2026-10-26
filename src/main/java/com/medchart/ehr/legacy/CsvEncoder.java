@@ -5,7 +5,7 @@ import java.util.StringJoiner;
 /**
  * RFC 4180 CSV encoding with spreadsheet formula neutralisation (OWASP CSV injection guidance):
  * every cell is quoted, embedded quotes are doubled, and cells starting with
- * {@code = + - @ TAB CR} are prefixed with a single quote so spreadsheets treat them as text.
+ * {@code = + - @ TAB CR LF} are prefixed with a single quote so spreadsheets treat them as text.
  */
 public final class CsvEncoder {
 
@@ -29,6 +29,6 @@ public final class CsvEncoder {
     }
 
     private static boolean isFormulaTrigger(char c) {
-        return c == '=' || c == '+' || c == '-' || c == '@' || c == '\t' || c == '\r';
+        return c == '=' || c == '+' || c == '-' || c == '@' || c == '\t' || c == '\r' || c == '\n';
     }
 }
