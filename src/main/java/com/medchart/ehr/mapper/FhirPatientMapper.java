@@ -81,7 +81,7 @@ public class FhirPatientMapper {
             fhirPatient.put("maritalStatus", buildMaritalStatus(patient));
         }
         
-        log.debug("Mapped patient {} to FHIR resource", patient.getMrn());
+        log.debug("Mapped patient id {} to FHIR resource", patient.getId());
         return fhirPatient;
     }
 
@@ -136,7 +136,7 @@ public class FhirPatientMapper {
         Boolean active = (Boolean) fhirPatient.get("active");
         patient.setActive(active != null ? active : true);
         
-        log.debug("Mapped FHIR resource to patient {}", patient.getMrn());
+        log.debug("Mapped FHIR resource to patient entity");
         return patient;
     }
 
