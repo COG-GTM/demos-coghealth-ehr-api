@@ -1,14 +1,79 @@
 package com.medchart.ehr.legacy;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class HrPtoSyncJobTest {
+
+    @TempDir
+    Path outDir;
+
+    private HrPtoSyncJob job;
+
+    @BeforeEach
+    void setUp() {
+        System.setProperty(HrPtoSyncJob.OUT_DIR_PROPERTY, outDir.toString());
+        job = new HrPtoSyncJob();
+        ReflectionTestUtils.setField(job, "hrExportReader", new HrExportReader());
+        ReflectionTestUtils.setField(job, "departmentMapping", new DepartmentMapping());
+    }
+
+    @AfterEach
+    void tearDown() {
+        System.clearProperty(HrPtoSyncJob.OUT_DIR_PROPERTY);
+    }
+
+    @Test
+    void runForDateRejectsCraftedExportDateWithoutWritingLogs() {
+        assertThrows(InvalidExportDateException.class,
+                () -> job.runForDate("2026,x:y/../workday_pto_export_20261008"));
+        assertFalse(Files.exists(outDir.resolve(HrPtoSyncJob.RUNS_FILE)));
+        assertFalse(Files.exists(outDir.resolve(HrPtoSyncJob.ERROR_QUEUE_FILE)));
+    }
+
+    @Test
+    void runLogRoundTripsThroughJackson() {
+        Map<String, Object> result = job.runForDate("20260930");
+        List<Map<String, Object>> runs = job.readRuns();
+        assertEquals(1, runs.size());
+        assertEquals("20260930", runs.get(0).get("exportDate"));
+        assertEquals(result.get("records"), runs.get(0).get("records"));
+        assertEquals(result.get("status"), runs.get(0).get("status"));
+    }
+
+    @Test
+    void readRunsParsesValuesContainingCommasAndColonsAndSkipsUnreadableLines() throws IOException {
+        Files.write(outDir.resolve(HrPtoSyncJob.RUNS_FILE), Arrays.asList(
+                "{\"job\":\"hr-pto-sync\",\"exportDate\":\"2026,x:y/../workday_pto_export_20261008\",\"records\":5}",
+                "{\"job\":\"hr-pto-sync\",\"exportDate\":\"20261008\",\"note\":\"a \\\"quoted\\\", b:c\",\"records\":3}",
+                "{\"job\":\"hr-pto-sync\",\"exportDate\":\"20261007\"\"broken",
+                ""), StandardCharsets.UTF_8);
+
+        List<Map<String, Object>> runs = job.readRuns();
+
+        assertEquals(2, runs.size());
+        assertEquals("2026,x:y/../workday_pto_export_20261008", runs.get(0).get("exportDate"));
+        assertEquals(5, runs.get(0).get("records"));
+        assertEquals("a \"quoted\", b:c", runs.get(1).get("note"));
+        assertEquals(3, runs.get(1).get("records"));
+    }
 
     @Test
     void parsesIsoSingleDay() {
