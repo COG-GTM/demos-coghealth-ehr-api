@@ -110,4 +110,19 @@ class SeededAdminMigrationTest {
         assertThat(count("SELECT COUNT(*) FROM users WHERE username = 'admin'")).isZero();
         assertThat(count("SELECT COUNT(*) FROM users WHERE password = ?", SEEDED_HASH)).isZero();
     }
+
+    @Test
+    void archivalIdentityCollisionDoesNotFailMigration() throws IOException {
+        migrate(V2);
+        jdbc.update("UPDATE users SET email = 'owner@clinic.test' WHERE username = 'admin'");
+        jdbc.update("INSERT INTO users (username, password, email, first_name, last_name)"
+                + " VALUES ('retired-seed-admin-1', 'x', 'squatter@clinic.test', 'S', 'Q')");
+
+        migrate(V5);
+
+        assertThat(count("SELECT COUNT(*) FROM users WHERE id = 1 AND NOT enabled"
+                + " AND username = 'admin' AND email = 'retired-seed-admin-1@invalid'")).isEqualTo(1);
+        assertThat(count("SELECT COUNT(*) FROM users WHERE password = ?", SEEDED_HASH)).isZero();
+        assertThat(count("SELECT COUNT(*) FROM users WHERE email = 'squatter@clinic.test'")).isEqualTo(1);
+    }
 }

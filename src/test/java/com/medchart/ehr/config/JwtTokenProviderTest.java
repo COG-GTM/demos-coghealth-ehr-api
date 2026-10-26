@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.LocalDateTime;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -50,5 +51,22 @@ class JwtTokenProviderTest {
     void rejectsTokenOnceUserIsLocked() {
         String token = tokenFor(user(true, true));
         assertThat(provider.validateToken(token, user(true, false))).isFalse();
+    }
+
+    @Test
+    void rejectsTokenIssuedBeforeAccountWithSameUsernameWasCreated() {
+        String token = tokenFor(user(true, true));
+        User replacement = user(true, true);
+        replacement.setCreatedAt(LocalDateTime.now().plusMinutes(1));
+
+        assertThat(provider.validateToken(token, replacement)).isFalse();
+    }
+
+    @Test
+    void acceptsTokenIssuedInSameSecondAccountWasCreated() {
+        User user = user(true, true);
+        user.setCreatedAt(LocalDateTime.now());
+
+        assertThat(provider.validateToken(tokenFor(user), user)).isTrue();
     }
 }

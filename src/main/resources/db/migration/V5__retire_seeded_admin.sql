@@ -24,8 +24,18 @@ WHERE username = 'admin'
 
 UPDATE users
 SET enabled = FALSE,
-    username = 'retired-seed-admin-' || id,
-    email = 'retired-seed-admin-' || id || '@invalid',
     password = '{retired}seeded-admin-credential',
     updated_at = CURRENT_TIMESTAMP
 WHERE password = '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.';
+
+-- Archival identities are only applied when free, so a pre-existing account with
+-- the same name cannot make this migration fail.
+UPDATE users
+SET username = 'retired-seed-admin-' || id
+WHERE password = '{retired}seeded-admin-credential'
+  AND NOT EXISTS (SELECT 1 FROM users o WHERE o.username = 'retired-seed-admin-' || users.id);
+
+UPDATE users
+SET email = 'retired-seed-admin-' || id || '@invalid'
+WHERE password = '{retired}seeded-admin-credential'
+  AND NOT EXISTS (SELECT 1 FROM users o WHERE o.email = 'retired-seed-admin-' || users.id || '@invalid');
