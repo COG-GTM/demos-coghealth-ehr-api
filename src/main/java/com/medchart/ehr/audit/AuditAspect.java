@@ -1,16 +1,19 @@
 package com.medchart.ehr.audit;
 
+import com.medchart.ehr.dto.PatientDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 
 @Aspect
@@ -19,21 +22,32 @@ import java.lang.reflect.Method;
 @RequiredArgsConstructor
 public class AuditAspect {
 
+    static final int PATIENT_MRN_MAX_LENGTH = 20;
+
     private final AuditService auditService;
 
     @Around("@annotation(com.medchart.ehr.audit.AuditAccess)")
     public Object auditAccess(ProceedingJoinPoint joinPoint) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = signature.getMethod();
+        if (joinPoint.getTarget() != null) {
+            method = AopUtils.getMostSpecificMethod(method, joinPoint.getTarget().getClass());
+        }
         AuditAccess auditAccess = method.getAnnotation(AuditAccess.class);
+        if (auditAccess == null) {
+            auditAccess = signature.getMethod().getAnnotation(AuditAccess.class);
+        }
 
-        Long patientId = extractPatientId(joinPoint.getArgs());
+        Object[] args = joinPoint.getArgs();
+        Long patientId = findAnnotatedArg(method, args, AuditPatientId.class, Long.class);
+        String patientMrn = truncateMrn(findAnnotatedArg(method, args, AuditPatientMrn.class, String.class));
         String userId = getCurrentUserId();
 
         AuditEvent.AuditEventBuilder eventBuilder = AuditEvent.builder()
                 .userId(userId)
                 .userName(getCurrentUserName())
                 .patientId(patientId)
+                .patientMrn(patientMrn)
                 .action(auditAccess.action())
                 .resourceType(auditAccess.resourceType())
                 .description(auditAccess.description())
@@ -42,6 +56,15 @@ public class AuditAspect {
 
         try {
             Object result = joinPoint.proceed();
+            if (auditAccess.patientFromResult() && result instanceof PatientDTO) {
+                PatientDTO patient = (PatientDTO) result;
+                if (patientId == null) {
+                    eventBuilder.patientId(patient.getId());
+                }
+                if (patientMrn == null) {
+                    eventBuilder.patientMrn(truncateMrn(patient.getMrn()));
+                }
+            }
             eventBuilder.success(true);
             auditService.saveAuditEventAsync(eventBuilder.build());
             return result;
@@ -53,13 +76,26 @@ public class AuditAspect {
         }
     }
 
-    private Long extractPatientId(Object[] args) {
-        for (Object arg : args) {
-            if (arg instanceof Long) {
-                return (Long) arg;
+    private static <T> T findAnnotatedArg(Method method, Object[] args,
+                                          Class<? extends Annotation> marker, Class<T> type) {
+        Annotation[][] parameterAnnotations = method.getParameterAnnotations();
+        for (int i = 0; i < parameterAnnotations.length && i < args.length; i++) {
+            for (Annotation annotation : parameterAnnotations[i]) {
+                if (marker.isInstance(annotation) && type.isInstance(args[i])) {
+                    return type.cast(args[i]);
+                }
             }
         }
         return null;
+    }
+
+    private static String truncateMrn(String mrn) {
+        if (mrn == null) {
+            return null;
+        }
+        return mrn.length() > PATIENT_MRN_MAX_LENGTH
+                ? mrn.substring(0, PATIENT_MRN_MAX_LENGTH)
+                : mrn;
     }
 
     private String getCurrentUserId() {

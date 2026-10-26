@@ -2,6 +2,8 @@ package com.medchart.ehr.service;
 
 import com.medchart.ehr.audit.AuditAccess;
 import com.medchart.ehr.audit.AuditAction;
+import com.medchart.ehr.audit.AuditPatientId;
+import com.medchart.ehr.audit.AuditPatientMrn;
 import com.medchart.ehr.legacy.InsuranceCache;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +29,7 @@ public class AppointmentService {
     private final InsuranceGateway insuranceGateway;
 
     @AuditAccess(action = AuditAction.CREATE, resourceType = "Appointment", description = "Schedule appointment")
-    public Map<String, Object> scheduleAppointment(Long patientId, String patientMrn, 
+    public Map<String, Object> scheduleAppointment(@AuditPatientId Long patientId, @AuditPatientMrn String patientMrn, 
                                                     String payerId, LocalDate appointmentDate,
                                                     String appointmentType, Long providerId) {
         
