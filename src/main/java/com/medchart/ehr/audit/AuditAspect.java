@@ -5,8 +5,12 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionException;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -14,8 +18,13 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import javax.servlet.http.HttpServletRequest;
 import java.lang.reflect.Method;
 
+/**
+ * Runs outside the audited method's own {@code @Transactional} advice so the audit write is never
+ * forced into a read-only service transaction.
+ */
 @Aspect
 @Component
+@Order(Ordered.HIGHEST_PRECEDENCE)
 @Slf4j
 public class AuditAspect {
 
@@ -46,8 +55,24 @@ public class AuditAspect {
                 .ipAddress(getClientIpAddress())
                 .userAgent(getUserAgent());
 
-        // The protected call and its audit record share one transaction: the result is only
-        // returned (and any writes only committed) once the audit event has been persisted.
+        try {
+            if (TransactionSynchronizationManager.isActualTransactionActive()) {
+                return proceedWithinCallerTransaction(joinPoint, eventBuilder);
+            }
+            return proceedWithinAuditTransaction(joinPoint, eventBuilder);
+        } catch (InvocationFailure failure) {
+            Throwable cause = failure.getCause();
+            recordFailure(eventBuilder, cause);
+            throw cause;
+        }
+    }
+
+    /**
+     * No caller transaction: the protected call and its audit record share one writable transaction,
+     * so the result is only returned (and any writes only committed) once the audit event is committed.
+     */
+    private Object proceedWithinAuditTransaction(ProceedingJoinPoint joinPoint,
+                                                 AuditEvent.AuditEventBuilder eventBuilder) throws Throwable {
         try {
             return transactionTemplate.execute(status -> {
                 Object result = proceed(joinPoint);
@@ -55,16 +80,42 @@ public class AuditAspect {
                 auditService.record(eventBuilder.build());
                 return result;
             });
-        } catch (InvocationFailure failure) {
-            Throwable cause = failure.getCause();
-            eventBuilder.success(false);
-            eventBuilder.errorMessage(cause.getMessage());
-            try {
-                auditService.recordInNewTransaction(eventBuilder.build());
-            } catch (AuditPersistenceException auditFailure) {
-                cause.addSuppressed(auditFailure);
-            }
-            throw cause;
+        } catch (TransactionException e) {
+            AuditPersistenceException auditFailure =
+                    new AuditPersistenceException("Audited transaction could not be committed", e);
+            recordFailure(eventBuilder, auditFailure);
+            throw auditFailure;
+        }
+    }
+
+    /**
+     * Inside a caller transaction (which may be read-only or later roll back): the audit record is
+     * committed independently before the result is returned, and an audit failure propagates so the
+     * caller's transaction rolls back.
+     */
+    private Object proceedWithinCallerTransaction(ProceedingJoinPoint joinPoint,
+                                                  AuditEvent.AuditEventBuilder eventBuilder) {
+        Object result = proceed(joinPoint);
+        eventBuilder.success(true);
+        recordInNewTransaction(eventBuilder.build());
+        return result;
+    }
+
+    private void recordFailure(AuditEvent.AuditEventBuilder eventBuilder, Throwable cause) {
+        eventBuilder.success(false);
+        eventBuilder.errorMessage(cause.getMessage());
+        try {
+            recordInNewTransaction(eventBuilder.build());
+        } catch (AuditPersistenceException auditFailure) {
+            cause.addSuppressed(auditFailure);
+        }
+    }
+
+    private void recordInNewTransaction(AuditEvent event) {
+        try {
+            auditService.recordInNewTransaction(event);
+        } catch (TransactionException e) {
+            throw new AuditPersistenceException("Audit transaction could not be committed", e);
         }
     }
 
