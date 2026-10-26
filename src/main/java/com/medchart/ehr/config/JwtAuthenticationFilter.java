@@ -36,7 +36,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (StringUtils.hasText(jwt)) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(tokenProvider.getUsernameFromToken(jwt));
-                if (!userDetails.isEnabled() || !tokenProvider.validateToken(jwt, userDetails)) {
+                if (!isUsable(userDetails) || !tokenProvider.validateToken(jwt, userDetails)) {
                     throw new IllegalStateException("Rejected bearer token");
                 }
                 UsernamePasswordAuthenticationToken authentication = 
@@ -51,6 +51,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private static boolean isUsable(UserDetails userDetails) {
+        return userDetails.isEnabled()
+            && userDetails.isAccountNonLocked()
+            && userDetails.isAccountNonExpired()
+            && userDetails.isCredentialsNonExpired();
     }
 
     private String getJwtFromRequest(HttpServletRequest request) {

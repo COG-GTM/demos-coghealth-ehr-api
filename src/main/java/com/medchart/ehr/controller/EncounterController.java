@@ -78,6 +78,7 @@ public class EncounterController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('PROVIDER', 'ADMIN')")
     public ResponseEntity<Encounter> update(@PathVariable Long id, @RequestBody Encounter encounter) {
         return encounterService.findById(id)
                 .map(existing -> {

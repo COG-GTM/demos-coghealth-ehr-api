@@ -174,6 +174,32 @@ class ApiAuthorizationTest {
     }
 
     @Test
+    void staffCannotEditEncounterRecord() throws Exception {
+        signIn("frontdesk.wilson", User.Role.STAFF);
+
+        mockMvc.perform(authed(put("/v1/encounters/1"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"COMPLETED\",\"notes\":\"x\"}"))
+            .andExpect(status().isForbidden());
+        verify(encounterService, never()).update(any());
+        verify(encounterService, never()).findById(anyLong());
+    }
+
+    @Test
+    void lockedExpiredOrDisabledAccountTokenGets401() throws Exception {
+        for (int i = 0; i < 4; i++) {
+            User user = signIn("locked.user", User.Role.ADMIN);
+            user.setEnabled(i != 0);
+            user.setAccountNonLocked(i != 1);
+            user.setAccountNonExpired(i != 2);
+            user.setCredentialsNonExpired(i != 3);
+
+            mockMvc.perform(authed(get("/v1/patients/1"))).andExpect(status().isUnauthorized());
+        }
+        verifyNoInteractions(patientService);
+    }
+
+    @Test
     void adminCanRunExportsAndHrSync() throws Exception {
         signIn("admin", User.Role.ADMIN);
         given(reportGenerator.generatePatientRoster()).willReturn("/tmp/roster.csv");
@@ -208,7 +234,7 @@ class ApiAuthorizationTest {
         assertTrue(saved.getValue().getRoles().isEmpty());
     }
 
-    private void signIn(String username, User.Role... roles) {
+    private User signIn(String username, User.Role... roles) {
         User user = User.builder()
             .username(username)
             .password("x")
@@ -224,6 +250,7 @@ class ApiAuthorizationTest {
         given(tokenProvider.getUsernameFromToken(TOKEN)).willReturn(username);
         given(tokenProvider.validateToken(TOKEN, user)).willReturn(true);
         given(userDetailsService.loadUserByUsername(username)).willReturn(user);
+        return user;
     }
 
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder authed(
