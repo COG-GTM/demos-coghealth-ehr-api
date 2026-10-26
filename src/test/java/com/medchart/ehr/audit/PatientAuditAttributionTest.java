@@ -99,16 +99,19 @@ class PatientAuditAttributionTest {
     }
 
     @Test
-    void mrnLookupDoesNotPersistTheMrn() throws Exception {
+    void mrnLookupIsLinkedToThePatientWithoutPersistingTheMrn() throws Exception {
         Patient patient = new Patient();
+        PatientDTO dto = new PatientDTO();
+        dto.setId(42L);
         when(patientRepository.findByMrn("MRN0000042")).thenReturn(Optional.of(patient));
-        when(patientMapper.toDto(patient)).thenReturn(new PatientDTO());
+        when(patientMapper.toDto(patient)).thenReturn(dto);
 
         mockMvc.perform(get("/v1/patients/mrn/MRN0000042")).andExpect(status().isOk());
 
         AuditEvent event = capturedEvent();
         assertThat(event.getRequestDetails()).isEqualTo("unauthenticated; request=GET /v1/patients/mrn/{mrn}");
         assertThat(event.getRequestDetails()).doesNotContain("MRN0000042");
+        assertThat(event.getPatientId()).isEqualTo(42L);
     }
 
     private AuditEvent capturedEvent() {

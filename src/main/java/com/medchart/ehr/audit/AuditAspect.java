@@ -1,6 +1,7 @@
 package com.medchart.ehr.audit;
 
 import com.medchart.ehr.domain.auth.User;
+import com.medchart.ehr.dto.PatientDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -59,6 +60,9 @@ public class AuditAspect {
 
         try {
             Object result = joinPoint.proceed();
+            if (patientId == null && result instanceof PatientDTO) {
+                eventBuilder.patientId(((PatientDTO) result).getId());
+            }
             eventBuilder.success(true);
             auditService.saveAuditEventAsync(eventBuilder.build());
             return result;
