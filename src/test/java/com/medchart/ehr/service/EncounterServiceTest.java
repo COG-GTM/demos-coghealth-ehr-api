@@ -199,4 +199,39 @@ class EncounterServiceTest {
         assertEquals(null, enc.getDepartment());
         verify(repository, never()).save(any());
     }
+    @Test
+    void partialUpdateKeepsOmittedFields() {
+        Encounter enc = stored(EncounterStatus.SCHEDULED);
+        enc.setDepartment("Cardiology");
+        enc.setChiefComplaint("Chest pain");
+
+        Encounter saved = service.update(42L, Encounter.builder().room("12B").build());
+
+        assertEquals("12B", saved.getRoom());
+        assertEquals("Cardiology", saved.getDepartment());
+        assertEquals("Chest pain", saved.getChiefComplaint());
+    }
+
+    @Test
+    void createIgnoresClientSuppliedIdentityAndNotes() {
+        Patient bob = new Patient();
+        bob.setId(7L);
+        Encounter body = Encounter.builder()
+                .id(42L)
+                .version(3L)
+                .patient(bob)
+                .encounterType(EncounterType.OUTPATIENT)
+                .status(EncounterStatus.COMPLETED)
+                .notes("injected note")
+                .createdBy("mallory")
+                .build();
+
+        Encounter saved = service.create(body);
+
+        assertEquals(null, saved.getId());
+        assertEquals(null, saved.getVersion());
+        assertEquals(null, saved.getNotes());
+        assertEquals("dr.alice", saved.getCreatedBy());
+        assertEquals(EncounterStatus.SCHEDULED, saved.getStatus());
+    }
 }

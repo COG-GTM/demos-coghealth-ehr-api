@@ -16,6 +16,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -105,6 +107,10 @@ public class EncounterService {
 
     public Encounter create(Encounter encounter) {
         String encNumber = generateEncounterNumber();
+        encounter.setId(null);
+        encounter.setVersion(null);
+        encounter.setNotes(null);
+        encounter.setCreatedBy(CurrentActor.username());
         encounter.setEncounterNumber(encNumber);
         encounter.setStatus(EncounterStatus.SCHEDULED);
         
@@ -126,13 +132,13 @@ public class EncounterService {
                     "Encounter " + enc.getEncounterNumber() + " was modified by another user; reload and retry");
         }
 
-        enc.setEncounterType(changes.getEncounterType() != null ? changes.getEncounterType() : enc.getEncounterType());
-        enc.setDepartment(changes.getDepartment());
-        enc.setRoom(changes.getRoom());
-        enc.setBed(changes.getBed());
-        enc.setChiefComplaint(changes.getChiefComplaint());
-        enc.setPriority(changes.getPriority());
-        enc.setVisitType(changes.getVisitType());
+        if (changes.getEncounterType() != null) enc.setEncounterType(changes.getEncounterType());
+        if (changes.getDepartment() != null) enc.setDepartment(changes.getDepartment());
+        if (changes.getRoom() != null) enc.setRoom(changes.getRoom());
+        if (changes.getBed() != null) enc.setBed(changes.getBed());
+        if (changes.getChiefComplaint() != null) enc.setChiefComplaint(changes.getChiefComplaint());
+        if (changes.getPriority() != null) enc.setPriority(changes.getPriority());
+        if (changes.getVisitType() != null) enc.setVisitType(changes.getVisitType());
 
         Encounter saved = encounterRepository.save(enc);
         auditUpdate(saved, "Updated encounter details", true, null);
@@ -196,7 +202,7 @@ public class EncounterService {
 
     private void auditUpdate(Encounter enc, String description, boolean success, String error) {
         String actor = CurrentActor.username();
-        auditService.saveAuditEventAsync(AuditEvent.builder()
+        AuditEvent event = AuditEvent.builder()
                 .userId(actor)
                 .userName(actor)
                 .patientId(enc.getPatient() != null ? enc.getPatient().getId() : null)
@@ -206,7 +212,17 @@ public class EncounterService {
                 .description(description)
                 .success(success)
                 .errorMessage(error)
-                .build());
+                .build();
+        if (success && TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    auditService.saveAuditEventAsync(event);
+                }
+            });
+        } else {
+            auditService.saveAuditEventAsync(event);
+        }
     }
 
     @Transactional(readOnly = true)
