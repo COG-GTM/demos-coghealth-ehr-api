@@ -1,6 +1,12 @@
 package com.medchart.ehr.legacy;
 
+import com.medchart.ehr.audit.AuditAction;
+import com.medchart.ehr.audit.AuditAspect;
+import com.medchart.ehr.audit.AuditEvent;
+import com.medchart.ehr.audit.AuditService;
 import org.junit.jupiter.api.BeforeEach;
+import org.mockito.ArgumentCaptor;
+import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -22,6 +28,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class ReportGeneratorTest {
@@ -97,6 +104,24 @@ class ReportGeneratorTest {
         String csv = new String(generator.generatePatientRoster(), StandardCharsets.UTF_8);
 
         assertThat(csv.split("\n")).hasSize(1);
+    }
+
+    @Test
+    void reportExportsAreAudited() {
+        when(query.getResultList()).thenReturn(List.<Object[]>of(ROSTER_ROW));
+        AuditService auditService = mock(AuditService.class);
+        AspectJProxyFactory factory = new AspectJProxyFactory(generator);
+        factory.setProxyTargetClass(true);
+        factory.addAspect(new AuditAspect(auditService));
+        ReportGenerator audited = factory.getProxy();
+
+        audited.generatePatientRoster();
+
+        ArgumentCaptor<AuditEvent> event = ArgumentCaptor.forClass(AuditEvent.class);
+        verify(auditService).saveAuditEventAsync(event.capture());
+        assertThat(event.getValue().getAction()).isEqualTo(AuditAction.EXPORT);
+        assertThat(event.getValue().getResourceType()).isEqualTo("Patient");
+        assertThat(event.getValue().getSuccess()).isTrue();
     }
 
     private static Set<Path> tempDirEntries() throws IOException {
