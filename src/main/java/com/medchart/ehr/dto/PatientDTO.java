@@ -17,7 +17,7 @@ import java.util.List;
 @Builder
 public class PatientDTO {
 
-    private static final String NAME_PATTERN = "^(?![=+\\-@])[^\\p{Cntrl}]*$";
+    private static final String NAME_PATTERN = "^(?!\\s*[=+\\-@])[^\\p{Cntrl}]*$";
     private static final String NAME_MESSAGE =
             "Name must not contain control characters or start with =, +, - or @";
 

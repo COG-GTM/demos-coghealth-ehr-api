@@ -29,7 +29,7 @@ class PatientDTONameValidationTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"=1+1", "+cmd", "-2+3", "@SUM(A1)", "Ann\nBob", "Ann\rBob", "Ann\tBob", "Ann\u0000"})
+    @ValueSource(strings = {"=1+1", " =1+1", "+cmd", "-2+3", "@SUM(A1)", "Ann\nBob", "Ann\rBob", "Ann\tBob", "Ann\u0000"})
     void rejectsFormulaAndControlCharacterNames(String name) {
         assertEquals(1, validator.validateProperty(patient(name, "Doe", null), "firstName").size());
         assertEquals(1, validator.validateProperty(patient("Ann", name, null), "lastName").size());

@@ -26,25 +26,31 @@ public final class CsvFields {
         if (value == null) return "";
         String text = value.toString();
         if (!(value instanceof Number)) {
-            text = neutraliseFormula(text);
             text = LINE_BREAKS.matcher(text).replaceAll(" ");
             text = CONTROL_CHARS.matcher(text).replaceAll("");
+            text = neutraliseFormula(text);
         }
         return '"' + text.replace("\"", "\"\"") + '"';
     }
 
     private static String neutraliseFormula(String text) {
         if (text.isEmpty()) return text;
+        if (text.charAt(0) == '\t' || isFormulaTrigger(text.stripLeading())) {
+            return "'" + text;
+        }
+        return text;
+    }
+
+    private static boolean isFormulaTrigger(String text) {
+        if (text.isEmpty()) return false;
         switch (text.charAt(0)) {
             case '=':
             case '+':
             case '-':
             case '@':
-            case '\t':
-            case '\r':
-                return "'" + text;
+                return true;
             default:
-                return text;
+                return false;
         }
     }
 }
