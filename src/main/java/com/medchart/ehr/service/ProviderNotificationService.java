@@ -2,6 +2,8 @@ package com.medchart.ehr.service;
 
 import com.medchart.ehr.audit.AuditAccess;
 import com.medchart.ehr.audit.AuditAction;
+import com.medchart.ehr.audit.AuditPatientId;
+import com.medchart.ehr.audit.AuditPatientMrn;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -86,8 +88,8 @@ public class ProviderNotificationService {
     @AuditAccess(action = AuditAction.CREATE, resourceType = "CriticalAlert", description = "Send critical alert")
     public CompletableFuture<Void> sendCriticalAlert(
             Long providerId,
-            Long patientId,
-            String patientMrn,
+            @AuditPatientId Long patientId,
+            @AuditPatientMrn String patientMrn,
             String alertType,
             String alertMessage,
             String severity) {

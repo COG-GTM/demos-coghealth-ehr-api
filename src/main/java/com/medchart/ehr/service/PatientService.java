@@ -2,6 +2,8 @@ package com.medchart.ehr.service;
 
 import com.medchart.ehr.audit.AuditAccess;
 import com.medchart.ehr.audit.AuditAction;
+import com.medchart.ehr.audit.AuditPatientId;
+import com.medchart.ehr.audit.AuditPatientMrn;
 import com.medchart.ehr.domain.patient.Patient;
 import com.medchart.ehr.dto.PatientDTO;
 import com.medchart.ehr.mapper.PatientMapper;
@@ -26,14 +28,15 @@ public class PatientService {
     private final PatientMapper patientMapper;
 
     @AuditAccess(action = AuditAction.READ, resourceType = "Patient", description = "View patient record")
-    public PatientDTO getPatientById(Long id) {
+    public PatientDTO getPatientById(@AuditPatientId Long id) {
         Patient patient = patientRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Patient not found with id: " + id));
         return patientMapper.toDto(patient);
     }
 
-    @AuditAccess(action = AuditAction.READ, resourceType = "Patient", description = "View patient by MRN")
-    public PatientDTO getPatientByMrn(String mrn) {
+    @AuditAccess(action = AuditAction.READ, resourceType = "Patient", description = "View patient by MRN",
+                 patientFromResult = true)
+    public PatientDTO getPatientByMrn(@AuditPatientMrn String mrn) {
         Patient patient = patientRepository.findByMrn(mrn)
                 .orElseThrow(() -> new EntityNotFoundException("Patient not found with MRN: " + mrn));
         return patientMapper.toDto(patient);
@@ -46,7 +49,8 @@ public class PatientService {
     }
 
     @Transactional
-    @AuditAccess(action = AuditAction.CREATE, resourceType = "Patient", description = "Create patient record")
+    @AuditAccess(action = AuditAction.CREATE, resourceType = "Patient", description = "Create patient record",
+                 patientFromResult = true)
     public PatientDTO createPatient(PatientDTO patientDTO) {
         if (patientDTO.getMrn() != null) {
             Optional<Patient> existing = patientRepository.findByMrn(patientDTO.getMrn());
@@ -66,8 +70,9 @@ public class PatientService {
     }
 
     @Transactional
-    @AuditAccess(action = AuditAction.UPDATE, resourceType = "Patient", description = "Update patient record")
-    public PatientDTO updatePatient(Long id, PatientDTO patientDTO) {
+    @AuditAccess(action = AuditAction.UPDATE, resourceType = "Patient", description = "Update patient record",
+                 patientFromResult = true)
+    public PatientDTO updatePatient(@AuditPatientId Long id, PatientDTO patientDTO) {
         Patient existing = patientRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Patient not found with id: " + id));
 
