@@ -29,15 +29,11 @@ class ForwardedHeadersConfigTest {
     }
 
     @Test
-    void onlyLoopbackIsATrustedProxyByDefault() throws IOException {
-        Pattern trusted = internalProxies(bindServerProperties(Collections.emptyMap()));
+    void noProxyIsTrustedByDefault() throws IOException {
+        ServerProperties server = bindServerProperties(Collections.emptyMap());
 
-        assertTrue(trusted.matcher("127.0.0.1").matches());
-        assertTrue(trusted.matcher("0:0:0:0:0:0:0:1").matches());
-        assertFalse(trusted.matcher("203.0.113.7").matches());
-        assertFalse(trusted.matcher("10.20.30.40").matches());
-        assertFalse(trusted.matcher("172.16.0.5").matches());
-        assertFalse(trusted.matcher("192.168.1.10").matches());
+        // Tomcat's RemoteIpValve treats an empty internal-proxies value as "trust nothing".
+        assertEquals("", server.getTomcat().getRemoteip().getInternalProxies());
     }
 
     @Test
@@ -48,6 +44,7 @@ class ForwardedHeadersConfigTest {
         assertTrue(trusted.matcher("10.0.5.17").matches());
         assertFalse(trusted.matcher("127.0.0.1").matches());
         assertFalse(trusted.matcher("10.20.30.40").matches());
+        assertFalse(trusted.matcher("0:0:0:0:0:0:0:1").matches());
     }
 
     private static Pattern internalProxies(ServerProperties server) {
