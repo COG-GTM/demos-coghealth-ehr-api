@@ -111,6 +111,18 @@ class AuditAspectPatientAttributionTest {
     }
 
     @Test
+    void mrnWithEdgeSpacesIsRecordedExactly() {
+        String spacedMrn = " A123 ";
+        Patient patient = new Patient();
+        when(patientRepository.findByMrn(spacedMrn)).thenReturn(Optional.of(patient));
+        when(patientMapper.toDto(patient)).thenReturn(PatientDTO.builder().id(PATIENT_ID).mrn(spacedMrn).build());
+
+        patientService().getPatientByMrn(spacedMrn);
+
+        assertEquals(spacedMrn, recordedEvent().getPatientMrn());
+    }
+
+    @Test
     void getPatientByIdRecordsPatientId() {
         Patient patient = new Patient();
         when(patientRepository.findById(PATIENT_ID)).thenReturn(Optional.of(patient));

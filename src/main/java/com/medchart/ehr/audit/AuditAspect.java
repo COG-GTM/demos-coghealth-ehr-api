@@ -93,10 +93,9 @@ public class AuditAspect {
         if (mrn == null) {
             return null;
         }
-        String trimmed = mrn.trim();
-        return trimmed.length() > PATIENT_MRN_MAX_LENGTH
-                ? trimmed.substring(0, PATIENT_MRN_MAX_LENGTH)
-                : trimmed;
+        return mrn.length() > PATIENT_MRN_MAX_LENGTH
+                ? mrn.substring(0, PATIENT_MRN_MAX_LENGTH)
+                : mrn;
     }
 
     private String getCurrentUserId() {
