@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -346,7 +347,10 @@ public class HrPtoSyncJob implements CommandLineRunner {
                 try {
                     String key = sentKeyFromMessage(new String(Files.readAllBytes(q.toPath()), StandardCharsets.UTF_8));
                     if (key == null) {
-                        throw new IllegalStateException("Cannot identify queued message " + q);
+                        File invalid = new File(q.getPath() + ".invalid");
+                        log.warn("{} quarantining incomplete outbound message {} as {}", JOB_NAME, q, invalid.getName());
+                        Files.move(q.toPath(), invalid.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                        continue;
                     }
                     keys.add(key);
                 } catch (IOException e) {
@@ -398,10 +402,15 @@ public class HrPtoSyncJob implements CommandLineRunner {
         File dir = new File(outDir(), OUTBOUND_DIR + File.separator + exportDate);
         dir.mkdirs();
         File f = new File(dir, controlId + ".hl7");
-        try (PrintWriter w = new PrintWriter(new FileWriter(f))) {
-            w.print(message);
+        File tmp = new File(dir, controlId + ".tmp");
+        try {
+            try (PrintWriter w = new PrintWriter(new FileWriter(tmp))) {
+                w.print(message);
+            }
+            Files.move(tmp.toPath(), f.toPath(), StandardCopyOption.ATOMIC_MOVE);
         } catch (IOException e) {
             log.error("Cannot write outbound message " + f, e);
+            tmp.delete();
             return false;
         }
         log.debug("Queued {}", f.getName());

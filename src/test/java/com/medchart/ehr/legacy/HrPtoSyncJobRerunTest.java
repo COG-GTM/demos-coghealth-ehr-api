@@ -9,6 +9,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.util.FileSystemUtils;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -169,6 +171,19 @@ class HrPtoSyncJobRerunTest {
 
         assertEquals(0, newJob().runForDate(EXPORT_DATE).get("messagesSent"));
         assertEquals(total, outboundFiles().length);
+    }
+
+    @Test
+    void incompleteQueuedMessageIsQuarantinedAndResent() throws Exception {
+        int total = ((Number) job.runForDate(EXPORT_DATE).get("messagesSent")).intValue();
+        assertTrue(new File(outDir.toFile(), HrPtoSyncJob.RUNS_FILE).delete());
+        FileSystemUtils.deleteRecursively(new File(outDir.toFile(), HrPtoSyncJob.SENT_DIR));
+        File truncated = outboundFiles()[0];
+        Files.write(truncated.toPath(), "MSH|^~\\&|COGHEALTH_EHR".getBytes(StandardCharsets.UTF_8));
+
+        assertEquals(1, newJob().runForDate(EXPORT_DATE).get("messagesSent"));
+        assertEquals(total, outboundFiles().length);
+        assertTrue(new File(truncated.getPath() + ".invalid").exists());
     }
 
     @Test
