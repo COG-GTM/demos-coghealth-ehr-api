@@ -6,6 +6,7 @@ import lombok.*;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Past;
+import javax.validation.constraints.Pattern;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -16,15 +17,22 @@ import java.util.List;
 @Builder
 public class PatientDTO {
 
+    private static final String NAME_PATTERN = "^(?![=+\\-@])[^\\p{Cntrl}]*$";
+    private static final String NAME_MESSAGE =
+            "Name must not contain control characters or start with =, +, - or @";
+
     private Long id;
     private String mrn;
 
     @NotBlank(message = "First name is required")
+    @Pattern(regexp = NAME_PATTERN, message = NAME_MESSAGE)
     private String firstName;
 
+    @Pattern(regexp = NAME_PATTERN, message = NAME_MESSAGE)
     private String middleName;
 
     @NotBlank(message = "Last name is required")
+    @Pattern(regexp = NAME_PATTERN, message = NAME_MESSAGE)
     private String lastName;
 
     @Past(message = "Date of birth must be in the past")
