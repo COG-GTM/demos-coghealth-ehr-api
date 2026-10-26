@@ -81,5 +81,31 @@ class SeededAdminMigrationTest {
 
         assertThat(count("SELECT COUNT(*) FROM users WHERE username = 'admin'")).isEqualTo(1);
         assertThat(count("SELECT COUNT(*) FROM user_roles WHERE role = 'ADMIN'")).isEqualTo(1);
+        assertThat(count("SELECT COUNT(*) FROM users WHERE username = 'admin' AND enabled")).isEqualTo(1);
+    }
+
+    @Test
+    void disablesCustomisedSeedRowInsteadOfDeletingIt() throws IOException {
+        migrate(V2);
+        jdbc.update("UPDATE users SET email = 'owner@clinic.test' WHERE username = 'admin'");
+
+        migrate(V5);
+
+        assertThat(count("SELECT COUNT(*) FROM users WHERE email = 'owner@clinic.test'")).isEqualTo(1);
+        assertThat(count("SELECT COUNT(*) FROM user_roles WHERE role = 'ADMIN'")).isEqualTo(1);
+        assertThat(count("SELECT COUNT(*) FROM users WHERE username = 'admin' AND enabled")).isZero();
+        assertThat(count("SELECT COUNT(*) FROM users WHERE password = ?", SEEDED_HASH)).isZero();
+    }
+
+    @Test
+    void disablesSeedRowThatGainedExtraRoles() throws IOException {
+        migrate(V2);
+        jdbc.update("INSERT INTO user_roles (user_id, role) VALUES (1, 'PHYSICIAN')");
+
+        migrate(V5);
+
+        assertThat(count("SELECT COUNT(*) FROM user_roles WHERE user_id = 1")).isEqualTo(2);
+        assertThat(count("SELECT COUNT(*) FROM users WHERE username = 'admin' AND enabled")).isZero();
+        assertThat(count("SELECT COUNT(*) FROM users WHERE password = ?", SEEDED_HASH)).isZero();
     }
 }
