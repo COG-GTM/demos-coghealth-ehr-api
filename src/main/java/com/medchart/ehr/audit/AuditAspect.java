@@ -6,6 +6,10 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import com.medchart.ehr.domain.auth.User;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -62,12 +66,34 @@ public class AuditAspect {
         return null;
     }
 
-    private String getCurrentUserId() {
-        return "system";
+    static final String ANONYMOUS_USER = "anonymous";
+
+    String getCurrentUserId() {
+        Authentication authentication = currentAuthentication();
+        if (authentication == null) {
+            return ANONYMOUS_USER;
+        }
+        if (authentication.getPrincipal() instanceof User) {
+            Long id = ((User) authentication.getPrincipal()).getId();
+            if (id != null) {
+                return String.valueOf(id);
+            }
+        }
+        return authentication.getName();
     }
 
-    private String getCurrentUserName() {
-        return "System User";
+    String getCurrentUserName() {
+        Authentication authentication = currentAuthentication();
+        return authentication == null ? ANONYMOUS_USER : authentication.getName();
+    }
+
+    private Authentication currentAuthentication() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
+            return null;
+        }
+        return authentication;
     }
 
     private String getClientIpAddress() {

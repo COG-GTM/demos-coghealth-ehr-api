@@ -32,10 +32,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String jwt = getJwtFromRequest(request);
 
-            if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt, loadUserByUsername(jwt))) {
-                String username = tokenProvider.getUsernameFromToken(jwt);
-                
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            if (StringUtils.hasText(jwt)) {
+                UserDetails userDetails = loadUserByUsername(jwt);
+                if (!tokenProvider.validateToken(jwt, userDetails) || !userDetails.isEnabled()
+                        || !userDetails.isAccountNonLocked()) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
                 UsernamePasswordAuthenticationToken authentication = 
                     new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
@@ -43,7 +46,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception ex) {
-            logger.error("Could not set user authentication in security context", ex);
+            SecurityContextHolder.clearContext();
+            logger.debug("Rejected bearer token: " + ex.getClass().getSimpleName());
         }
 
         filterChain.doFilter(request, response);
