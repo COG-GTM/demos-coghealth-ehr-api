@@ -63,7 +63,7 @@ public class InterfaceController {
     @PostMapping("/hr-pto-sync/run")
     public ResponseEntity<?> run(@RequestParam(required = false) String exportDate,
                                  @RequestParam(defaultValue = "false") boolean force) {
-        String date = hrExportReader.resolveExportDate(exportDate);
+        String date = hrExportReader.resolveRequestedExportDate(exportDate);
         long retryAfter = throttle.tryAcquire(RUN_OPERATION);
         if (retryAfter > 0) {
             return tooManyRequests(retryAfter);
@@ -76,7 +76,7 @@ public class InterfaceController {
 
     @GetMapping("/fhir/contract-report")
     public ResponseEntity<?> contractReport(@RequestParam(required = false) String exportDate) {
-        String date = hrExportReader.resolveExportDate(exportDate);
+        String date = hrExportReader.resolveRequestedExportDate(exportDate);
         long retryAfter = throttle.tryAcquire(CONTRACT_REPORT_OPERATION);
         if (retryAfter > 0) {
             return tooManyRequests(retryAfter);

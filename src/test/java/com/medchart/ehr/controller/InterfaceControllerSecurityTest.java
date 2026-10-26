@@ -62,7 +62,7 @@ class InterfaceControllerSecurityTest {
 
     @BeforeEach
     void setUp() {
-        when(hrExportReader.resolveExportDate(any())).thenReturn(DATE);
+        when(hrExportReader.resolveRequestedExportDate(any())).thenReturn(DATE);
         when(throttle.tryAcquire(anyString())).thenReturn(0L);
         when(hrPtoSyncJob.runForDate(anyString(), anyBoolean())).thenReturn(result("OK"));
         when(interfaceContractCheck.run(anyString())).thenReturn(new InterfaceContractReport());
@@ -120,8 +120,7 @@ class InterfaceControllerSecurityTest {
 
     @Test
     void jwtBearerForOperatorIsAccepted() throws Exception {
-        User ops = User.builder().username("ops").password("x").enabled(true)
-                .roles(Set.of(User.Role.INTERFACE_ADMIN)).build();
+        User ops = operator(true);
         when(jwtTokenProvider.getUsernameFromToken("ops-token")).thenReturn("ops");
         when(jwtTokenProvider.validateToken(eq("ops-token"), any(UserDetails.class))).thenReturn(true);
         when(userDetailsService.loadUserByUsername("ops")).thenReturn(ops);
@@ -129,6 +128,18 @@ class InterfaceControllerSecurityTest {
         mvc.perform(post("/interfaces/hr-pto-sync/run").header("Authorization", "Bearer ops-token"))
                 .andExpect(status().isOk());
         verify(hrPtoSyncJob).runForDate(DATE, false);
+    }
+
+    @Test
+    void jwtBearerForDisabledOperatorIsUnauthorized() throws Exception {
+        User ops = operator(false);
+        when(jwtTokenProvider.getUsernameFromToken("ops-token")).thenReturn("ops");
+        when(jwtTokenProvider.validateToken(eq("ops-token"), any(UserDetails.class))).thenReturn(true);
+        when(userDetailsService.loadUserByUsername("ops")).thenReturn(ops);
+
+        mvc.perform(post("/interfaces/hr-pto-sync/run").header("Authorization", "Bearer ops-token"))
+                .andExpect(status().isUnauthorized());
+        verifyNoInteractions(hrPtoSyncJob);
     }
 
     @Test
@@ -166,11 +177,17 @@ class InterfaceControllerSecurityTest {
 
     @Test
     void malformedExportDateIsBadRequest() throws Exception {
-        when(hrExportReader.resolveExportDate("../x")).thenThrow(new IllegalArgumentException("exportDate must be yyyyMMdd"));
+        when(hrExportReader.resolveRequestedExportDate("../x")).thenThrow(new IllegalArgumentException("exportDate must be yyyyMMdd"));
         mvc.perform(post("/interfaces/hr-pto-sync/run").param("exportDate", "../x")
                         .with(user("ops").roles("INTERFACE_ADMIN")))
                 .andExpect(status().isBadRequest());
         verifyNoInteractions(hrPtoSyncJob);
+    }
+
+    private static User operator(boolean enabled) {
+        return User.builder().username("ops").password("x").enabled(enabled).accountNonExpired(true)
+                .accountNonLocked(true).credentialsNonExpired(true)
+                .roles(Set.of(User.Role.INTERFACE_ADMIN)).build();
     }
 
     private static Map<String, Object> result(String status) {

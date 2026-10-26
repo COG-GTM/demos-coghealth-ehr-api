@@ -39,6 +39,13 @@ class HrExportReaderTest {
     }
 
     @Test
+    void requestedExportDateDoesNotTreatPlaceholdersAsLatest() {
+        assertEquals(reader.latestExportDate(), reader.resolveExportDate("${hr.pto.export.date}"));
+        assertEquals(reader.latestExportDate(), reader.resolveRequestedExportDate("latest"));
+        assertThrows(IllegalArgumentException.class, () -> reader.resolveRequestedExportDate("${missing}"));
+    }
+
+    @Test
     void readsAllColumnsIncludingQuotedField() {
         List<HrPtoRecord> records = reader.read("20260930");
         assertEquals(4, records.size());

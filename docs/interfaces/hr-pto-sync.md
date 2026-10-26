@@ -35,8 +35,11 @@ Export directory can be overridden with `-Dhr.export.dir=<path>` (default: class
 | `--hr-pto-sync-force[=yyyyMMdd]` application argument | once at startup, resends an already-run date |
 | `POST /api/interfaces/hr-pto-sync/run?exportDate=yyyyMMdd[&force=true]` | on demand |
 
-Each export date is sent once. A date that already has an entry in `runs.log` or queued `.hl7` files in
-`outbound/<exportDate>/` is skipped (`status: ALREADY_RUN`, nothing written; HTTP 409) unless `force` is set.
+Each export date is sent once. A date that already has a completed run in `runs.log` is skipped
+(`status: ALREADY_RUN`, nothing written; HTTP 409) unless `force` is set. Every queued cancellation is recorded
+in `sent/<exportDate>.keys`; a retry after an interrupted run (no `runs.log` entry) skips those and only queues
+the rest. Control ids come from a sequence persisted in `control-id.seq`, so they stay unique across restarts and
+forced resends.
 On-demand HTTP runs (and the contract report) are limited to one per
 `hr.pto.sync.on-demand.min-interval-seconds` (default 60); extra calls get HTTP 429 with `Retry-After`.
 
@@ -51,8 +54,8 @@ Rows for an employee with no `or_block` produce no messages.
 
 ## Endpoints
 
-All `/api/interfaces/**` routes require a JWT (`Authorization: Bearer <token>`) for a user with role
-`INTERFACE_ADMIN` or `ADMIN`: 401 without a valid token, 403 for other roles. `exportDate` must be `yyyyMMdd`
+All `/api/interfaces/**` routes require a JWT (`Authorization: Bearer <token>`) for an enabled, unlocked user
+with role `INTERFACE_ADMIN` or `ADMIN`: 401 without a valid token, 403 for other roles. `exportDate` must be `yyyyMMdd`
 (or empty / `latest`), otherwise 400.
 
 | Method | Path | Returns |

@@ -19,9 +19,11 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Component
 @Slf4j
@@ -33,6 +35,8 @@ public class HrPtoSyncJob implements CommandLineRunner {
     public static final String ERROR_QUEUE_FILE = "error-queue.log";
     public static final String RUNS_FILE = "runs.log";
     public static final String OUTBOUND_DIR = "outbound";
+    public static final String SENT_DIR = "sent";
+    public static final String CONTROL_SEQ_FILE = "control-id.seq";
     public static final String RUN_ONCE_ARG = "--hr-pto-sync";
     public static final String FORCE_RUN_ARG = "--hr-pto-sync-force";
     public static final String STATUS_ALREADY_RUN = "ALREADY_RUN";
@@ -53,7 +57,7 @@ public class HrPtoSyncJob implements CommandLineRunner {
     @Autowired(required = false)
     private JdbcTemplate jdbcTemplate;
 
-    private int controlIdSeq = 0;
+    private Long controlIdSeq;
 
     @Scheduled(cron = "0 0 2 * * *")
     public void nightly() {
@@ -79,9 +83,10 @@ public class HrPtoSyncJob implements CommandLineRunner {
     }
 
     /**
-     * Sends the SIU^S15 cancellations for one export date. A date that already has a completed run or
-     * queued outbound messages is not sent again unless {@code force} is set, so repeated triggers do not
-     * re-queue the same cancellations.
+     * Sends the SIU^S15 cancellations for one export date. A date with a completed run in {@code runs.log} is
+     * not sent again unless {@code force} is set. Without {@code force}, cancellations already queued for the
+     * date (recorded in {@code sent/<exportDate>.keys}) are skipped, so a retry after an interrupted run only
+     * queues the remainder.
      */
     public synchronized Map<String, Object> runForDate(String exportDate, boolean force) {
         LocalDateTime started = LocalDateTime.now();
@@ -96,6 +101,7 @@ public class HrPtoSyncJob implements CommandLineRunner {
             return skippedRun;
         }
         log.info("{} start exportDate={} force={}", JOB_NAME, exportDate, force);
+        Set<String> alreadyQueued = force ? new HashSet<String>() : readSentKeys(exportDate);
         List<HrPtoRecord> records = hrExportReader.read(exportDate);
         int year = Integer.parseInt(exportDate.substring(0, 4));
 
@@ -122,10 +128,17 @@ public class HrPtoSyncJob implements CommandLineRunner {
             for (LocalDate day : days) {
                 for (OrBlock b : blocks) {
                     if (weekdayOf(day).equals(b.weekday)) {
+                        String key = sentKey(r, b, day);
+                        if (alreadyQueued.contains(key)) {
+                            continue;
+                        }
                         String ctl = nextControlId(exportDate);
                         String msg = buildSiuS15(r, dept, b, day, ctl);
-                        writeOutbound(exportDate, ctl, msg);
-                        sent++;
+                        if (writeOutbound(exportDate, ctl, msg)) {
+                            appendSentKey(exportDate, key);
+                            alreadyQueued.add(key);
+                            sent++;
+                        }
                     }
                 }
             }
@@ -249,17 +262,72 @@ public class HrPtoSyncJob implements CommandLineRunner {
         return blocks;
     }
 
+    /** Control ids stay unique across restarts and forced resends: the sequence is persisted in {@code control-id.seq}. */
     private synchronized String nextControlId(String exportDate) {
+        File f = new File(outDir(), CONTROL_SEQ_FILE);
+        if (controlIdSeq == null) {
+            controlIdSeq = readControlSeq(f);
+        }
         controlIdSeq++;
+        outDir().mkdirs();
+        try (PrintWriter w = new PrintWriter(new FileWriter(f))) {
+            w.print(controlIdSeq);
+        } catch (IOException e) {
+            throw new IllegalStateException("Cannot persist control id sequence " + f, e);
+        }
         return "HRPTO" + exportDate + String.format("%05d", controlIdSeq);
     }
 
-    public boolean alreadyRun(String exportDate) {
-        File[] queued = new File(outDir(), OUTBOUND_DIR + File.separator + exportDate)
-                .listFiles((d, name) -> name.endsWith(".hl7"));
-        if (queued != null && queued.length > 0) {
-            return true;
+    private static long readControlSeq(File f) {
+        if (!f.exists()) {
+            return 0L;
         }
+        try (BufferedReader br = new BufferedReader(new FileReader(f))) {
+            String line = br.readLine();
+            return line == null || line.trim().isEmpty() ? 0L : Long.parseLong(line.trim());
+        } catch (IOException | NumberFormatException e) {
+            throw new IllegalStateException("Cannot read control id sequence " + f, e);
+        }
+    }
+
+    private static String sentKey(HrPtoRecord r, OrBlock b, LocalDate day) {
+        return r.employeeId + "|" + day + "|" + b.providerId + "|" + b.startTime + "|" + b.room;
+    }
+
+    private static File sentKeysFile(String exportDate) {
+        return new File(outDir(), SENT_DIR + File.separator + exportDate + ".keys");
+    }
+
+    private Set<String> readSentKeys(String exportDate) {
+        Set<String> keys = new HashSet<String>();
+        File f = sentKeysFile(exportDate);
+        if (!f.exists()) {
+            return keys;
+        }
+        try (BufferedReader br = new BufferedReader(new FileReader(f))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (!line.isEmpty()) {
+                    keys.add(line);
+                }
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException("Cannot read sent keys " + f, e);
+        }
+        return keys;
+    }
+
+    private void appendSentKey(String exportDate, String key) {
+        File f = sentKeysFile(exportDate);
+        f.getParentFile().mkdirs();
+        try (PrintWriter w = new PrintWriter(new FileWriter(f, true))) {
+            w.println(key);
+        } catch (IOException e) {
+            throw new IllegalStateException("Cannot record sent key " + f, e);
+        }
+    }
+
+    public boolean alreadyRun(String exportDate) {
         for (Map<String, Object> run : readRuns()) {
             if (exportDate.equals(run.get("exportDate")) && !STATUS_ALREADY_RUN.equals(run.get("status"))) {
                 return true;
@@ -272,7 +340,7 @@ public class HrPtoSyncJob implements CommandLineRunner {
         return new File(System.getProperty(OUT_DIR_PROPERTY, DEFAULT_OUT_DIR));
     }
 
-    private void writeOutbound(String exportDate, String controlId, String message) {
+    private boolean writeOutbound(String exportDate, String controlId, String message) {
         File dir = new File(outDir(), OUTBOUND_DIR + File.separator + exportDate);
         dir.mkdirs();
         File f = new File(dir, controlId + ".hl7");
@@ -280,8 +348,10 @@ public class HrPtoSyncJob implements CommandLineRunner {
             w.print(message);
         } catch (IOException e) {
             log.error("Cannot write outbound message " + f, e);
+            return false;
         }
         log.debug("Queued {}", f.getName());
+        return true;
     }
 
     private void appendErrorQueue(String exportDate, String employeeId, String message) {

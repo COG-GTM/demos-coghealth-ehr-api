@@ -67,8 +67,15 @@ public class HrExportReader {
     }
 
     public String resolveExportDate(String requested) {
-        if (requested == null || requested.trim().length() == 0 || requested.startsWith("${")
-                || "latest".equalsIgnoreCase(requested.trim())) {
+        if (requested != null && requested.startsWith("${")) {
+            return latestExportDate();
+        }
+        return resolveRequestedExportDate(requested);
+    }
+
+    /** Like {@link #resolveExportDate} but without the unresolved-placeholder fallback; for caller-supplied dates. */
+    public String resolveRequestedExportDate(String requested) {
+        if (requested == null || requested.trim().length() == 0 || "latest".equalsIgnoreCase(requested.trim())) {
             return latestExportDate();
         }
         String date = requested.trim();

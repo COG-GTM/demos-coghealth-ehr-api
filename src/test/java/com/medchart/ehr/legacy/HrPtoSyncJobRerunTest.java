@@ -6,19 +6,25 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.util.FileSystemUtils;
 
 import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -30,17 +36,23 @@ class HrPtoSyncJobRerunTest {
     Path outDir;
 
     private HrPtoSyncJob job;
+    private JdbcTemplate jdbc;
 
     @BeforeEach
     void setUp() {
         System.setProperty(HrPtoSyncJob.OUT_DIR_PROPERTY, outDir.toString());
-        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        jdbc = mock(JdbcTemplate.class);
         when(jdbc.queryForList(anyString(), (Object) any())).thenReturn(everyWeekdayBlocks());
 
-        job = new HrPtoSyncJob();
+        job = newJob();
+    }
+
+    private HrPtoSyncJob newJob() {
+        HrPtoSyncJob job = new HrPtoSyncJob();
         ReflectionTestUtils.setField(job, "hrExportReader", new HrExportReader());
         ReflectionTestUtils.setField(job, "departmentMapping", new DepartmentMapping());
         ReflectionTestUtils.setField(job, "jdbcTemplate", jdbc);
+        return job;
     }
 
     @AfterEach
@@ -89,11 +101,69 @@ class HrPtoSyncJobRerunTest {
     }
 
     @Test
+    void forcedResendAfterRestartUsesNewControlIds() {
+        job.runForDate(EXPORT_DATE);
+        Set<String> firstIds = fileNames();
+
+        Map<String, Object> forced = newJob().runForDate(EXPORT_DATE, true);
+
+        Set<String> allIds = fileNames();
+        assertEquals(firstIds.size() + ((Number) forced.get("messagesSent")).intValue(), allIds.size());
+        assertTrue(allIds.containsAll(firstIds));
+    }
+
+    @Test
+    void interruptedRunResumesWithoutRequeueingSentMessages() {
+        AtomicInteger fullCalls = new AtomicInteger();
+        when(jdbc.queryForList(anyString(), (Object) any())).thenAnswer(inv -> {
+            fullCalls.incrementAndGet();
+            return everyWeekdayBlocks();
+        });
+        Map<String, Object> full = newJob().runForDate(EXPORT_DATE);
+        int total = ((Number) full.get("messagesSent")).intValue();
+        int failAfter = fullCalls.get() / 2;
+        assertTrue(failAfter > 0, "export needs at least two records with OR blocks");
+        resetOutDir();
+
+        AtomicInteger calls = new AtomicInteger();
+        when(jdbc.queryForList(anyString(), (Object) any())).thenAnswer(inv -> {
+            if (calls.incrementAndGet() > failAfter) {
+                throw new IllegalStateException("db down");
+            }
+            return everyWeekdayBlocks();
+        });
+        assertThrows(IllegalStateException.class, () -> job.runForDate(EXPORT_DATE));
+        int partial = outboundFiles().length;
+        assertTrue(partial > 0 && partial < total, "partial=" + partial + " total=" + total);
+        assertTrue(job.readRuns().isEmpty());
+        assertFalse(job.alreadyRun(EXPORT_DATE));
+
+        doReturn(everyWeekdayBlocks()).when(jdbc).queryForList(anyString(), (Object) any());
+        Map<String, Object> retry = newJob().runForDate(EXPORT_DATE);
+
+        assertEquals(total - partial, retry.get("messagesSent"));
+        assertEquals(total, outboundFiles().length);
+    }
+
+    @Test
     void otherDatesAreNotBlocked() {
         job.runForDate(EXPORT_DATE);
 
         assertFalse(job.alreadyRun("20261001"));
         assertFalse(HrPtoSyncJob.STATUS_ALREADY_RUN.equals(job.runForDate("20261001").get("status")));
+    }
+
+    private void resetOutDir() {
+        FileSystemUtils.deleteRecursively(outDir.toFile());
+        assertTrue(outDir.toFile().mkdirs());
+    }
+
+    private Set<String> fileNames() {
+        Set<String> names = new HashSet<String>();
+        for (File f : outboundFiles()) {
+            names.add(f.getName());
+        }
+        return names;
     }
 
     private File[] outboundFiles() {
