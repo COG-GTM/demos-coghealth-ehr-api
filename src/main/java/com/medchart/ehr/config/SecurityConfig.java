@@ -48,7 +48,7 @@ public class SecurityConfig {
                 .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
             .and()
             .authorizeRequests()
-                .antMatchers("/api/auth/login", "/api/auth/register", "/actuator/health").permitAll()
+                .antMatchers("/api/auth/login", "/actuator/health").permitAll()
                 .anyRequest().authenticated()
             .and()
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
