@@ -11,9 +11,13 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Component
 @Slf4j
@@ -24,6 +28,8 @@ public class HrExportReader {
     public static final String FILE_SUFFIX = ".csv";
     public static final String DATE_PROPERTY = "hr.export.date";
     public static final String DIR_PROPERTY = "hr.export.dir";
+
+    private static final Pattern EXPORT_DATE = Pattern.compile("\\d{8}");
 
     private static final String SPLIT_REGEX = ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)";
 
@@ -36,7 +42,7 @@ public class HrExportReader {
                 for (File f : files) {
                     String n = f.getName();
                     if (n.startsWith(FILE_PREFIX) && n.endsWith(FILE_SUFFIX)) {
-                        dates.add(n.substring(FILE_PREFIX.length(), n.length() - FILE_SUFFIX.length()));
+                        addIfValid(dates, n.substring(FILE_PREFIX.length(), n.length() - FILE_SUFFIX.length()));
                     }
                 }
             }
@@ -47,7 +53,7 @@ public class HrExportReader {
                 for (Resource r : resources) {
                     String n = r.getFilename();
                     if (n != null) {
-                        dates.add(n.substring(FILE_PREFIX.length(), n.length() - FILE_SUFFIX.length()));
+                        addIfValid(dates, n.substring(FILE_PREFIX.length(), n.length() - FILE_SUFFIX.length()));
                     }
                 }
             } catch (IOException e) {
@@ -71,10 +77,35 @@ public class HrExportReader {
                 || "latest".equalsIgnoreCase(requested.trim())) {
             return latestExportDate();
         }
-        return requested.trim();
+        return validateExportDate(requested.trim());
+    }
+
+    /**
+     * Export dates are part of the export file name and are echoed into the run log, error queue and HL7
+     * control ids, so only a real calendar date in yyyyMMdd form is accepted.
+     */
+    public static String validateExportDate(String exportDate) {
+        if (exportDate == null || !EXPORT_DATE.matcher(exportDate).matches()) {
+            throw new InvalidExportDateException("exportDate must be yyyyMMdd");
+        }
+        try {
+            LocalDate.parse(exportDate, DateTimeFormatter.BASIC_ISO_DATE);
+        } catch (DateTimeParseException e) {
+            throw new InvalidExportDateException("exportDate must be a valid yyyyMMdd date");
+        }
+        return exportDate;
+    }
+
+    private static void addIfValid(List<String> dates, String candidate) {
+        try {
+            dates.add(validateExportDate(candidate));
+        } catch (InvalidExportDateException e) {
+            log.warn("Ignoring HR export with non-yyyyMMdd date: {}", candidate);
+        }
     }
 
     public List<HrPtoRecord> read(String exportDate) {
+        validateExportDate(exportDate);
         String fileName = FILE_PREFIX + exportDate + FILE_SUFFIX;
         List<HrPtoRecord> out = new ArrayList<HrPtoRecord>();
         try (BufferedReader br = new BufferedReader(new InputStreamReader(open(fileName), "UTF-8"))) {
