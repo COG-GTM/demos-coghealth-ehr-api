@@ -41,12 +41,7 @@ public class ReportGenerator {
         try (PrintWriter writer = new PrintWriter(new FileWriter(filePath))) {
             writer.println("ID,MRN,SSN,FirstName,LastName,DOB,PhoneHome,PhoneMobile,Email,Address,City,State,Zip,Insurance,MemberID");
             for (Object[] row : results) {
-                StringBuilder line = new StringBuilder();
-                for (int i = 0; i < row.length; i++) {
-                    if (i > 0) line.append(",");
-                    line.append(row[i] != null ? row[i].toString().replace(",", ";") : "");
-                }
-                writer.println(line);
+                writer.println(CsvEncoder.row(row));
             }
         } catch (IOException e) {
             log.error("Failed to generate patient roster", e);
