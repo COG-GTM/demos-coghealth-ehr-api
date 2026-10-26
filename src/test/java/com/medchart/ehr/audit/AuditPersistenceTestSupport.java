@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -22,7 +24,8 @@ import javax.persistence.EntityNotFoundException;
 
 /**
  * Runs {@link AuditAspect} against an H2 schema generated from {@link AuditEvent},
- * which enforces the same VARCHAR limits as V1__initial_schema.sql.
+ * which enforces the same VARCHAR limits as V1__initial_schema.sql. The pool has a single
+ * connection, so an audited call that needed a second connection would time out.
  */
 @DataJpaTest
 @TestPropertySource(properties = {
@@ -31,6 +34,8 @@ import javax.persistence.EntityNotFoundException;
         "spring.datasource.driver-class-name=org.h2.Driver",
         "spring.datasource.username=sa",
         "spring.datasource.password=",
+        "spring.datasource.hikari.maximum-pool-size=1",
+        "spring.datasource.hikari.connection-timeout=2000",
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect"
 })
@@ -71,6 +76,18 @@ abstract class AuditPersistenceTestSupport {
         public void updatePatient(Long id) {
             repository.save(AuditEvent.builder()
                     .userId("marker").action(AuditAction.UPDATE).resourceType("Marker").build());
+        }
+
+        @Transactional
+        @AuditAccess(action = AuditAction.UPDATE, resourceType = "Patient", description = "Update patient record")
+        public void updatePatientFailingAtCommit(Long id) {
+            updatePatient(id);
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void beforeCommit(boolean readOnly) {
+                    throw new IllegalStateException("deferred constraint violation");
+                }
+            });
         }
     }
 

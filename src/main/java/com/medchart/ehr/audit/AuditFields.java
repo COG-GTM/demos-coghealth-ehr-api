@@ -19,7 +19,10 @@ public final class AuditFields {
     private AuditFields() {
     }
 
-    /** Removes control characters (PostgreSQL rejects NUL in text) and caps the value at {@code max} chars. */
+    /**
+     * Removes control characters (PostgreSQL rejects NUL in text) and unpaired surrogates
+     * (not encodable as UTF-8), and caps the value at {@code max} chars without splitting a pair.
+     */
     public static String bounded(String value, int max) {
         if (value == null) {
             return null;
@@ -27,11 +30,18 @@ public final class AuditFields {
         StringBuilder sb = new StringBuilder(Math.min(value.length(), max));
         for (int i = 0; i < value.length() && sb.length() < max; i++) {
             char c = value.charAt(i);
-            if (Character.isISOControl(c)) {
+            if (Character.isISOControl(c) || Character.isLowSurrogate(c)) {
                 continue;
             }
-            if (Character.isHighSurrogate(c) && sb.length() == max - 1) {
-                break;
+            if (Character.isHighSurrogate(c)) {
+                if (i + 1 >= value.length() || !Character.isLowSurrogate(value.charAt(i + 1))) {
+                    continue;
+                }
+                if (sb.length() > max - 2) {
+                    break;
+                }
+                sb.append(c).append(value.charAt(++i));
+                continue;
             }
             sb.append(c);
         }

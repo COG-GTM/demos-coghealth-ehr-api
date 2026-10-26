@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
 public class AuditWriteException extends RuntimeException {
 
-    public AuditWriteException(String message, Throwable cause) {
-        super(message, cause);
+    public AuditWriteException(String message) {
+        super(message);
     }
 }

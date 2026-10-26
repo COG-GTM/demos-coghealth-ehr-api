@@ -54,4 +54,16 @@ class AuditAspectPersistenceTest extends AuditPersistenceTestSupport {
         assertThat(repository.findAll()).extracting(AuditEvent::getResourceType)
                 .containsExactlyInAnyOrder("Marker", "Patient");
     }
+
+    @Test
+    void commitTimeFailureLeavesOnlyAFailureAuditRow() {
+        assertThatThrownBy(() -> operations.updatePatientFailingAtCommit(42L))
+                .isInstanceOf(IllegalStateException.class);
+
+        List<AuditEvent> events = repository.findAll();
+        assertThat(events).hasSize(1);
+        assertThat(events.get(0).getResourceType()).isEqualTo("Patient");
+        assertThat(events.get(0).getSuccess()).isFalse();
+        assertThat(events.get(0).getErrorMessage()).isEqualTo("deferred constraint violation");
+    }
 }

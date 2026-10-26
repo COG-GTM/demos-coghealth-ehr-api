@@ -19,7 +19,9 @@ class AuditFailClosedTest extends AuditPersistenceTestSupport {
     @BeforeEach
     void failAuditWrites() {
         when(failingAuditService.recordAuditEvent(any()))
-                .thenThrow(new AuditWriteException("Audit event could not be recorded", new RuntimeException("db down")));
+                .thenThrow(new AuditWriteException("Audit event could not be recorded"));
+        when(failingAuditService.recordFailedAuditEvent(any()))
+                .thenThrow(new AuditWriteException("Audit event could not be recorded"));
     }
 
     @Test

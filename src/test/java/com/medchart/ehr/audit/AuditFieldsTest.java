@@ -21,6 +21,11 @@ class AuditFieldsTest {
     }
 
     @Test
+    void boundedDropsUnpairedSurrogates() {
+        assertThat(AuditFields.bounded("a\uD83Db\uDE00c\uD83D", 10)).isEqualTo("abc");
+    }
+
+    @Test
     void ipLiteralAcceptsOnlyAddresses() {
         assertThat(AuditFields.ipLiteral(" 203.0.113.7 ")).isEqualTo("203.0.113.7");
         assertThat(AuditFields.ipLiteral("2001:db8::1")).isEqualTo("2001:db8::1");

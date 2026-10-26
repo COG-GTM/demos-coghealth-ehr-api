@@ -6,22 +6,38 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
 import java.lang.reflect.Method;
 
+/**
+ * Runs outside the audited method's own {@code @Transactional} boundary and wraps it in a
+ * transaction that also holds the success audit row, so the operation and its audit row
+ * commit or roll back together on one connection. Failures (including commit-time failures)
+ * are audited afterwards in a separate transaction.
+ */
 @Aspect
 @Component
+@Order(Ordered.HIGHEST_PRECEDENCE)
 @Slf4j
-@RequiredArgsConstructor
 public class AuditAspect {
 
     private static final int USER_AGENT_MAX_LENGTH = 200;
 
     private final AuditService auditService;
+    private final TransactionTemplate transactionTemplate;
+
+    public AuditAspect(AuditService auditService, PlatformTransactionManager transactionManager) {
+        this.auditService = auditService;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
+    }
 
     @Around("@annotation(com.medchart.ehr.audit.AuditAccess)")
     public Object auditAccess(ProceedingJoinPoint joinPoint) throws Throwable {
@@ -42,24 +58,43 @@ public class AuditAspect {
                 .ipAddress(getClientIpAddress())
                 .userAgent(getUserAgent());
 
-        Object result;
         try {
-            result = joinPoint.proceed();
-        } catch (Throwable e) {
+            return transactionTemplate.execute(status -> {
+                Object result = proceed(joinPoint);
+                eventBuilder.success(true);
+                auditService.recordAuditEvent(eventBuilder.build());
+                return result;
+            });
+        } catch (AuditWriteException auditFailure) {
+            throw auditFailure;
+        } catch (Throwable thrown) {
+            Throwable e = thrown instanceof CheckedProceedFailure ? thrown.getCause() : thrown;
             eventBuilder.success(false);
             eventBuilder.errorMessage(e.getMessage() != null ? e.getMessage() : e.getClass().getName());
             try {
-                auditService.recordAuditEvent(eventBuilder.build());
+                auditService.recordFailedAuditEvent(eventBuilder.build());
             } catch (AuditWriteException auditFailure) {
                 auditFailure.addSuppressed(e);
                 throw auditFailure;
             }
             throw e;
         }
+    }
 
-        eventBuilder.success(true);
-        auditService.recordAuditEvent(eventBuilder.build());
-        return result;
+    private static Object proceed(ProceedingJoinPoint joinPoint) {
+        try {
+            return joinPoint.proceed();
+        } catch (RuntimeException | Error e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new CheckedProceedFailure(e);
+        }
+    }
+
+    private static final class CheckedProceedFailure extends RuntimeException {
+        CheckedProceedFailure(Throwable cause) {
+            super(cause);
+        }
     }
 
     private Long extractPatientId(Object[] args) {
