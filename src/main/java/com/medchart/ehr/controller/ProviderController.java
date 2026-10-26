@@ -1,10 +1,14 @@
 package com.medchart.ehr.controller;
 
 import com.medchart.ehr.domain.provider.Provider;
+import com.medchart.ehr.dto.ProviderDTO;
 import com.medchart.ehr.service.ProviderService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.util.List;
 
 @RestController
@@ -65,23 +69,25 @@ public class ProviderController {
     }
 
     @PostMapping
-    public Provider create(@RequestBody Provider provider) {
-        return providerService.save(provider);
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Provider> create(@Valid @RequestBody ProviderDTO request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(providerService.create(request));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Provider> update(@PathVariable Long id, @RequestBody Provider provider) {
-        return providerService.findById(id)
-                .map(existing -> {
-                    provider.setId(id);
-                    return ResponseEntity.ok(providerService.save(provider));
-                })
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Provider> update(@PathVariable Long id, @Valid @RequestBody ProviderDTO request) {
+        return providerService.update(id, request)
+                .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deactivate(@PathVariable Long id) {
-        providerService.deactivate(id);
+        if (!providerService.deactivate(id)) {
+            return ResponseEntity.notFound().build();
+        }
         return ResponseEntity.noContent().build();
     }
 }
