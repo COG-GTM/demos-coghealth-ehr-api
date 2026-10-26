@@ -13,6 +13,8 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -291,15 +293,67 @@ public class HrPtoSyncJob implements CommandLineRunner {
     }
 
     private static String sentKey(HrPtoRecord r, OrBlock b, LocalDate day) {
-        return r.employeeId + "|" + day + "|" + b.providerId + "|" + b.startTime + "|" + b.room;
+        String ymd = day.format(DateTimeFormatter.BASIC_ISO_DATE);
+        return sentKey(r.employeeId, ymd + b.startTime.replace(":", "").substring(0, 4),
+                ymd + b.endTime.replace(":", "").substring(0, 4), b.room);
+    }
+
+    private static String sentKey(String employeeId, String start, String end, String room) {
+        return employeeId + "|" + start + "|" + end + "|" + room;
+    }
+
+    /** Rebuilds the sent key from a queued SIU^S15 (SCH-11 start/end, AIL-3 room, AIP-3 employee id). */
+    static String sentKeyFromMessage(String message) {
+        String start = null;
+        String end = null;
+        String room = null;
+        String employeeId = null;
+        for (String segment : message.split("\r")) {
+            String[] f = segment.split("\\|", -1);
+            if (f[0].equals("SCH") && f.length > 11) {
+                String[] c = f[11].split("\\^", -1);
+                if (c.length > 4) {
+                    start = c[3];
+                    end = c[4];
+                }
+            } else if (f[0].equals("AIL") && f.length > 3) {
+                room = f[3].split("\\^", -1)[0];
+            } else if (f[0].equals("AIP") && f.length > 3) {
+                employeeId = f[3].split("\\^", -1)[0];
+            }
+        }
+        if (start == null || room == null || employeeId == null) {
+            return null;
+        }
+        return sentKey(employeeId, start, end, room);
     }
 
     private static File sentKeysFile(String exportDate) {
         return new File(outDir(), SENT_DIR + File.separator + exportDate + ".keys");
     }
 
+    /**
+     * Keys of cancellations already queued for the date: the {@code sent/<exportDate>.keys} ledger (which survives the
+     * integration engine consuming the files) plus keys rebuilt from any {@code .hl7} files still in the outbound
+     * directory (covers runs that stopped between queuing a file and recording its key, and runs from before the ledger).
+     */
     private Set<String> readSentKeys(String exportDate) {
         Set<String> keys = new HashSet<String>();
+        File[] queued = new File(outDir(), OUTBOUND_DIR + File.separator + exportDate)
+                .listFiles((d, name) -> name.endsWith(".hl7"));
+        if (queued != null) {
+            for (File q : queued) {
+                try {
+                    String key = sentKeyFromMessage(new String(Files.readAllBytes(q.toPath()), StandardCharsets.UTF_8));
+                    if (key == null) {
+                        throw new IllegalStateException("Cannot identify queued message " + q);
+                    }
+                    keys.add(key);
+                } catch (IOException e) {
+                    throw new IllegalStateException("Cannot read queued message " + q, e);
+                }
+            }
+        }
         File f = sentKeysFile(exportDate);
         if (!f.exists()) {
             return keys;

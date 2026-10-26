@@ -146,6 +146,32 @@ class HrPtoSyncJobRerunTest {
     }
 
     @Test
+    void blocksDifferingOnlyByEndTimeAreBothQueued() {
+        int single = ((Number) newJob().runForDate(EXPORT_DATE).get("messagesSent")).intValue();
+        resetOutDir();
+
+        List<Map<String, Object>> rows = everyWeekdayBlocks();
+        for (Map<String, Object> row : everyWeekdayBlocks()) {
+            row.put("end_time", "12:00:00");
+            rows.add(row);
+        }
+        doReturn(rows).when(jdbc).queryForList(anyString(), (Object) any());
+
+        assertEquals(single * 2, newJob().runForDate(EXPORT_DATE).get("messagesSent"));
+        assertEquals(single * 2, outboundFiles().length);
+    }
+
+    @Test
+    void retryWithQueuedFilesButNoLedgerQueuesNothingNew() {
+        int total = ((Number) job.runForDate(EXPORT_DATE).get("messagesSent")).intValue();
+        assertTrue(new File(outDir.toFile(), HrPtoSyncJob.RUNS_FILE).delete());
+        FileSystemUtils.deleteRecursively(new File(outDir.toFile(), HrPtoSyncJob.SENT_DIR));
+
+        assertEquals(0, newJob().runForDate(EXPORT_DATE).get("messagesSent"));
+        assertEquals(total, outboundFiles().length);
+    }
+
+    @Test
     void otherDatesAreNotBlocked() {
         job.runForDate(EXPORT_DATE);
 
