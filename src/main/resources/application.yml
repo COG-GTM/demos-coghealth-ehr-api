@@ -36,6 +36,10 @@ server:
   port: 8080
   servlet:
     context-path: /api
+  forward-headers-strategy: native
+  tomcat:
+    remoteip:
+      internal-proxies: '${TRUSTED_PROXIES:127\.\d+\.\d+\.\d+|0:0:0:0:0:0:0:1|::1}'
 
 management:
   endpoints:
