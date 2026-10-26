@@ -103,6 +103,26 @@ class PatientControllerSecurityTest {
     }
 
     @Test
+    void tokenForExpiredAccountOrCredentialsIsRejected() throws Exception {
+        User expiredAccount = account("expired", User.Role.PROVIDER, true);
+        expiredAccount.setAccountNonExpired(false);
+        User expiredPassword = account("stale", User.Role.PROVIDER, true);
+        expiredPassword.setCredentialsNonExpired(false);
+        when(tokenProvider.getUsernameFromToken("expired-token")).thenReturn("expired");
+        when(tokenProvider.getUsernameFromToken("stale-token")).thenReturn("stale");
+        when(userDetailsService.loadUserByUsername("expired")).thenReturn(expiredAccount);
+        when(userDetailsService.loadUserByUsername("stale")).thenReturn(expiredPassword);
+        when(tokenProvider.validateToken(anyString(), any())).thenReturn(true);
+
+        mockMvc.perform(get("/v1/patients/17").header("Authorization", "Bearer expired-token"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/v1/patients/17").header("Authorization", "Bearer stale-token"))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(patientService);
+    }
+
+    @Test
     void authenticatedUserWithoutClinicalRoleIsForbidden() throws Exception {
         mockMvc.perform(get("/v1/patients/17").with(user("someone").roles("AUDITOR")))
                 .andExpect(status().isForbidden());

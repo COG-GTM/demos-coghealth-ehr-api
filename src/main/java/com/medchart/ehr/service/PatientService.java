@@ -41,8 +41,12 @@ public class PatientService {
 
     @AuditAccess(action = AuditAction.SEARCH, resourceType = "Patient", description = "Search patients")
     public Page<PatientDTO> searchPatients(String searchTerm, Pageable pageable) {
-        return patientRepository.searchPatients(searchTerm, pageable)
+        return patientRepository.searchPatients(escapeLikePattern(searchTerm), pageable)
                 .map(patientMapper::toDto);
+    }
+
+    static String escapeLikePattern(String term) {
+        return term.replace("!", "!!").replace("%", "!%").replace("_", "!_");
     }
 
     @Transactional

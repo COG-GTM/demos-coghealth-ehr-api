@@ -34,8 +34,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (StringUtils.hasText(jwt)) {
                 UserDetails userDetails = loadUserByUsername(jwt);
-                if (!tokenProvider.validateToken(jwt, userDetails) || !userDetails.isEnabled()
-                        || !userDetails.isAccountNonLocked()) {
+                if (!tokenProvider.validateToken(jwt, userDetails) || !isUsable(userDetails)) {
                     filterChain.doFilter(request, response);
                     return;
                 }
@@ -64,5 +63,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private UserDetails loadUserByUsername(String jwt) {
         String username = tokenProvider.getUsernameFromToken(jwt);
         return userDetailsService.loadUserByUsername(username);
+    }
+
+    private static boolean isUsable(UserDetails userDetails) {
+        return userDetails.isEnabled() && userDetails.isAccountNonLocked()
+            && userDetails.isAccountNonExpired() && userDetails.isCredentialsNonExpired();
     }
 }
