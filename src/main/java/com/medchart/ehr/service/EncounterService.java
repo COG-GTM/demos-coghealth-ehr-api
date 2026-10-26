@@ -6,7 +6,10 @@ import com.medchart.ehr.audit.AuditService;
 import com.medchart.ehr.audit.CurrentActor;
 import com.medchart.ehr.domain.encounter.Encounter;
 import com.medchart.ehr.domain.encounter.EncounterStatus;
+import com.medchart.ehr.domain.patient.Patient;
+import com.medchart.ehr.domain.provider.Provider;
 import com.medchart.ehr.repository.EncounterRepository;
+import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -134,6 +137,8 @@ public class EncounterService {
         Encounter saved = encounterRepository.save(enc);
         auditUpdate(saved, "Updated encounter details", true, null);
         log.info("Encounter {} updated by {}", saved.getEncounterNumber(), CurrentActor.username());
+        saved.setPatient((Patient) Hibernate.unproxy(saved.getPatient()));
+        saved.setAttendingProvider((Provider) Hibernate.unproxy(saved.getAttendingProvider()));
         return saved;
     }
 
