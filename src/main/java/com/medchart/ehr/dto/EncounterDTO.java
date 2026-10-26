@@ -1,5 +1,6 @@
 package com.medchart.ehr.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.medchart.ehr.domain.encounter.EncounterPriority;
 import com.medchart.ehr.domain.encounter.EncounterStatus;
 import com.medchart.ehr.domain.encounter.EncounterType;
@@ -39,6 +40,7 @@ public class EncounterDTO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private List<EncounterDiagnosisDTO> diagnoses;
 
     private Long version;

@@ -24,25 +24,48 @@ public class EncounterAccessAuditor {
     private final AuditService auditService;
 
     public void logEncounterAccess(Encounter encounter, AuditAction action, String description) {
-        Patient patient = encounter.getPatient();
-        auditService.saveAuditEventAsync(baseEvent(action, description)
-                .patientId(patient != null ? patient.getId() : null)
-                .patientMrn(patient != null ? patient.getMrn() : null)
-                .resourceId(encounter.getId())
+        auditService.saveAuditEventAsync(encounterEvent(encounter, action, description).build());
+    }
+
+    public void logEncounterAccessFailure(Encounter encounter, AuditAction action, String description, Exception error) {
+        auditService.saveAuditEventAsync(encounterEvent(encounter, action, description)
+                .success(false)
+                .errorMessage(error.getClass().getSimpleName())
                 .build());
     }
 
+    /** Patient-scoped lists are READs of that patient's record; cross-patient lists are SEARCHes. */
     public void logEncounterListAccess(Long patientId, Collection<Encounter> encounters, String description) {
+        auditService.saveAuditEventAsync(listEvent(patientId, encounters, description).build());
+    }
+
+    public void logEncounterListAccessFailure(Long patientId, Collection<Encounter> encounters, String description,
+                                              Exception error) {
+        auditService.saveAuditEventAsync(listEvent(patientId, encounters, description)
+                .success(false)
+                .errorMessage(error.getClass().getSimpleName())
+                .build());
+    }
+
+    private AuditEvent.AuditEventBuilder encounterEvent(Encounter encounter, AuditAction action, String description) {
+        Patient patient = encounter.getPatient();
+        return baseEvent(action, description)
+                .patientId(patient != null ? patient.getId() : null)
+                .patientMrn(patient != null ? patient.getMrn() : null)
+                .resourceId(encounter.getId());
+    }
+
+    private AuditEvent.AuditEventBuilder listEvent(Long patientId, Collection<Encounter> encounters, String description) {
         long patientCount = encounters.stream()
                 .map(Encounter::getPatient)
                 .filter(p -> p != null && p.getId() != null)
                 .map(Patient::getId)
                 .distinct()
                 .count();
-        auditService.saveAuditEventAsync(baseEvent(AuditAction.SEARCH,
+        AuditAction action = patientId != null ? AuditAction.READ : AuditAction.SEARCH;
+        return baseEvent(action,
                 description + " [" + encounters.size() + " encounters, " + patientCount + " patients]")
-                .patientId(patientId)
-                .build());
+                .patientId(patientId);
     }
 
     private AuditEvent.AuditEventBuilder baseEvent(AuditAction action, String description) {

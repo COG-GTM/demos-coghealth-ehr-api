@@ -55,8 +55,15 @@ public class EncounterController {
     @GetMapping("/patient/{patientId}/paged")
     public Page<EncounterDTO> getByPatientPaged(@PathVariable Long patientId, Pageable pageable) {
         Page<Encounter> page = encounterService.findByPatientId(patientId, pageable);
-        accessAuditor.logEncounterListAccess(patientId, page.getContent(), "List patient encounters (paged)");
-        return encounterMapper.toDtoPage(page);
+        String description = "List patient encounters (paged)";
+        try {
+            Page<EncounterDTO> dtos = encounterMapper.toDtoPage(page);
+            accessAuditor.logEncounterListAccess(patientId, page.getContent(), description);
+            return dtos;
+        } catch (RuntimeException e) {
+            accessAuditor.logEncounterListAccessFailure(patientId, page.getContent(), description, e);
+            throw e;
+        }
     }
 
     @GetMapping("/provider/{providerId}")
@@ -129,12 +136,24 @@ public class EncounterController {
     }
 
     private EncounterDTO audited(Encounter encounter, AuditAction action, String description) {
-        accessAuditor.logEncounterAccess(encounter, action, description);
-        return encounterMapper.toDto(encounter);
+        try {
+            EncounterDTO dto = encounterMapper.toDto(encounter);
+            accessAuditor.logEncounterAccess(encounter, action, description);
+            return dto;
+        } catch (RuntimeException e) {
+            accessAuditor.logEncounterAccessFailure(encounter, action, description, e);
+            throw e;
+        }
     }
 
     private List<EncounterDTO> auditedList(Long patientId, List<Encounter> encounters, String description) {
-        accessAuditor.logEncounterListAccess(patientId, encounters, description);
-        return encounterMapper.toDtoList(encounters);
+        try {
+            List<EncounterDTO> dtos = encounterMapper.toDtoList(encounters);
+            accessAuditor.logEncounterListAccess(patientId, encounters, description);
+            return dtos;
+        } catch (RuntimeException e) {
+            accessAuditor.logEncounterListAccessFailure(patientId, encounters, description, e);
+            throw e;
+        }
     }
 }

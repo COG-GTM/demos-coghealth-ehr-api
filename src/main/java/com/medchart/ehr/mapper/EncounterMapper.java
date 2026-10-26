@@ -24,6 +24,15 @@ import java.util.stream.Collectors;
 public class EncounterMapper {
 
     public EncounterDTO toDto(Encounter encounter) {
+        EncounterDTO dto = toSummaryDto(encounter);
+        if (dto != null) {
+            dto.setDiagnoses(toDiagnosisDtos(encounter.getDiagnoses()));
+        }
+        return dto;
+    }
+
+    /** List views skip the lazy diagnoses collection to avoid per-row queries. */
+    public EncounterDTO toSummaryDto(Encounter encounter) {
         if (encounter == null) {
             return null;
         }
@@ -46,17 +55,16 @@ public class EncounterMapper {
                 .notes(encounter.getNotes())
                 .createdAt(encounter.getCreatedAt())
                 .updatedAt(encounter.getUpdatedAt())
-                .diagnoses(toDiagnosisDtos(encounter.getDiagnoses()))
                 .version(encounter.getVersion())
                 .build();
     }
 
     public List<EncounterDTO> toDtoList(List<Encounter> encounters) {
-        return encounters.stream().map(this::toDto).collect(Collectors.toList());
+        return encounters.stream().map(this::toSummaryDto).collect(Collectors.toList());
     }
 
     public Page<EncounterDTO> toDtoPage(Page<Encounter> encounters) {
-        return encounters.map(this::toDto);
+        return encounters.map(this::toSummaryDto);
     }
 
     EncounterPatientDTO toPatientDto(Patient patient) {

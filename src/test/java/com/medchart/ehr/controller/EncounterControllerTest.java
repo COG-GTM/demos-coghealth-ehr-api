@@ -128,7 +128,8 @@ class EncounterControllerTest {
         for (String url : urls) {
             assertNoPhiLeak(mockMvc.perform(get(url)), "$[0]")
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$[0].patient.mrn").value("MRN0000000001"));
+                    .andExpect(jsonPath("$[0].patient.mrn").value("MRN0000000001"))
+                    .andExpect(jsonPath("$[0].diagnoses").doesNotExist());
         }
         verify(accessAuditor).logEncounterListAccess(eq(42L), anyList(), anyString());
         verify(accessAuditor).logEncounterListAccess(isNull(), anyList(), eq("List provider encounters"));
