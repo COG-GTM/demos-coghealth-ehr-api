@@ -2,7 +2,6 @@ package com.medchart.ehr.audit;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,13 +13,18 @@ public class AuditService {
 
     private final AuditEventRepository auditEventRepository;
 
-    @Async
+    /**
+     * Persists the event synchronously in its own transaction and throws
+     * {@link AuditWriteException} if it cannot be written, so audited calls fail closed.
+     */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void saveAuditEventAsync(AuditEvent event) {
+    public AuditEvent recordAuditEvent(AuditEvent event) {
         try {
-            auditEventRepository.save(event);
-        } catch (Exception e) {
-            log.error("Failed to save audit event", e);
+            return auditEventRepository.saveAndFlush(event);
+        } catch (RuntimeException e) {
+            log.error("Failed to save audit event action={} resourceType={}",
+                    event.getAction(), event.getResourceType(), e);
+            throw new AuditWriteException("Audit event could not be recorded", e);
         }
     }
 }

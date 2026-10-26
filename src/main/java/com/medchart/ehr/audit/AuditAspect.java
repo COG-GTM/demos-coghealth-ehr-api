@@ -19,6 +19,8 @@ import java.lang.reflect.Method;
 @RequiredArgsConstructor
 public class AuditAspect {
 
+    private static final int USER_AGENT_MAX_LENGTH = 200;
+
     private final AuditService auditService;
 
     @Around("@annotation(com.medchart.ehr.audit.AuditAccess)")
@@ -40,17 +42,24 @@ public class AuditAspect {
                 .ipAddress(getClientIpAddress())
                 .userAgent(getUserAgent());
 
+        Object result;
         try {
-            Object result = joinPoint.proceed();
-            eventBuilder.success(true);
-            auditService.saveAuditEventAsync(eventBuilder.build());
-            return result;
-        } catch (Exception e) {
+            result = joinPoint.proceed();
+        } catch (Throwable e) {
             eventBuilder.success(false);
-            eventBuilder.errorMessage(e.getMessage());
-            auditService.saveAuditEventAsync(eventBuilder.build());
+            eventBuilder.errorMessage(e.getMessage() != null ? e.getMessage() : e.getClass().getName());
+            try {
+                auditService.recordAuditEvent(eventBuilder.build());
+            } catch (AuditWriteException auditFailure) {
+                auditFailure.addSuppressed(e);
+                throw auditFailure;
+            }
             throw e;
         }
+
+        eventBuilder.success(true);
+        auditService.recordAuditEvent(eventBuilder.build());
+        return result;
     }
 
     private Long extractPatientId(Object[] args) {
@@ -77,9 +86,13 @@ public class AuditAspect {
                 HttpServletRequest request = attrs.getRequest();
                 String xForwardedFor = request.getHeader("X-Forwarded-For");
                 if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-                    return xForwardedFor.split(",")[0].trim();
+                    String forwarded = AuditFields.ipLiteral(xForwardedFor.split(",", 2)[0]);
+                    if (forwarded != null) {
+                        return forwarded;
+                    }
                 }
-                return request.getRemoteAddr();
+                String remote = AuditFields.ipLiteral(request.getRemoteAddr());
+                return remote != null ? remote : AuditFields.INVALID_IP;
             }
         } catch (Exception e) {
             log.debug("Could not get client IP", e);
@@ -91,7 +104,7 @@ public class AuditAspect {
         try {
             ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
             if (attrs != null) {
-                return attrs.getRequest().getHeader("User-Agent");
+                return AuditFields.bounded(attrs.getRequest().getHeader("User-Agent"), USER_AGENT_MAX_LENGTH);
             }
         } catch (Exception e) {
             log.debug("Could not get user agent", e);
