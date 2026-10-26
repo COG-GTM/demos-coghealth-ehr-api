@@ -2,15 +2,19 @@ package com.medchart.ehr.controller;
 
 import com.medchart.ehr.domain.encounter.Encounter;
 import com.medchart.ehr.domain.encounter.EncounterStatus;
+import com.medchart.ehr.service.EncounterNotFoundException;
 import com.medchart.ehr.service.EncounterService;
+import com.medchart.ehr.service.InvalidEncounterTransitionException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/v1/encounters")
@@ -77,12 +81,7 @@ public class EncounterController {
 
     @PutMapping("/{id}")
     public ResponseEntity<Encounter> update(@PathVariable Long id, @RequestBody Encounter encounter) {
-        return encounterService.findById(id)
-                .map(existing -> {
-                    encounter.setId(id);
-                    return ResponseEntity.ok(encounterService.update(encounter));
-                })
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(encounterService.update(id, encounter));
     }
 
     @PostMapping("/{id}/check-in")
@@ -113,5 +112,20 @@ public class EncounterController {
     public ResponseEntity<Void> noShow(@PathVariable Long id) {
         encounterService.markNoShow(id);
         return ResponseEntity.ok().build();
+    }
+
+    @ExceptionHandler(EncounterNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleNotFound(EncounterNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidEncounterTransitionException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidTransition(InvalidEncounterTransitionException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> handleBadRequest(IllegalArgumentException ex) {
+        return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
     }
 }

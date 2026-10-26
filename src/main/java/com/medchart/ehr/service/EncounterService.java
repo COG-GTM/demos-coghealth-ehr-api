@@ -1,5 +1,9 @@
 package com.medchart.ehr.service;
 
+import com.medchart.ehr.audit.AuditAction;
+import com.medchart.ehr.audit.AuditEvent;
+import com.medchart.ehr.audit.AuditService;
+import com.medchart.ehr.audit.CurrentActor;
 import com.medchart.ehr.domain.encounter.Encounter;
 import com.medchart.ehr.domain.encounter.EncounterStatus;
 import com.medchart.ehr.repository.EncounterRepository;
@@ -13,8 +17,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Service
@@ -24,11 +31,26 @@ public class EncounterService {
     private static final Logger log = LoggerFactory.getLogger(EncounterService.class);
     private static final DateTimeFormatter ENC_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy");
     
+    private static final int MAX_NOTES_LENGTH = 1000;
+
+    private static final Set<EncounterStatus> TERMINAL_STATUSES =
+            EnumSet.of(EncounterStatus.COMPLETED, EncounterStatus.CANCELLED, EncounterStatus.NO_SHOW);
+
+    private static final Map<EncounterStatus, Set<EncounterStatus>> ALLOWED_TRANSITIONS = Map.of(
+            EncounterStatus.SCHEDULED,
+            EnumSet.of(EncounterStatus.CHECKED_IN, EncounterStatus.CANCELLED, EncounterStatus.NO_SHOW),
+            EncounterStatus.CHECKED_IN,
+            EnumSet.of(EncounterStatus.IN_PROGRESS, EncounterStatus.CANCELLED, EncounterStatus.NO_SHOW),
+            EncounterStatus.IN_PROGRESS,
+            EnumSet.of(EncounterStatus.COMPLETED));
+
     private final EncounterRepository encounterRepository;
+    private final AuditService auditService;
     private final AtomicLong encounterSequence = new AtomicLong(100);
 
-    public EncounterService(EncounterRepository encounterRepository) {
+    public EncounterService(EncounterRepository encounterRepository, AuditService auditService) {
         this.encounterRepository = encounterRepository;
+        this.auditService = auditService;
     }
 
     @Transactional(readOnly = true)
@@ -88,52 +110,98 @@ public class EncounterService {
         return saved;
     }
 
-    public Encounter update(Encounter encounter) {
-        log.info("Updating encounter {}", encounter.getEncounterNumber());
-        return encounterRepository.save(encounter);
+    public Encounter update(Long encounterId, Encounter changes) {
+        Encounter enc = load(encounterId);
+        if (TERMINAL_STATUSES.contains(enc.getStatus())) {
+            auditUpdate(enc, "Update rejected", false, "Encounter is " + enc.getStatus());
+            throw new InvalidEncounterTransitionException(
+                    "Encounter " + enc.getEncounterNumber() + " is " + enc.getStatus() + " and can no longer be edited");
+        }
+        if (changes.getVersion() != null && !changes.getVersion().equals(enc.getVersion())) {
+            auditUpdate(enc, "Update rejected", false, "Stale version");
+            throw new InvalidEncounterTransitionException(
+                    "Encounter " + enc.getEncounterNumber() + " was modified by another user; reload and retry");
+        }
+
+        enc.setEncounterType(changes.getEncounterType() != null ? changes.getEncounterType() : enc.getEncounterType());
+        enc.setDepartment(changes.getDepartment());
+        enc.setRoom(changes.getRoom());
+        enc.setBed(changes.getBed());
+        enc.setChiefComplaint(changes.getChiefComplaint());
+        enc.setPriority(changes.getPriority());
+        enc.setVisitType(changes.getVisitType());
+
+        Encounter saved = encounterRepository.save(enc);
+        auditUpdate(saved, "Updated encounter details", true, null);
+        log.info("Encounter {} updated by {}", saved.getEncounterNumber(), CurrentActor.username());
+        return saved;
     }
 
     public void checkIn(Long encounterId) {
-        encounterRepository.findById(encounterId).ifPresent(enc -> {
-            enc.setStatus(EncounterStatus.CHECKED_IN);
-            encounterRepository.save(enc);
-            log.info("Patient checked in for encounter {}", enc.getEncounterNumber());
-        });
+        transition(encounterId, EncounterStatus.CHECKED_IN);
     }
 
     public void startEncounter(Long encounterId) {
-        encounterRepository.findById(encounterId).ifPresent(enc -> {
-            enc.setStatus(EncounterStatus.IN_PROGRESS);
-            encounterRepository.save(enc);
-            log.info("Encounter {} started", enc.getEncounterNumber());
-        });
+        transition(encounterId, EncounterStatus.IN_PROGRESS);
     }
 
     public void completeEncounter(Long encounterId, String notes) {
-        encounterRepository.findById(encounterId).ifPresent(enc -> {
-            enc.setStatus(EncounterStatus.COMPLETED);
-            if (notes != null) {
-                enc.setNotes(notes);
-            }
+        if (notes != null && notes.length() > MAX_NOTES_LENGTH) {
+            throw new IllegalArgumentException("Notes must be at most " + MAX_NOTES_LENGTH + " characters");
+        }
+        Encounter enc = transition(encounterId, EncounterStatus.COMPLETED);
+        if (notes != null && !notes.isBlank()) {
+            enc.setNotes(notes);
             encounterRepository.save(enc);
-            log.info("Encounter {} completed", enc.getEncounterNumber());
-        });
+        }
     }
 
     public void cancelEncounter(Long encounterId) {
-        encounterRepository.findById(encounterId).ifPresent(enc -> {
-            enc.setStatus(EncounterStatus.CANCELLED);
-            encounterRepository.save(enc);
-            log.info("Encounter {} cancelled", enc.getEncounterNumber());
-        });
+        transition(encounterId, EncounterStatus.CANCELLED);
     }
 
     public void markNoShow(Long encounterId) {
-        encounterRepository.findById(encounterId).ifPresent(enc -> {
-            enc.setStatus(EncounterStatus.NO_SHOW);
-            encounterRepository.save(enc);
-            log.info("Encounter {} marked as no-show", enc.getEncounterNumber());
-        });
+        transition(encounterId, EncounterStatus.NO_SHOW);
+    }
+
+    public static boolean canTransition(EncounterStatus from, EncounterStatus to) {
+        return from != null && ALLOWED_TRANSITIONS.getOrDefault(from, Set.of()).contains(to);
+    }
+
+    private Encounter transition(Long encounterId, EncounterStatus target) {
+        Encounter enc = load(encounterId);
+        EncounterStatus current = enc.getStatus();
+        String description = "Status " + current + " -> " + target;
+        if (!canTransition(current, target)) {
+            auditUpdate(enc, description, false, "Transition not allowed");
+            log.warn("Rejected encounter {} transition {} by {}", enc.getEncounterNumber(), description, CurrentActor.username());
+            throw new InvalidEncounterTransitionException(current, target);
+        }
+        enc.setStatus(target);
+        Encounter saved = encounterRepository.save(enc);
+        auditUpdate(saved, description, true, null);
+        log.info("Encounter {} {} by {}", saved.getEncounterNumber(), description, CurrentActor.username());
+        return saved;
+    }
+
+    private Encounter load(Long encounterId) {
+        return encounterRepository.findById(encounterId)
+                .orElseThrow(() -> new EncounterNotFoundException(encounterId));
+    }
+
+    private void auditUpdate(Encounter enc, String description, boolean success, String error) {
+        String actor = CurrentActor.username();
+        auditService.saveAuditEventAsync(AuditEvent.builder()
+                .userId(actor)
+                .userName(actor)
+                .patientId(enc.getPatient() != null ? enc.getPatient().getId() : null)
+                .action(AuditAction.UPDATE)
+                .resourceType("Encounter")
+                .resourceId(enc.getId())
+                .description(description)
+                .success(success)
+                .errorMessage(error)
+                .build());
     }
 
     @Transactional(readOnly = true)
