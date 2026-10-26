@@ -124,7 +124,7 @@ class AuditAspectTest {
     }
 
     @Test
-    void auditedAccessSurvivesLaterRollbackOfCallerTransaction() {
+    void callerRollbackAfterAuditedAccessKeepsAccessRecordAndRecordsRollback() {
         TransactionTemplate caller = new TransactionTemplate(transactionManager);
 
         assertThrows(IllegalStateException.class, () -> caller.execute(status -> {
@@ -132,8 +132,12 @@ class AuditAspectTest {
             throw new IllegalStateException("caller fails after reading");
         }));
 
-        verify(repository).saveAndFlush(any());
-        assertEquals(Arrays.asList("commit", "rollback"), transactionManager.outcomes);
+        ArgumentCaptor<AuditEvent> saved = ArgumentCaptor.forClass(AuditEvent.class);
+        verify(repository, times(2)).saveAndFlush(saved.capture());
+        assertTrue(saved.getAllValues().get(0).getSuccess());
+        assertFalse(saved.getAllValues().get(1).getSuccess());
+        assertEquals("Caller transaction rolled back after audited call", saved.getAllValues().get(1).getErrorMessage());
+        assertEquals(Arrays.asList("commit", "rollback", "commit"), transactionManager.outcomes);
     }
 
     @Test
