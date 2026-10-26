@@ -84,7 +84,7 @@ class PatientAuditAttributionTest {
         AuditEvent event = capturedEvent();
         assertThat(event.getUserId()).isEqualTo("dr.chen");
         assertThat(event.getUserName()).isEqualTo("Mei Chen");
-        assertThat(event.getRequestDetails()).isEqualTo("roles=ROLE_PROVIDER; request=GET /v1/patients/11");
+        assertThat(event.getRequestDetails()).isEqualTo("roles=ROLE_PROVIDER; request=GET /v1/patients/{id}");
         assertThat(event.getPatientId()).isEqualTo(11L);
         assertThat(event.getAction()).isEqualTo(AuditAction.READ);
     }
@@ -95,7 +95,20 @@ class PatientAuditAttributionTest {
 
         AuditEvent event = capturedEvent();
         assertThat(event.getUserId()).isEqualTo("anonymous");
-        assertThat(event.getRequestDetails()).isEqualTo("unauthenticated; request=GET /v1/patients/11");
+        assertThat(event.getRequestDetails()).isEqualTo("unauthenticated; request=GET /v1/patients/{id}");
+    }
+
+    @Test
+    void mrnLookupDoesNotPersistTheMrn() throws Exception {
+        Patient patient = new Patient();
+        when(patientRepository.findByMrn("MRN0000042")).thenReturn(Optional.of(patient));
+        when(patientMapper.toDto(patient)).thenReturn(new PatientDTO());
+
+        mockMvc.perform(get("/v1/patients/mrn/MRN0000042")).andExpect(status().isOk());
+
+        AuditEvent event = capturedEvent();
+        assertThat(event.getRequestDetails()).isEqualTo("unauthenticated; request=GET /v1/patients/mrn/{mrn}");
+        assertThat(event.getRequestDetails()).doesNotContain("MRN0000042");
     }
 
     private AuditEvent capturedEvent() {

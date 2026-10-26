@@ -14,6 +14,7 @@ import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.web.servlet.HandlerMapping;
 
 import java.util.Set;
 
@@ -51,7 +52,7 @@ class AuditAspectTest {
 
         assertThat(event.getUserId()).isEqualTo("dr.chen");
         assertThat(event.getUserName()).isEqualTo("Mei Chen");
-        assertThat(event.getRequestDetails()).isEqualTo("roles=ROLE_PROVIDER; request=GET /api/v1/patients/42");
+        assertThat(event.getRequestDetails()).isEqualTo("roles=ROLE_PROVIDER; request=GET /api/v1/patients/{id}");
         assertThat(event.getPatientId()).isEqualTo(42L);
         assertThat(event.getSuccess()).isTrue();
     }
@@ -81,7 +82,7 @@ class AuditAspectTest {
 
         assertThat(event.getUserId()).isEqualTo(AuditAspect.ANONYMOUS_USER_ID);
         assertThat(event.getUserName()).isEqualTo(AuditAspect.ANONYMOUS_USER_NAME);
-        assertThat(event.getRequestDetails()).isEqualTo("unauthenticated; request=PUT /api/v1/patients/9");
+        assertThat(event.getRequestDetails()).isEqualTo("unauthenticated; request=PUT /api/v1/patients/{id}");
     }
 
     @Test
@@ -91,7 +92,7 @@ class AuditAspectTest {
         AuditEvent event = invokeAudited(3L);
 
         assertThat(event.getUserId()).isEqualTo("anonymous");
-        assertThat(event.getRequestDetails()).contains("/api/v1/patients/3");
+        assertThat(event.getRequestDetails()).isEqualTo("unauthenticated; request=GET /api/v1/patients/{id}");
     }
 
     @Test
@@ -131,6 +132,15 @@ class AuditAspectTest {
         assertThat(actor.details).isEqualTo("roles=ROLE_ADMIN");
     }
 
+    @Test
+    void requestWithoutRoutePatternRecordsOnlyTheMethod() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/patients/mrn/MRN123");
+
+        AuditAspect.AuditActor actor = AuditAspect.resolveActor(null, request);
+
+        assertThat(actor.details).isEqualTo("unauthenticated; request=GET");
+    }
+
     private AuditEvent invokeAudited(Long patientId) throws Throwable {
         ProceedingJoinPoint joinPoint = joinPoint(patientId);
         when(joinPoint.proceed()).thenReturn("ok");
@@ -155,6 +165,7 @@ class AuditAspectTest {
 
     private static void bindRequest(String method, String uri) {
         MockHttpServletRequest request = new MockHttpServletRequest(method, uri);
+        request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, uri.replaceAll("/\\d+$", "/{id}"));
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
     }
 

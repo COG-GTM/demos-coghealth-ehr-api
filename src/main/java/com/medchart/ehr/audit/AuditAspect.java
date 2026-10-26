@@ -14,6 +14,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
@@ -79,7 +80,7 @@ public class AuditAspect {
     }
 
     static AuditActor resolveActor(Authentication authentication, HttpServletRequest request) {
-        String requestLine = request != null ? request.getMethod() + " " + request.getRequestURI() : null;
+        String requestLine = describeRequest(request);
 
         if (authentication == null
                 || authentication instanceof AnonymousAuthenticationToken
@@ -117,6 +118,15 @@ public class AuditAspect {
                 .collect(Collectors.joining(","));
         String details = "roles=" + roles + (requestLine != null ? "; request=" + requestLine : "");
         return new AuditActor(truncate(userId), truncate(userName), details);
+    }
+
+    // Route template (e.g. /v1/patients/mrn/{mrn}) rather than the raw URI, so identifiers such as MRNs never reach the audit row.
+    private static String describeRequest(HttpServletRequest request) {
+        if (request == null) {
+            return null;
+        }
+        Object pattern = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
+        return pattern != null ? request.getMethod() + " " + pattern : request.getMethod();
     }
 
     private static String nullToEmpty(String value) {
