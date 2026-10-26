@@ -82,6 +82,16 @@ src/main/java/com/medchart/ehr/
 
 JWT-based authentication. CORS allows `localhost:5173`, `localhost:5178`, `localhost:3000`.
 
+No default administrator is seeded. Migration `V5__retire_seeded_admin.sql` deletes the old `admin` seed, or disables and renames it to `retired-seed-admin-<id>` if it was customised but still uses the published password. Rotate `JWT_SECRET` when upgrading so tokens issued to the old seed account stop working. To create the first administrator, start the API once with:
+
+```bash
+export BOOTSTRAP_ADMIN_USERNAME="<username>"
+export BOOTSTRAP_ADMIN_EMAIL="<email>"
+export BOOTSTRAP_ADMIN_PASSWORD="<at least 12 characters, from your secret store>"
+```
+
+`AdminBootstrap` creates the account only if no enabled administrator exists, then logs a reminder to remove `BOOTSTRAP_ADMIN_PASSWORD` from the environment.
+
 ## Useful Commands
 
 ```bash
