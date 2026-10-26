@@ -1,7 +1,11 @@
 package com.medchart.ehr.controller;
 
+import com.medchart.ehr.audit.AuditAccess;
+import com.medchart.ehr.audit.AuditAction;
 import com.medchart.ehr.domain.encounter.Encounter;
 import com.medchart.ehr.domain.encounter.EncounterStatus;
+import com.medchart.ehr.dto.EncounterDTO;
+import com.medchart.ehr.mapper.EncounterMapper;
 import com.medchart.ehr.service.EncounterService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,70 +21,76 @@ import java.util.List;
 public class EncounterController {
 
     private final EncounterService encounterService;
+    private final EncounterMapper encounterMapper;
 
-    public EncounterController(EncounterService encounterService) {
+    public EncounterController(EncounterService encounterService, EncounterMapper encounterMapper) {
         this.encounterService = encounterService;
+        this.encounterMapper = encounterMapper;
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Encounter> getById(@PathVariable Long id) {
+    public ResponseEntity<EncounterDTO> getById(@PathVariable Long id) {
         return encounterService.findByIdWithDetails(id)
+                .map(encounterMapper::toDto)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/number/{encounterNumber}")
-    public ResponseEntity<Encounter> getByNumber(@PathVariable String encounterNumber) {
+    public ResponseEntity<EncounterDTO> getByNumber(@PathVariable String encounterNumber) {
         return encounterService.findByEncounterNumber(encounterNumber)
+                .map(encounterMapper::toDto)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @AuditAccess(action = AuditAction.READ, resourceType = "Encounter", description = "List patient encounters")
     @GetMapping("/patient/{patientId}")
-    public List<Encounter> getByPatient(@PathVariable Long patientId) {
-        return encounterService.findByPatientId(patientId);
+    public List<EncounterDTO> getByPatient(@PathVariable Long patientId) {
+        return encounterMapper.toDtoList(encounterService.findByPatientId(patientId));
     }
 
+    @AuditAccess(action = AuditAction.READ, resourceType = "Encounter", description = "List patient encounters (paged)")
     @GetMapping("/patient/{patientId}/paged")
-    public Page<Encounter> getByPatientPaged(@PathVariable Long patientId, Pageable pageable) {
-        return encounterService.findByPatientId(patientId, pageable);
+    public Page<EncounterDTO> getByPatientPaged(@PathVariable Long patientId, Pageable pageable) {
+        return encounterMapper.toDtoPage(encounterService.findByPatientId(patientId, pageable));
     }
 
     @GetMapping("/provider/{providerId}")
-    public List<Encounter> getByProvider(@PathVariable Long providerId) {
-        return encounterService.findByProviderId(providerId);
+    public List<EncounterDTO> getByProvider(@PathVariable Long providerId) {
+        return encounterMapper.toDtoList(encounterService.findByProviderId(providerId));
     }
 
     @GetMapping("/provider/{providerId}/schedule")
-    public List<Encounter> getProviderSchedule(
+    public List<EncounterDTO> getProviderSchedule(
             @PathVariable Long providerId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return encounterService.getProviderSchedule(providerId, date);
+        return encounterMapper.toDtoList(encounterService.getProviderSchedule(providerId, date));
     }
 
     @GetMapping("/date-range")
-    public List<Encounter> getByDateRange(
+    public List<EncounterDTO> getByDateRange(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        return encounterService.findByDateRange(startDate, endDate);
+        return encounterMapper.toDtoList(encounterService.findByDateRange(startDate, endDate));
     }
 
     @GetMapping("/status/{status}")
-    public List<Encounter> getByStatus(@PathVariable EncounterStatus status) {
-        return encounterService.findByStatus(status);
+    public List<EncounterDTO> getByStatus(@PathVariable EncounterStatus status) {
+        return encounterMapper.toDtoList(encounterService.findByStatus(status));
     }
 
     @PostMapping
-    public Encounter create(@RequestBody Encounter encounter) {
-        return encounterService.create(encounter);
+    public EncounterDTO create(@RequestBody Encounter encounter) {
+        return encounterMapper.toDto(encounterService.create(encounter));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Encounter> update(@PathVariable Long id, @RequestBody Encounter encounter) {
+    public ResponseEntity<EncounterDTO> update(@PathVariable Long id, @RequestBody Encounter encounter) {
         return encounterService.findById(id)
                 .map(existing -> {
                     encounter.setId(id);
-                    return ResponseEntity.ok(encounterService.update(encounter));
+                    return ResponseEntity.ok(encounterMapper.toDto(encounterService.update(encounter)));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
