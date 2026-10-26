@@ -1,7 +1,6 @@
 export interface Patient {
   id: number;
   mrn: string;
-  ssn?: string;
   firstName: string;
   middleName?: string;
   lastName: string;
@@ -63,10 +62,20 @@ export interface Provider {
   active: boolean;
 }
 
+export interface EncounterPatient {
+  id: number;
+  mrn: string;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  dateOfBirth: string;
+  gender?: Patient['gender'];
+}
+
 export interface Encounter {
   id: number;
   encounterNumber: string;
-  patient: Patient;
+  patient: EncounterPatient;
   attendingProvider?: Provider;
   encounterType: EncounterType;
   status: EncounterStatus;
@@ -79,6 +88,7 @@ export interface Encounter {
   room?: string;
   notes?: ClinicalNote[];
   diagnoses?: Diagnosis[];
+  version?: number;
 }
 
 export type EncounterType = 
