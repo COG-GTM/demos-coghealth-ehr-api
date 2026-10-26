@@ -25,11 +25,11 @@ public class AuditService {
     }
 
     /**
-     * Persists the event of a failed or rolled-back operation in its own transaction.
-     * Throws {@link AuditWriteException} if it cannot be written.
+     * Persists the event in its own transaction, so a later rollback of the caller's transaction
+     * cannot erase it. Throws {@link AuditWriteException} if it cannot be written.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public AuditEvent recordFailedAuditEvent(AuditEvent event) {
+    public AuditEvent recordAuditEventInNewTransaction(AuditEvent event) {
         return persist(event);
     }
 

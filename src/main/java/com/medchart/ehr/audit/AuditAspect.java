@@ -10,6 +10,7 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -21,7 +22,9 @@ import java.lang.reflect.Method;
  * Runs outside the audited method's own {@code @Transactional} boundary and wraps it in a
  * transaction that also holds the success audit row, so the operation and its audit row
  * commit or roll back together on one connection. Failures (including commit-time failures)
- * are audited afterwards in a separate transaction.
+ * are audited afterwards in a separate transaction. If the caller already has a transaction,
+ * the success row is committed independently, because the caller receives the data even if
+ * its own transaction later rolls back.
  */
 @Aspect
 @Component
@@ -58,11 +61,16 @@ public class AuditAspect {
                 .ipAddress(getClientIpAddress())
                 .userAgent(getUserAgent());
 
+        boolean enclosingTransaction = TransactionSynchronizationManager.isActualTransactionActive();
         try {
             return transactionTemplate.execute(status -> {
                 Object result = proceed(joinPoint);
                 eventBuilder.success(true);
-                auditService.recordAuditEvent(eventBuilder.build());
+                if (enclosingTransaction) {
+                    auditService.recordAuditEventInNewTransaction(eventBuilder.build());
+                } else {
+                    auditService.recordAuditEvent(eventBuilder.build());
+                }
                 return result;
             });
         } catch (AuditWriteException auditFailure) {
@@ -72,7 +80,7 @@ public class AuditAspect {
             eventBuilder.success(false);
             eventBuilder.errorMessage(e.getMessage() != null ? e.getMessage() : e.getClass().getName());
             try {
-                auditService.recordFailedAuditEvent(eventBuilder.build());
+                auditService.recordAuditEventInNewTransaction(eventBuilder.build());
             } catch (AuditWriteException auditFailure) {
                 auditFailure.addSuppressed(e);
                 throw auditFailure;
