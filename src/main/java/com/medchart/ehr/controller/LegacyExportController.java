@@ -1,5 +1,7 @@
 package com.medchart.ehr.controller;
 
+import com.medchart.ehr.audit.AuditAccess;
+import com.medchart.ehr.audit.AuditAction;
 import com.medchart.ehr.legacy.EncounterExportService;
 import com.medchart.ehr.legacy.ReportGenerator;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ public class LegacyExportController {
     private final ReportGenerator reportGenerator;
 
     @GetMapping("/encounters")
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Encounter", description = "Bulk encounter export by date range")
     public ResponseEntity<byte[]> exportEncounters(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
@@ -36,6 +39,7 @@ public class LegacyExportController {
     }
 
     @GetMapping("/patient/{patientId}/encounters")
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Patient", description = "Patient encounter history export")
     public ResponseEntity<byte[]> exportPatientEncounters(@PathVariable Long patientId) {
         byte[] data = encounterExportService.exportPatientEncounterHistory(patientId);
         
@@ -46,12 +50,14 @@ public class LegacyExportController {
     }
 
     @GetMapping("/reports/patient-roster")
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Patient", description = "Patient roster report generation")
     public ResponseEntity<String> generatePatientRoster() {
         String filePath = reportGenerator.generatePatientRoster();
         return ResponseEntity.ok("Report generated at: " + filePath);
     }
 
     @GetMapping("/reports/encounter-summary")
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Encounter", description = "Encounter summary report generation")
     public ResponseEntity<String> generateEncounterSummary(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
@@ -61,6 +67,7 @@ public class LegacyExportController {
     }
 
     @GetMapping("/reports/daily")
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Patient", description = "Daily patient roster report download")
     public ResponseEntity<byte[]> getDailyReport() {
         byte[] data = reportGenerator.generateDailyReport();
         

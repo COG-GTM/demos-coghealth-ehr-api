@@ -60,6 +60,26 @@ class ExportSsnRedactionTest {
     }
 
     @Test
+    void concurrentRostersUseDistinctFiles() throws Exception {
+        when(query.getResultList()).thenReturn(Collections.emptyList());
+        ReportGenerator generator = new ReportGenerator();
+        ReflectionTestUtils.setField(generator, "entityManager", entityManager);
+
+        Path first = Path.of(generator.generatePatientRoster());
+        Path second = Path.of(generator.generatePatientRoster());
+        try {
+            assertFalse(first.equals(second));
+            byte[] daily = generator.generateDailyReport();
+            assertTrue(new String(daily, StandardCharsets.UTF_8).startsWith("ID,MRN,"));
+            assertTrue(Files.exists(first));
+            assertTrue(Files.exists(second));
+        } finally {
+            Files.deleteIfExists(first);
+            Files.deleteIfExists(second);
+        }
+    }
+
+    @Test
     void encounterSummaryOmitsSsnAndLabelsDob() throws Exception {
         List<Object[]> rows = Collections.singletonList(new Object[]{
                 10L, "ENC-1", "2026-01-02T09:00", "OUTPATIENT", "COMPLETED",
