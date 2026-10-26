@@ -15,6 +15,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -22,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -111,5 +113,59 @@ class UserAdminControllerTest {
         mockMvc.perform(post("/api/admin/users/7/approve")
                 .contentType(MediaType.APPLICATION_JSON).content(BODY))
             .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void approvingActiveAccountIsRejectedAndKeepsRoles() throws Exception {
+        User admin = pendingUser();
+        admin.setEnabled(true);
+        admin.setRoles(new HashSet<>(Set.of(User.Role.ADMIN)));
+        when(userRepository.findById(42L)).thenReturn(Optional.of(admin));
+
+        mockMvc.perform(post("/api/admin/users/42/approve")
+                .contentType(MediaType.APPLICATION_JSON).content(BODY))
+            .andExpect(status().isConflict());
+
+        verify(userRepository, never()).save(any());
+        assertEquals(Set.of(User.Role.ADMIN), admin.getRoles());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void approvingDeactivatedAccountWithRoleIsRejected() throws Exception {
+        User deactivated = pendingUser();
+        deactivated.setRoles(new HashSet<>(Set.of(User.Role.PROVIDER)));
+        when(userRepository.findById(42L)).thenReturn(Optional.of(deactivated));
+
+        mockMvc.perform(post("/api/admin/users/42/approve")
+                .contentType(MediaType.APPLICATION_JSON).content(BODY))
+            .andExpect(status().isConflict());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminListsOnlyPendingAccountsWithIds() throws Exception {
+        User deactivated = pendingUser();
+        deactivated.setId(43L);
+        deactivated.setUsername("former");
+        deactivated.setRoles(new HashSet<>(Set.of(User.Role.STAFF)));
+        when(userRepository.findByEnabledFalse()).thenReturn(List.of(pendingUser(), deactivated));
+
+        mockMvc.perform(get("/api/admin/users/pending"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].id").value(42))
+            .andExpect(jsonPath("$[0].username").value("newhire"))
+            .andExpect(jsonPath("$[0].password").doesNotExist());
+    }
+
+    @Test
+    @WithMockUser(roles = "PROVIDER")
+    void providerCannotListPendingAccounts() throws Exception {
+        mockMvc.perform(get("/api/admin/users/pending"))
+            .andExpect(status().isForbidden());
+        verify(userRepository, never()).findByEnabledFalse();
     }
 }
