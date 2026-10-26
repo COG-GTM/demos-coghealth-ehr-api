@@ -4,6 +4,7 @@ import com.medchart.ehr.legacy.EncounterExportService;
 import com.medchart.ehr.legacy.ReportGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -44,18 +45,28 @@ public class LegacyExportController {
     }
 
     @GetMapping("/reports/patient-roster")
-    public ResponseEntity<String> generatePatientRoster() {
-        String filePath = reportGenerator.generatePatientRoster();
-        return ResponseEntity.ok("Report generated at: " + filePath);
+    public ResponseEntity<byte[]> generatePatientRoster() {
+        byte[] data = reportGenerator.generatePatientRoster();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=patient_roster.csv")
+                .cacheControl(CacheControl.noStore())
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(data);
     }
 
     @GetMapping("/reports/encounter-summary")
-    public ResponseEntity<String> generateEncounterSummary(
+    public ResponseEntity<byte[]> generateEncounterSummary(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
         
-        String filePath = reportGenerator.generateEncounterSummary(startDate, endDate);
-        return ResponseEntity.ok("Report generated at: " + filePath);
+        byte[] data = reportGenerator.generateEncounterSummary(startDate, endDate);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=encounter_summary.txt")
+                .cacheControl(CacheControl.noStore())
+                .contentType(MediaType.TEXT_PLAIN)
+                .body(data);
     }
 
     @GetMapping("/reports/daily")
@@ -64,6 +75,7 @@ public class LegacyExportController {
         
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=daily_report.csv")
+                .cacheControl(CacheControl.noStore())
                 .contentType(MediaType.parseMediaType("text/csv"))
                 .body(data);
     }
