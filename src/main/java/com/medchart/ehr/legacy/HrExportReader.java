@@ -67,11 +67,22 @@ public class HrExportReader {
     }
 
     public String resolveExportDate(String requested) {
-        if (requested == null || requested.trim().length() == 0 || requested.startsWith("${")
-                || "latest".equalsIgnoreCase(requested.trim())) {
+        if (requested != null && requested.startsWith("${")) {
             return latestExportDate();
         }
-        return requested.trim();
+        return resolveRequestedExportDate(requested);
+    }
+
+    /** Like {@link #resolveExportDate} but without the unresolved-placeholder fallback; for caller-supplied dates. */
+    public String resolveRequestedExportDate(String requested) {
+        if (requested == null || requested.trim().length() == 0 || "latest".equalsIgnoreCase(requested.trim())) {
+            return latestExportDate();
+        }
+        String date = requested.trim();
+        if (!date.matches("\\d{8}")) {
+            throw new IllegalArgumentException("exportDate must be yyyyMMdd");
+        }
+        return date;
     }
 
     public List<HrPtoRecord> read(String exportDate) {
