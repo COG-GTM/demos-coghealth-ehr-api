@@ -1,14 +1,18 @@
 package com.medchart.ehr.mapper;
 
+import com.medchart.ehr.domain.clinical.Diagnosis;
 import com.medchart.ehr.domain.encounter.Encounter;
+import com.medchart.ehr.domain.encounter.EncounterDiagnosis;
 import com.medchart.ehr.domain.patient.Patient;
 import com.medchart.ehr.domain.provider.Provider;
 import com.medchart.ehr.dto.EncounterDTO;
+import com.medchart.ehr.dto.EncounterDiagnosisDTO;
 import com.medchart.ehr.dto.EncounterPatientDTO;
 import com.medchart.ehr.dto.EncounterProviderDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -42,6 +46,8 @@ public class EncounterMapper {
                 .notes(encounter.getNotes())
                 .createdAt(encounter.getCreatedAt())
                 .updatedAt(encounter.getUpdatedAt())
+                .diagnoses(toDiagnosisDtos(encounter.getDiagnoses()))
+                .version(encounter.getVersion())
                 .build();
     }
 
@@ -80,6 +86,26 @@ public class EncounterMapper {
                 .credentials(provider.getCredentials())
                 .specialty(provider.getSpecialty())
                 .department(provider.getDepartment())
+                .build();
+    }
+
+    List<EncounterDiagnosisDTO> toDiagnosisDtos(List<EncounterDiagnosis> diagnoses) {
+        if (diagnoses == null) {
+            return Collections.emptyList();
+        }
+        return diagnoses.stream().map(this::toDiagnosisDto).collect(Collectors.toList());
+    }
+
+    EncounterDiagnosisDTO toDiagnosisDto(EncounterDiagnosis encounterDiagnosis) {
+        Diagnosis diagnosis = encounterDiagnosis.getDiagnosis();
+        return EncounterDiagnosisDTO.builder()
+                .id(encounterDiagnosis.getId())
+                .diagnosisId(diagnosis != null ? diagnosis.getId() : null)
+                .icd10Code(diagnosis != null ? diagnosis.getIcd10Code() : null)
+                .description(diagnosis != null ? diagnosis.getDescription() : null)
+                .role(encounterDiagnosis.getRole())
+                .rank(encounterDiagnosis.getRank())
+                .primaryDiagnosis(encounterDiagnosis.getPrimaryDiagnosis())
                 .build();
     }
 }
