@@ -1,5 +1,7 @@
 package com.medchart.ehr.legacy;
 
+import com.medchart.ehr.audit.AuditAccess;
+import com.medchart.ehr.audit.AuditAction;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -17,6 +19,7 @@ public class ReportGenerator {
     @Autowired
     private EntityManager entityManager;
 
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Patient", description = "Patient roster report")
     public byte[] generatePatientRoster() {
         String sql = "SELECT p.id, p.mrn, p.ssn, p.first_name, p.last_name, p.date_of_birth, " +
                      "p.phone_home, p.phone_mobile, p.email, " +
@@ -44,6 +47,7 @@ public class ReportGenerator {
         return report.toString().getBytes(StandardCharsets.UTF_8);
     }
 
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Encounter", description = "Encounter summary report")
     public byte[] generateEncounterSummary(LocalDateTime startDate, LocalDateTime endDate) {
         String sql = "SELECT e.id, e.encounter_number, e.encounter_date_time, e.encounter_type, e.status, " +
                      "p.mrn, p.first_name, p.last_name, p.date_of_birth, " +
@@ -80,6 +84,7 @@ public class ReportGenerator {
         return report.toString().getBytes(StandardCharsets.UTF_8);
     }
 
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Patient", description = "Daily patient roster report")
     public byte[] generateDailyReport() {
         return generatePatientRoster();
     }
