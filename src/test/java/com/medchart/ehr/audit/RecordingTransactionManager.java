@@ -2,6 +2,7 @@ package com.medchart.ehr.audit;
 
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionSystemException;
 import org.springframework.transaction.annotation.AnnotationTransactionAttributeSource;
 import org.springframework.transaction.interceptor.TransactionInterceptor;
 import org.springframework.transaction.support.AbstractPlatformTransactionManager;
@@ -14,6 +15,8 @@ import java.util.List;
 public class RecordingTransactionManager extends AbstractPlatformTransactionManager {
 
     public final List<String> outcomes = new ArrayList<>();
+    public final List<Boolean> readOnlyBegins = new ArrayList<>();
+    public boolean failNextCommit;
     private boolean active;
 
     @Override
@@ -28,6 +31,7 @@ public class RecordingTransactionManager extends AbstractPlatformTransactionMana
 
     @Override
     protected void doBegin(Object transaction, TransactionDefinition definition) {
+        readOnlyBegins.add(definition.isReadOnly());
         active = true;
     }
 
@@ -61,6 +65,11 @@ public class RecordingTransactionManager extends AbstractPlatformTransactionMana
 
     @Override
     protected void doCommit(DefaultTransactionStatus status) {
+        if (failNextCommit) {
+            failNextCommit = false;
+            outcomes.add("commit-failed");
+            throw new TransactionSystemException("connection lost during commit");
+        }
         outcomes.add("commit");
     }
 
