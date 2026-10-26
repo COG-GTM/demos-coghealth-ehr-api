@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
@@ -184,6 +185,32 @@ class HrPtoSyncJobRerunTest {
         assertEquals(1, newJob().runForDate(EXPORT_DATE).get("messagesSent"));
         assertEquals(total, outboundFiles().length);
         assertTrue(new File(truncated.getPath() + ".invalid").exists());
+    }
+
+    @Test
+    void corruptedQueuedMessageWithLedgerEntryIsResent() throws Exception {
+        int total = ((Number) job.runForDate(EXPORT_DATE).get("messagesSent")).intValue();
+        assertTrue(new File(outDir.toFile(), HrPtoSyncJob.RUNS_FILE).delete());
+        File truncated = outboundFiles()[0];
+        Files.write(truncated.toPath(), "MSH|".getBytes(StandardCharsets.UTF_8));
+
+        assertEquals(1, newJob().runForDate(EXPORT_DATE).get("messagesSent"));
+        assertEquals(total, outboundFiles().length);
+    }
+
+    @Test
+    void failedOutboundWriteDoesNotRecordCompletedRun() {
+        File outbound = new File(outDir.toFile(), HrPtoSyncJob.OUTBOUND_DIR);
+        assertTrue(outbound.mkdirs());
+        assertTrue(new File(outbound, EXPORT_DATE).mkdirs());
+        assertTrue(new File(outbound, EXPORT_DATE).setWritable(false));
+        assumeFalse(new File(outbound, EXPORT_DATE).canWrite(), "running as a user that ignores permissions");
+        try {
+            assertThrows(IllegalStateException.class, () -> job.runForDate(EXPORT_DATE));
+            assertFalse(job.alreadyRun(EXPORT_DATE));
+        } finally {
+            new File(outbound, EXPORT_DATE).setWritable(true);
+        }
     }
 
     @Test

@@ -14,6 +14,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.time.DayOfWeek;
@@ -137,11 +138,10 @@ public class HrPtoSyncJob implements CommandLineRunner {
                         }
                         String ctl = nextControlId(exportDate);
                         String msg = buildSiuS15(r, dept, b, day, ctl);
-                        if (writeOutbound(exportDate, ctl, msg)) {
-                            appendSentKey(exportDate, key);
-                            alreadyQueued.add(key);
-                            sent++;
-                        }
+                        writeOutbound(exportDate, ctl, msg);
+                        appendSentKey(exportDate, ctl, key);
+                        alreadyQueued.add(key);
+                        sent++;
                     }
                 }
             }
@@ -340,6 +340,7 @@ public class HrPtoSyncJob implements CommandLineRunner {
      */
     private Set<String> readSentKeys(String exportDate) {
         Set<String> keys = new HashSet<String>();
+        Set<String> corruptControlIds = new HashSet<String>();
         File[] queued = new File(outDir(), OUTBOUND_DIR + File.separator + exportDate)
                 .listFiles((d, name) -> name.endsWith(".hl7"));
         if (queued != null) {
@@ -350,6 +351,7 @@ public class HrPtoSyncJob implements CommandLineRunner {
                         File invalid = new File(q.getPath() + ".invalid");
                         log.warn("{} quarantining incomplete outbound message {} as {}", JOB_NAME, q, invalid.getName());
                         Files.move(q.toPath(), invalid.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                        corruptControlIds.add(q.getName().substring(0, q.getName().length() - ".hl7".length()));
                         continue;
                     }
                     keys.add(key);
@@ -365,8 +367,9 @@ public class HrPtoSyncJob implements CommandLineRunner {
         try (BufferedReader br = new BufferedReader(new FileReader(f))) {
             String line;
             while ((line = br.readLine()) != null) {
-                if (!line.isEmpty()) {
-                    keys.add(line);
+                int tab = line.indexOf('\t');
+                if (tab > 0 && !corruptControlIds.contains(line.substring(0, tab))) {
+                    keys.add(line.substring(tab + 1));
                 }
             }
         } catch (IOException e) {
@@ -375,11 +378,11 @@ public class HrPtoSyncJob implements CommandLineRunner {
         return keys;
     }
 
-    private void appendSentKey(String exportDate, String key) {
+    private void appendSentKey(String exportDate, String controlId, String key) {
         File f = sentKeysFile(exportDate);
         f.getParentFile().mkdirs();
         try (PrintWriter w = new PrintWriter(new FileWriter(f, true))) {
-            w.println(key);
+            w.println(controlId + "\t" + key);
         } catch (IOException e) {
             throw new IllegalStateException("Cannot record sent key " + f, e);
         }
@@ -398,7 +401,7 @@ public class HrPtoSyncJob implements CommandLineRunner {
         return new File(System.getProperty(OUT_DIR_PROPERTY, DEFAULT_OUT_DIR));
     }
 
-    private boolean writeOutbound(String exportDate, String controlId, String message) {
+    private void writeOutbound(String exportDate, String controlId, String message) {
         File dir = new File(outDir(), OUTBOUND_DIR + File.separator + exportDate);
         dir.mkdirs();
         File f = new File(dir, controlId + ".hl7");
@@ -407,14 +410,16 @@ public class HrPtoSyncJob implements CommandLineRunner {
             try (PrintWriter w = new PrintWriter(new FileWriter(tmp))) {
                 w.print(message);
             }
-            Files.move(tmp.toPath(), f.toPath(), StandardCopyOption.ATOMIC_MOVE);
+            try {
+                Files.move(tmp.toPath(), f.toPath(), StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(tmp.toPath(), f.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
         } catch (IOException e) {
-            log.error("Cannot write outbound message " + f, e);
             tmp.delete();
-            return false;
+            throw new IllegalStateException("Cannot write outbound message " + f, e);
         }
         log.debug("Queued {}", f.getName());
-        return true;
     }
 
     private void appendErrorQueue(String exportDate, String employeeId, String message) {
