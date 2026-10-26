@@ -71,7 +71,11 @@ public class HrExportReader {
                 || "latest".equalsIgnoreCase(requested.trim())) {
             return latestExportDate();
         }
-        return requested.trim();
+        String date = requested.trim();
+        if (!date.matches("\\d{8}")) {
+            throw new IllegalArgumentException("exportDate must be yyyyMMdd");
+        }
+        return date;
     }
 
     public List<HrPtoRecord> read(String exportDate) {

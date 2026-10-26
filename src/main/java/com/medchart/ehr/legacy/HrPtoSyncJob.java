@@ -34,6 +34,8 @@ public class HrPtoSyncJob implements CommandLineRunner {
     public static final String RUNS_FILE = "runs.log";
     public static final String OUTBOUND_DIR = "outbound";
     public static final String RUN_ONCE_ARG = "--hr-pto-sync";
+    public static final String FORCE_RUN_ARG = "--hr-pto-sync-force";
+    public static final String STATUS_ALREADY_RUN = "ALREADY_RUN";
 
     private static final String SENDING_APP = "COGHEALTH_EHR";
     private static final String SENDING_FACILITY = "HRPTO";
@@ -67,14 +69,33 @@ public class HrPtoSyncJob implements CommandLineRunner {
                 if (eq > 0) {
                     date = a.substring(eq + 1);
                 }
-                runForDate(hrExportReader.resolveExportDate(date));
+                runForDate(hrExportReader.resolveExportDate(date), a.startsWith(FORCE_RUN_ARG));
             }
         }
     }
 
     public Map<String, Object> runForDate(String exportDate) {
+        return runForDate(exportDate, false);
+    }
+
+    /**
+     * Sends the SIU^S15 cancellations for one export date. A date that already has a completed run or
+     * queued outbound messages is not sent again unless {@code force} is set, so repeated triggers do not
+     * re-queue the same cancellations.
+     */
+    public synchronized Map<String, Object> runForDate(String exportDate, boolean force) {
         LocalDateTime started = LocalDateTime.now();
-        log.info("{} start exportDate={}", JOB_NAME, exportDate);
+        if (!force && alreadyRun(exportDate)) {
+            log.warn("{} skipped exportDate={}: already run (use force to resend)", JOB_NAME, exportDate);
+            Map<String, Object> skippedRun = new LinkedHashMap<String, Object>();
+            skippedRun.put("job", JOB_NAME);
+            skippedRun.put("exportDate", exportDate);
+            skippedRun.put("startedAt", started.format(LOG_TS));
+            skippedRun.put("messagesSent", 0);
+            skippedRun.put("status", STATUS_ALREADY_RUN);
+            return skippedRun;
+        }
+        log.info("{} start exportDate={} force={}", JOB_NAME, exportDate, force);
         List<HrPtoRecord> records = hrExportReader.read(exportDate);
         int year = Integer.parseInt(exportDate.substring(0, 4));
 
@@ -231,6 +252,20 @@ public class HrPtoSyncJob implements CommandLineRunner {
     private synchronized String nextControlId(String exportDate) {
         controlIdSeq++;
         return "HRPTO" + exportDate + String.format("%05d", controlIdSeq);
+    }
+
+    public boolean alreadyRun(String exportDate) {
+        File[] queued = new File(outDir(), OUTBOUND_DIR + File.separator + exportDate)
+                .listFiles((d, name) -> name.endsWith(".hl7"));
+        if (queued != null && queued.length > 0) {
+            return true;
+        }
+        for (Map<String, Object> run : readRuns()) {
+            if (exportDate.equals(run.get("exportDate")) && !STATUS_ALREADY_RUN.equals(run.get("status"))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static File outDir() {

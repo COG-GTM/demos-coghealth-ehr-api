@@ -32,18 +32,28 @@ Export directory can be overridden with `-Dhr.export.dir=<path>` (default: class
 |---|---|
 | `@Scheduled(cron = "0 0 2 * * *")` | 02:00 server time, latest export file |
 | `--hr-pto-sync[=yyyyMMdd]` application argument | once at startup (CommandLineRunner) |
-| `POST /api/interfaces/hr-pto-sync/run?exportDate=yyyyMMdd` | on demand |
+| `--hr-pto-sync-force[=yyyyMMdd]` application argument | once at startup, resends an already-run date |
+| `POST /api/interfaces/hr-pto-sync/run?exportDate=yyyyMMdd[&force=true]` | on demand |
+
+Each export date is sent once. A date that already has an entry in `runs.log` or queued `.hl7` files in
+`outbound/<exportDate>/` is skipped (`status: ALREADY_RUN`, nothing written; HTTP 409) unless `force` is set.
+On-demand HTTP runs (and the contract report) are limited to one per
+`hr.pto.sync.on-demand.min-interval-seconds` (default 60); extra calls get HTTP 429 with `Retry-After`.
 
 ## Error codes
 
 | Code | Text | Cause | Action |
 |---|---|---|---|
-| AE | `Unknown department for cost center <cc>` | cost center not in `cost_center_department_map.csv` | add row (with `effective_from`) and re-run for the export date |
+| AE | `Unknown department for cost center <cc>` | cost center not in `cost_center_department_map.csv` | add row (with `effective_from`) and re-run for the export date with `force=true` |
 
 Rows without `pto_start` or with status other than `Approved` are skipped (counted as `recordsSkipped`).
 Rows for an employee with no `or_block` produce no messages.
 
 ## Endpoints
+
+All `/api/interfaces/**` routes require a JWT (`Authorization: Bearer <token>`) for a user with role
+`INTERFACE_ADMIN` or `ADMIN`: 401 without a valid token, 403 for other roles. `exportDate` must be `yyyyMMdd`
+(or empty / `latest`), otherwise 400.
 
 | Method | Path | Returns |
 |---|---|---|
