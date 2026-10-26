@@ -16,8 +16,11 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.Set;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
@@ -110,5 +113,16 @@ class EncounterControllerSecurityTest {
     void providerCanComplete() throws Exception {
         mvc.perform(post("/v1/encounters/42/complete").content("Follow up")).andExpect(status().isOk());
         verify(encounterService).completeEncounter(eq(42L), eq("Follow up"));
+    }
+
+    @Test
+    @WithMockUser(roles = "STAFF")
+    void putPassesOnlySuppliedFieldNames() throws Exception {
+        mvc.perform(put("/v1/encounters/42").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"room\":null,\"department\":\"Cardiology\"}"))
+                .andExpect(status().isOk());
+        verify(encounterService).update(eq(42L),
+                argThat(e -> e.getRoom() == null && "Cardiology".equals(e.getDepartment())),
+                eq(Set.of("room", "department")));
     }
 }

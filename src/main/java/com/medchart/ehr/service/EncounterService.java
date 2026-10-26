@@ -119,7 +119,7 @@ public class EncounterService {
         return saved;
     }
 
-    public Encounter update(Long encounterId, Encounter changes) {
+    public Encounter update(Long encounterId, Encounter changes, Set<String> suppliedFields) {
         Encounter enc = load(encounterId);
         if (TERMINAL_STATUSES.contains(enc.getStatus())) {
             auditUpdate(enc, "Update rejected", false, "Encounter is " + enc.getStatus());
@@ -133,12 +133,12 @@ public class EncounterService {
         }
 
         if (changes.getEncounterType() != null) enc.setEncounterType(changes.getEncounterType());
-        if (changes.getDepartment() != null) enc.setDepartment(changes.getDepartment());
-        if (changes.getRoom() != null) enc.setRoom(changes.getRoom());
-        if (changes.getBed() != null) enc.setBed(changes.getBed());
-        if (changes.getChiefComplaint() != null) enc.setChiefComplaint(changes.getChiefComplaint());
-        if (changes.getPriority() != null) enc.setPriority(changes.getPriority());
-        if (changes.getVisitType() != null) enc.setVisitType(changes.getVisitType());
+        if (suppliedFields.contains("department")) enc.setDepartment(changes.getDepartment());
+        if (suppliedFields.contains("room")) enc.setRoom(changes.getRoom());
+        if (suppliedFields.contains("bed")) enc.setBed(changes.getBed());
+        if (suppliedFields.contains("chiefComplaint")) enc.setChiefComplaint(changes.getChiefComplaint());
+        if (suppliedFields.contains("priority")) enc.setPriority(changes.getPriority());
+        if (suppliedFields.contains("visitType")) enc.setVisitType(changes.getVisitType());
 
         Encounter saved = encounterRepository.save(enc);
         auditUpdate(saved, "Updated encounter details", true, null);

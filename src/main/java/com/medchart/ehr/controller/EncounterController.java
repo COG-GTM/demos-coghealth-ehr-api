@@ -1,5 +1,6 @@
 package com.medchart.ehr.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.medchart.ehr.domain.encounter.Encounter;
 import com.medchart.ehr.domain.encounter.EncounterStatus;
 import com.medchart.ehr.service.EncounterNotFoundException;
@@ -21,9 +22,11 @@ import java.util.Map;
 public class EncounterController {
 
     private final EncounterService encounterService;
+    private final ObjectMapper objectMapper;
 
-    public EncounterController(EncounterService encounterService) {
+    public EncounterController(EncounterService encounterService, ObjectMapper objectMapper) {
         this.encounterService = encounterService;
+        this.objectMapper = objectMapper;
     }
 
     @GetMapping("/{id}")
@@ -80,8 +83,9 @@ public class EncounterController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Encounter> update(@PathVariable Long id, @RequestBody Encounter encounter) {
-        return ResponseEntity.ok(encounterService.update(id, encounter));
+    public ResponseEntity<Encounter> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        Encounter changes = objectMapper.convertValue(body, Encounter.class);
+        return ResponseEntity.ok(encounterService.update(id, changes, body.keySet()));
     }
 
     @PostMapping("/{id}/check-in")

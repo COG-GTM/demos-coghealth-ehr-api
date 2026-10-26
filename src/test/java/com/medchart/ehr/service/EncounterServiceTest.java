@@ -20,6 +20,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -167,7 +168,8 @@ class EncounterServiceTest {
                 .version(3L)
                 .build();
 
-        Encounter saved = service.update(42L, body);
+        Encounter saved = service.update(42L, body, Set.of("patient", "encounterNumber", "createdBy",
+                "encounterDateTime", "status", "notes", "department", "room", "priority", "chiefComplaint", "version"));
 
         assertEquals(7L, saved.getPatient().getId());
         assertEquals("ENC-2026-000042", saved.getEncounterNumber());
@@ -187,7 +189,7 @@ class EncounterServiceTest {
     void updateRejectsStaleVersion() {
         stored(EncounterStatus.SCHEDULED);
         Encounter body = Encounter.builder().department("X").version(2L).build();
-        assertThrows(InvalidEncounterTransitionException.class, () -> service.update(42L, body));
+        assertThrows(InvalidEncounterTransitionException.class, () -> service.update(42L, body, Set.of("department", "version")));
         verify(repository, never()).save(any());
     }
 
@@ -195,7 +197,7 @@ class EncounterServiceTest {
     void updateRejectsClosedEncounter() {
         Encounter enc = stored(EncounterStatus.COMPLETED);
         Encounter body = Encounter.builder().department("X").build();
-        assertThrows(InvalidEncounterTransitionException.class, () -> service.update(42L, body));
+        assertThrows(InvalidEncounterTransitionException.class, () -> service.update(42L, body, Set.of("department")));
         assertEquals(null, enc.getDepartment());
         verify(repository, never()).save(any());
     }
@@ -205,11 +207,24 @@ class EncounterServiceTest {
         enc.setDepartment("Cardiology");
         enc.setChiefComplaint("Chest pain");
 
-        Encounter saved = service.update(42L, Encounter.builder().room("12B").build());
+        Encounter saved = service.update(42L, Encounter.builder().room("12B").build(), Set.of("room"));
 
         assertEquals("12B", saved.getRoom());
         assertEquals("Cardiology", saved.getDepartment());
         assertEquals("Chest pain", saved.getChiefComplaint());
+    }
+
+    @Test
+    void explicitNullClearsOptionalField() {
+        Encounter enc = stored(EncounterStatus.SCHEDULED);
+        enc.setRoom("12B");
+        enc.setDepartment("Cardiology");
+
+        Encounter saved = service.update(42L, Encounter.builder().build(), Set.of("room"));
+
+        assertEquals(null, saved.getRoom());
+        assertEquals("Cardiology", saved.getDepartment());
+        assertEquals(EncounterType.OUTPATIENT, saved.getEncounterType());
     }
 
     @Test
