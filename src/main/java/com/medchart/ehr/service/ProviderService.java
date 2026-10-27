@@ -143,9 +143,14 @@ public class ProviderService {
     @SuppressWarnings("unchecked")
     public List<ProviderResponse> search(String lastName) {
         String sql = "SELECT * FROM providers WHERE active = true "
-                + "AND last_name ILIKE '%" + lastName + "%' "
+                + "AND last_name ILIKE :pattern ESCAPE '\\' "
                 + "ORDER BY last_name, first_name";
-        Query query = entityManager.createNativeQuery(sql, Provider.class);
+        Query query = entityManager.createNativeQuery(sql, Provider.class)
+                .setParameter("pattern", "%" + escapeLike(lastName == null ? "" : lastName) + "%");
         return providerMapper.toResponseList(query.getResultList());
+    }
+
+    private static String escapeLike(String value) {
+        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 }
