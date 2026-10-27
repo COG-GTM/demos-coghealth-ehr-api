@@ -71,7 +71,7 @@ class EncounterControllerTest {
 
     @Test
     void getByIdReturnsPatientSummaryWithoutSsn() throws Exception {
-        when(encounterService.findByIdWithDetails(1L)).thenReturn(Optional.of(encounter()));
+        when(encounterService.findByIdForProvider(eq(1L), isNull())).thenReturn(Optional.of(encounter()));
 
         assertNoPhiLeak(mockMvc.perform(get("/v1/encounters/1")), "$")
                 .andExpect(status().isOk())
@@ -95,7 +95,7 @@ class EncounterControllerTest {
 
     @Test
     void getByIdReturns404WhenMissing() throws Exception {
-        when(encounterService.findByIdWithDetails(99L)).thenReturn(Optional.empty());
+        when(encounterService.findByIdForProvider(eq(99L), isNull())).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/v1/encounters/99")).andExpect(status().isNotFound());
     }
