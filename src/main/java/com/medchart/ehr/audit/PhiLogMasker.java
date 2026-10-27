@@ -6,6 +6,7 @@ package com.medchart.ehr.audit;
 public final class PhiLogMasker {
 
     private static final int VISIBLE_SUFFIX = 4;
+    private static final int MIN_LENGTH_FOR_SUFFIX = 2 * VISIBLE_SUFFIX;
     private static final String MASK = "****";
 
     private PhiLogMasker() {
@@ -16,7 +17,7 @@ public final class PhiLogMasker {
             return MASK;
         }
         String trimmed = mrn.trim();
-        if (trimmed.length() <= VISIBLE_SUFFIX) {
+        if (trimmed.length() < MIN_LENGTH_FOR_SUFFIX) {
             return MASK;
         }
         return MASK + trimmed.substring(trimmed.length() - VISIBLE_SUFFIX);
