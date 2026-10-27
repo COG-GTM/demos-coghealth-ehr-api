@@ -1,5 +1,7 @@
 package com.medchart.ehr.legacy;
 
+import com.medchart.ehr.audit.AuditAccess;
+import com.medchart.ehr.audit.AuditAction;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,7 @@ public class ReportGenerator {
 
     private static final String TEMP_DIR = System.getProperty("java.io.tmpdir");
 
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Patient", description = "Generate patient roster report")
     public String generatePatientRoster() {
         String sql = "SELECT p.id, p.mrn, p.ssn, p.first_name, p.last_name, p.date_of_birth, " +
                      "p.phone_home, p.phone_mobile, p.email, " +
@@ -44,7 +47,8 @@ public class ReportGenerator {
                 StringBuilder line = new StringBuilder();
                 for (int i = 0; i < row.length; i++) {
                     if (i > 0) line.append(",");
-                    line.append(row[i] != null ? row[i].toString().replace(",", ";") : "");
+                    Object value = i == 2 ? PhiMasking.maskSsn(row[i]) : row[i];
+                    line.append(value != null ? value.toString().replace(",", ";") : "");
                 }
                 writer.println(line);
             }
@@ -57,9 +61,10 @@ public class ReportGenerator {
         return filePath;
     }
 
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Encounter", description = "Generate encounter summary report")
     public String generateEncounterSummary(LocalDateTime startDate, LocalDateTime endDate) {
         String sql = "SELECT e.id, e.encounter_number, e.encounter_date_time, e.encounter_type, e.status, " +
-                     "p.mrn, p.first_name, p.last_name, p.ssn, p.date_of_birth, " +
+                     "p.mrn, p.first_name, p.last_name, p.date_of_birth, " +
                      "pr.first_name as provider_first, pr.last_name as provider_last " +
                      "FROM encounters e " +
                      "JOIN patients p ON e.patient_id = p.id " +
@@ -101,14 +106,20 @@ public class ReportGenerator {
         return filePath;
     }
 
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Patient", description = "Download daily patient roster report")
     public byte[] generateDailyReport() {
-        String tempFile = generatePatientRoster();
+        Path tempFile = Path.of(generatePatientRoster());
         try {
-            byte[] content = Files.readAllBytes(Path.of(tempFile));
-            return content;
+            return Files.readAllBytes(tempFile);
         } catch (IOException e) {
             log.error("Failed to read temp file", e);
             throw new RuntimeException(e);
+        } finally {
+            try {
+                Files.deleteIfExists(tempFile);
+            } catch (IOException e) {
+                log.warn("Failed to delete temp report file", e);
+            }
         }
     }
 }
