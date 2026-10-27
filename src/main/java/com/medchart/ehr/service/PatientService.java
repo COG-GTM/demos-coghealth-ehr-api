@@ -9,18 +9,17 @@ import com.medchart.ehr.repository.PatientRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
-import javax.persistence.EntityManager;
 import javax.persistence.EntityNotFoundException;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Query;
-import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -28,11 +27,17 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class PatientService {
 
+    private static final Map<String, String> SORTABLE_FIELDS = Map.of(
+            "last_name", "lastName",
+            "lastName", "lastName",
+            "first_name", "firstName",
+            "firstName", "firstName",
+            "mrn", "mrn",
+            "date_of_birth", "dateOfBirth",
+            "dateOfBirth", "dateOfBirth");
+
     private final PatientRepository patientRepository;
     private final PatientMapper patientMapper;
-
-    @PersistenceContext
-    private EntityManager entityManager;
 
     @AuditAccess(action = AuditAction.READ, resourceType = "Patient", description = "View patient record")
     public PatientDTO getPatientById(Long id) {
@@ -51,30 +56,42 @@ public class PatientService {
     @AuditAccess(action = AuditAction.SEARCH, resourceType = "Patient", description = "Search patients")
     public Page<PatientDTO> searchPatients(String searchTerm, String sort, Pageable pageable) {
         if (sort == null || sort.isBlank()) {
-            return patientRepository.searchPatients(searchTerm, pageable)
+            return patientRepository.searchPatients(searchTerm,
+                    PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()))
                     .map(patientMapper::toDto);
         }
 
-        String where = "(LOWER(last_name) LIKE LOWER(?1) OR LOWER(first_name) LIKE LOWER(?1) OR mrn LIKE ?1)";
-        String term = "%" + searchTerm + "%";
+        Sort resolvedSort = resolveSort(sort);
+        return patientRepository.searchPatients(searchTerm,
+                PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), resolvedSort))
+                .map(patientMapper::toDto);
+    }
 
-        Query countQuery = entityManager.createNativeQuery(
-                "SELECT COUNT(*) FROM patients WHERE " + where);
-        countQuery.setParameter(1, term);
-        long total = ((Number) countQuery.getSingleResult()).longValue();
+    private Sort resolveSort(String sort) {
+        String[] tokens = sort.trim().split("[,\\s]+", -1);
+        if (tokens.length < 1 || tokens.length > 2) {
+            throw unsupportedSortParameter();
+        }
 
-        Query query = entityManager.createNativeQuery(
-                "SELECT * FROM patients WHERE " + where + " ORDER BY " + sort, Patient.class);
-        query.setParameter(1, term);
-        query.setFirstResult((int) pageable.getOffset());
-        query.setMaxResults(pageable.getPageSize());
+        String property = SORTABLE_FIELDS.get(tokens[0]);
+        if (property == null) {
+            throw unsupportedSortParameter();
+        }
 
-        @SuppressWarnings("unchecked")
-        List<Patient> patients = query.getResultList();
-        List<PatientDTO> content = patients.stream()
-                .map(patientMapper::toDto)
-                .collect(Collectors.toList());
-        return new PageImpl<>(content, pageable, total);
+        Sort.Direction direction = Sort.Direction.ASC;
+        if (tokens.length == 2) {
+            if ("desc".equalsIgnoreCase(tokens[1])) {
+                direction = Sort.Direction.DESC;
+            } else if (!"asc".equalsIgnoreCase(tokens[1])) {
+                throw unsupportedSortParameter();
+            }
+        }
+
+        return Sort.by(direction, property);
+    }
+
+    private ResponseStatusException unsupportedSortParameter() {
+        return new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported sort parameter");
     }
 
     @Transactional
