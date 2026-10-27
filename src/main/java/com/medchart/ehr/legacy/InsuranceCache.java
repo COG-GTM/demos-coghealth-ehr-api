@@ -1,5 +1,6 @@
 package com.medchart.ehr.legacy;
 
+import com.medchart.ehr.util.PhiLogMasker;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -29,14 +30,14 @@ public class InsuranceCache {
         cached.cachedAt = LocalDateTime.now();
         
         eligibilityCache.put(cacheKey, cached);
-        log.debug("Cached eligibility for patient {} with payer {}", patientMrn, payerId);
+        log.debug("Cached eligibility for patient mrn={} with payer {}", PhiLogMasker.maskMrn(patientMrn), payerId);
     }
 
     public CachedEligibility getEligibility(String patientMrn, String payerId) {
         String cacheKey = patientMrn + "_" + payerId;
         CachedEligibility cached = eligibilityCache.get(cacheKey);
         if (cached != null) {
-            log.debug("Cache hit for patient {} with payer {}", patientMrn, payerId);
+            log.debug("Cache hit for patient mrn={} with payer {}", PhiLogMasker.maskMrn(patientMrn), payerId);
         }
         return cached;
     }

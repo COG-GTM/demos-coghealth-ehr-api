@@ -1,5 +1,6 @@
 package com.medchart.ehr.mapper;
 
+import com.medchart.ehr.util.PhiLogMasker;
 import com.medchart.ehr.domain.patient.Patient;
 import com.medchart.ehr.domain.patient.Gender;
 import lombok.extern.slf4j.Slf4j;
@@ -81,7 +82,7 @@ public class FhirPatientMapper {
             fhirPatient.put("maritalStatus", buildMaritalStatus(patient));
         }
         
-        log.debug("Mapped patient {} to FHIR resource", patient.getMrn());
+        log.debug("Mapped patient id={} to FHIR resource", patient.getId());
         return fhirPatient;
     }
 
@@ -136,7 +137,7 @@ public class FhirPatientMapper {
         Boolean active = (Boolean) fhirPatient.get("active");
         patient.setActive(active != null ? active : true);
         
-        log.debug("Mapped FHIR resource to patient {}", patient.getMrn());
+        log.debug("Mapped FHIR resource to patient mrn={}", PhiLogMasker.maskMrn(patient.getMrn()));
         return patient;
     }
 

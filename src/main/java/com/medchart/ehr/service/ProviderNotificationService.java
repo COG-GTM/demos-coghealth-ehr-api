@@ -92,7 +92,7 @@ public class ProviderNotificationService {
             String alertMessage,
             String severity) {
         
-        log.warn("CRITICAL ALERT for patient {}: {} - {}", patientMrn, alertType, alertMessage);
+        log.warn("CRITICAL ALERT for patient id={}: {} - {}", patientId, alertType, alertMessage);
         
         // Step 1: Send immediate notification
         // Step 2: If not acknowledged in 15 minutes, escalate to supervisor

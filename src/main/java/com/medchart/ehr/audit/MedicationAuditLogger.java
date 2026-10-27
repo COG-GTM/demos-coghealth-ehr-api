@@ -55,11 +55,11 @@ public class MedicationAuditLogger {
         auditEventRepository.save(event);
         
         if (isControlled) {
-            log.warn("CONTROLLED SUBSTANCE: User {} prescribed {} ({}) to patient {}", 
-                    userId, medicationName, drugSchedule, patientMrn);
+            log.warn("CONTROLLED SUBSTANCE: User {} prescribed {} ({}) to patient id={}", 
+                    userId, medicationName, drugSchedule, patientId);
         } else {
-            log.info("PRESCRIPTION: User {} prescribed {} to patient {}", 
-                    userId, medicationName, patientMrn);
+            log.info("PRESCRIPTION: User {} prescribed {} to patient id={}", 
+                    userId, medicationName, patientId);
         }
     }
 

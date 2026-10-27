@@ -35,7 +35,7 @@ public class PatientService {
     @AuditAccess(action = AuditAction.READ, resourceType = "Patient", description = "View patient by MRN")
     public PatientDTO getPatientByMrn(String mrn) {
         Patient patient = patientRepository.findByMrn(mrn)
-                .orElseThrow(() -> new EntityNotFoundException("Patient not found with MRN: " + mrn));
+                .orElseThrow(() -> new EntityNotFoundException("Patient not found for the given MRN"));
         return patientMapper.toDto(patient);
     }
 
@@ -51,7 +51,7 @@ public class PatientService {
         if (patientDTO.getMrn() != null) {
             Optional<Patient> existing = patientRepository.findByMrn(patientDTO.getMrn());
             if (existing.isPresent()) {
-                throw new IllegalArgumentException("Patient with MRN " + patientDTO.getMrn() + " already exists");
+                throw new IllegalArgumentException("A patient with this MRN already exists");
             }
         }
 
@@ -61,7 +61,7 @@ public class PatientService {
         }
 
         Patient saved = patientRepository.save(patient);
-        log.info("Created patient with MRN: {}", saved.getMrn());
+        log.info("Created patient id={}", saved.getId());
         return patientMapper.toDto(saved);
     }
 
@@ -73,7 +73,7 @@ public class PatientService {
 
         patientMapper.updateEntityFromDto(patientDTO, existing);
         Patient saved = patientRepository.save(existing);
-        log.info("Updated patient with MRN: {}", saved.getMrn());
+        log.info("Updated patient id={}", saved.getId());
         return patientMapper.toDto(saved);
     }
 

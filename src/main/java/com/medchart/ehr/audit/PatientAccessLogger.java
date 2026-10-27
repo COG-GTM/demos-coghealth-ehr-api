@@ -61,8 +61,8 @@ public class PatientAccessLogger {
         
         auditEventRepository.save(event);
         
-        log.info("AUDIT: User {} ({}) accessed {} for patient {} - Action: {}", 
-            userId, userRole, resourceType, patientMrn, action);
+        log.info("AUDIT: User {} ({}) accessed {} for patient id={} - Action: {}", 
+            userId, userRole, resourceType, patientId, action);
     }
 
     /**
