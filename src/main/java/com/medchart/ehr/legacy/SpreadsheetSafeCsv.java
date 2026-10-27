@@ -49,11 +49,14 @@ public final class SpreadsheetSafeCsv {
         if (text.charAt(0) == '\t') {
             return true;
         }
-        String trimmed = text.stripLeading();
-        if (trimmed.isEmpty()) {
+        int start = 0;
+        while (start < text.length() && isIgnorableLeadingChar(text.charAt(start))) {
+            start++;
+        }
+        if (start == text.length()) {
             return false;
         }
-        switch (trimmed.charAt(0)) {
+        switch (text.charAt(start)) {
             case '=':
             case '+':
             case '-':
@@ -66,5 +69,9 @@ public final class SpreadsheetSafeCsv {
             default:
                 return false;
         }
+    }
+
+    private static boolean isIgnorableLeadingChar(char c) {
+        return Character.isWhitespace(c) || Character.isSpaceChar(c) || Character.getType(c) == Character.FORMAT;
     }
 }

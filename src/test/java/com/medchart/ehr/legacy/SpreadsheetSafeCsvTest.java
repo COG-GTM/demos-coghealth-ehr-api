@@ -14,7 +14,7 @@ class SpreadsheetSafeCsvTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"=1+1", "+1", "-1+cmd", "@SUM(A1)", "\t=1", " =1", "\u3000=1",
-            "=HYPERLINK(\"http://evil.example\",\"x\")", "=cmd|' /C calc'!A0", "\uFF1D1+1"})
+            "=HYPERLINK(\"http://evil.example\",\"x\")", "=cmd|' /C calc'!A0", "\uFF1D1+1", "\u00A0=1+1", "\u200B=1+1", "\uFEFF@SUM(A1)", "\u00A0\u200B -1"})
     void prefixesFormulaTriggers(String value) {
         String parsed = CsvTestParser.parse(SpreadsheetSafeCsv.cell(value)).get(0).get(0);
         assertEquals("'", parsed.substring(0, 1));
