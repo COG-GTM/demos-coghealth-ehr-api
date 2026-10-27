@@ -1,10 +1,14 @@
 package com.medchart.ehr.config;
 
 import com.medchart.ehr.domain.auth.User;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.Date;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -67,7 +71,12 @@ class JwtTokenProviderTest {
 
     @Test
     void rejectsTokenWithoutAccountId() {
-        String token = provider.generateTokenFromUsername("clinic.admin");
+        String token = Jwts.builder()
+                .setSubject("clinic.admin")
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + 60_000))
+                .signWith(Keys.hmacShaKeyFor("x".repeat(64).getBytes()), SignatureAlgorithm.HS512)
+                .compact();
 
         assertThat(provider.validateToken(token, user(true, true))).isFalse();
     }
