@@ -117,30 +117,35 @@ public class EncounterController {
     @PostMapping("/{id}/check-in")
     public ResponseEntity<Void> checkIn(@PathVariable Long id) {
         encounterService.checkIn(id);
+        auditStatusChange(id, "Check in encounter");
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{id}/start")
     public ResponseEntity<Void> start(@PathVariable Long id) {
         encounterService.startEncounter(id);
+        auditStatusChange(id, "Start encounter");
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{id}/complete")
     public ResponseEntity<Void> complete(@PathVariable Long id, @RequestBody(required = false) String notes) {
         encounterService.completeEncounter(id, notes);
+        auditStatusChange(id, "Complete encounter");
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{id}/cancel")
     public ResponseEntity<Void> cancel(@PathVariable Long id) {
         encounterService.cancelEncounter(id);
+        auditStatusChange(id, "Cancel encounter");
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{id}/no-show")
     public ResponseEntity<Void> noShow(@PathVariable Long id) {
         encounterService.markNoShow(id);
+        auditStatusChange(id, "Mark encounter no-show");
         return ResponseEntity.ok().build();
     }
 
@@ -152,5 +157,9 @@ public class EncounterController {
     private List<EncounterDTO> list(Long patientId, List<Encounter> encounters, String description) {
         accessAuditor.logListAccess(patientId, encounters, description);
         return encounterMapper.toDtoList(encounters);
+    }
+
+    private void auditStatusChange(Long id, String description) {
+        encounterService.findById(id).ifPresent(e -> accessAuditor.logAccess(e, AuditAction.UPDATE, description));
     }
 }

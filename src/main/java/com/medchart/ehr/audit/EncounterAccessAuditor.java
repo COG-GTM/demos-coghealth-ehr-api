@@ -12,8 +12,10 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Audits encounter reads/writes against the encounter's patient. {@link AuditAccess} can't be used
@@ -36,18 +38,31 @@ public class EncounterAccessAuditor {
                 .build());
     }
 
-    /** Patient-scoped lists are READs of that patient's record; cross-patient lists are SEARCHes. */
+    /**
+     * Patient-scoped lists are one READ of that patient's record. Cross-patient lists log one SEARCH
+     * per patient returned so each patient's audit trail shows the access.
+     */
     public void logListAccess(Long patientId, List<Encounter> encounters, String description) {
-        long patients = encounters.stream()
-                .map(Encounter::getPatient)
-                .filter(Objects::nonNull)
-                .map(Patient::getId)
-                .distinct()
-                .count();
-        auditService.saveAuditEventAsync(baseEvent(patientId != null ? AuditAction.READ : AuditAction.SEARCH,
-                description + " [" + encounters.size() + " encounters, " + patients + " patients]")
-                .patientId(patientId)
-                .build());
+        if (patientId != null) {
+            auditService.saveAuditEventAsync(baseEvent(AuditAction.READ,
+                    description + " [" + encounters.size() + " encounters]")
+                    .patientId(patientId)
+                    .build());
+            return;
+        }
+        Map<Long, List<Encounter>> byPatient = encounters.stream()
+                .filter(e -> e.getPatient() != null && e.getPatient().getId() != null)
+                .collect(Collectors.groupingBy(e -> e.getPatient().getId(), LinkedHashMap::new, Collectors.toList()));
+        if (byPatient.isEmpty()) {
+            auditService.saveAuditEventAsync(baseEvent(AuditAction.SEARCH,
+                    description + " [" + encounters.size() + " encounters]").build());
+            return;
+        }
+        byPatient.forEach((id, patientEncounters) -> auditService.saveAuditEventAsync(baseEvent(AuditAction.SEARCH,
+                description + " [" + patientEncounters.size() + " of " + encounters.size() + " encounters]")
+                .patientId(id)
+                .patientMrn(patientEncounters.get(0).getPatient().getMrn())
+                .build()));
     }
 
     private AuditEvent.AuditEventBuilder baseEvent(AuditAction action, String description) {

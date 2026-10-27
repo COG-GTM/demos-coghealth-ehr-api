@@ -26,6 +26,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -41,6 +42,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -138,9 +140,41 @@ class EncounterControllerTest {
         assertThat(events.getAllValues().get(1).getPatientId()).isEqualTo(7L);
         AuditEvent search = events.getAllValues().get(2);
         assertThat(search.getAction()).isEqualTo(AuditAction.SEARCH);
-        assertThat(search.getDescription()).contains("1 encounters, 1 patients");
+        assertThat(search.getPatientId()).isEqualTo(7L);
+        assertThat(search.getDescription()).contains("1 of 1 encounters");
         assertThat(events.getAllValues()).allSatisfy(e ->
                 assertThat(String.valueOf(e.getDescription())).doesNotContain(SSN));
+    }
+
+    @Test
+    void crossPatientListsLogOneEventPerPatient() throws Exception {
+        Encounter other = encounter();
+        other.setId(2L);
+        Patient otherPatient = Patient.builder().id(8L).mrn("MRN0000008").firstName("Marge").lastName("Simpson").build();
+        other.setPatient(otherPatient);
+        when(encounterService.findByStatus(EncounterStatus.SCHEDULED)).thenReturn(Arrays.asList(encounter(), other));
+
+        mockMvc.perform(get("/v1/encounters/status/SCHEDULED")).andExpect(status().isOk());
+
+        ArgumentCaptor<AuditEvent> events = ArgumentCaptor.forClass(AuditEvent.class);
+        verify(auditService, times(2)).saveAuditEventAsync(events.capture());
+        assertThat(events.getAllValues()).extracting(AuditEvent::getPatientId).containsExactly(7L, 8L);
+        assertThat(events.getAllValues()).extracting(AuditEvent::getAction).containsOnly(AuditAction.SEARCH);
+    }
+
+    @Test
+    void statusTransitionsAreAudited() throws Exception {
+        when(encounterService.findById(1L)).thenReturn(Optional.of(encounter()));
+
+        mockMvc.perform(post("/v1/encounters/1/check-in")).andExpect(status().isOk());
+        mockMvc.perform(post("/v1/encounters/1/no-show")).andExpect(status().isOk());
+
+        ArgumentCaptor<AuditEvent> events = ArgumentCaptor.forClass(AuditEvent.class);
+        verify(auditService, times(2)).saveAuditEventAsync(events.capture());
+        assertThat(events.getAllValues()).extracting(AuditEvent::getAction).containsOnly(AuditAction.UPDATE);
+        assertThat(events.getAllValues()).extracting(AuditEvent::getPatientId).containsOnly(7L);
+        assertThat(events.getAllValues()).extracting(AuditEvent::getDescription)
+                .containsExactly("Check in encounter", "Mark encounter no-show");
     }
 
     @Test
