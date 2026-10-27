@@ -33,6 +33,7 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -89,7 +90,7 @@ class EncounterControllerSecurityTest {
     @Test
     void encounterResponseNeverContainsPatientSsnOrDemographics() throws Exception {
         signIn("dr.anderson", User.Role.PROVIDER);
-        given(encounterService.findByIdWithDetails(1L))
+        given(encounterService.findByIdForProvider(eq(1L), any()))
             .willReturn(Optional.of(EncounterResponseDTO.from(encounterWithFullPatient())));
 
         mockMvc.perform(authed(get("/v1/encounters/1")))

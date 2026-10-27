@@ -30,8 +30,10 @@ public class EncounterController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<EncounterResponseDTO> getById(@PathVariable Long id) {
-        return okOrNotFound(encounterService.findByIdWithDetails(id));
+    public ResponseEntity<EncounterResponseDTO> getById(
+            @PathVariable Long id,
+            @RequestParam(required = false) Long providerId) {
+        return okOrNotFound(encounterService.findByIdForProvider(id, providerId));
     }
 
     @GetMapping("/number/{encounterNumber}")

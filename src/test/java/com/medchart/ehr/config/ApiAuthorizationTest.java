@@ -42,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
@@ -149,7 +150,7 @@ class ApiAuthorizationTest {
     void clinicianWithValidTokenCanReadCharts() throws Exception {
         signIn("dr.anderson", User.Role.PROVIDER);
         given(patientService.getPatientById(1L)).willReturn(new PatientDTO());
-        given(encounterService.findByIdWithDetails(1L)).willReturn(Optional.of(new EncounterResponseDTO()));
+        given(encounterService.findByIdForProvider(eq(1L), any())).willReturn(Optional.of(new EncounterResponseDTO()));
         given(encounterService.completeEncounter(1L, null)).willReturn(Optional.of(new EncounterResponseDTO()));
 
         mockMvc.perform(authed(get("/v1/patients/1"))).andExpect(status().isOk());

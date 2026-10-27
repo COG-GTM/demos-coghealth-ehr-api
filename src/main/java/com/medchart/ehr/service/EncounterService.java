@@ -53,6 +53,15 @@ public class EncounterService {
     }
 
     @Transactional(readOnly = true)
+    @AuditAccess(action = AuditAction.READ, resourceType = "Encounter", description = "View encounter for provider",
+            patientIdFromArgs = false)
+    public Optional<EncounterResponseDTO> findByIdForProvider(Long id, Long providerId) {
+        Optional<Encounter> encounter = encounterRepository.findByIdWithDetails(id);
+        encounter.ifPresent(enc -> log.info("Provider {} accessed encounter {}", providerId, enc.getEncounterNumber()));
+        return encounter.map(EncounterResponseDTO::from);
+    }
+
+    @Transactional(readOnly = true)
     @AuditAccess(action = AuditAction.READ, resourceType = "Encounter", description = "View encounter by number")
     public Optional<EncounterResponseDTO> findByEncounterNumber(String encounterNumber) {
         return encounterRepository.findByEncounterNumber(encounterNumber).map(EncounterResponseDTO::from);
