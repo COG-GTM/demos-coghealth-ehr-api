@@ -12,6 +12,9 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
@@ -21,6 +24,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -113,5 +117,39 @@ class ProviderControllerSecurityTest {
                 .andExpect(status().isOk());
 
         verify(providerService).update(eq(4L), any());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void staleVersionUpdateReturnsConflict() throws Exception {
+        when(providerService.update(eq(4L), any()))
+                .thenThrow(new ObjectOptimisticLockingFailureException(Provider.class, 4L));
+
+        mockMvc.perform(put("/v1/providers/4").contentType(MediaType.APPLICATION_JSON).content(BODY))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void disabledAdminJwtIsNotAuthenticated() throws Exception {
+        stubJwtUser(User.withUsername("admin").password("x").roles("ADMIN").disabled(true).build());
+
+        mockMvc.perform(delete("/v1/providers/4").header("Authorization", "Bearer token"))
+                .andExpect(status().isUnauthorized());
+        verify(providerService, never()).deactivate(anyLong());
+    }
+
+    @Test
+    void enabledAdminJwtIsAuthenticated() throws Exception {
+        stubJwtUser(User.withUsername("admin").password("x").roles("ADMIN").build());
+
+        mockMvc.perform(delete("/v1/providers/4").header("Authorization", "Bearer token"))
+                .andExpect(status().isNoContent());
+        verify(providerService).deactivate(4L);
+    }
+
+    private void stubJwtUser(UserDetails user) {
+        when(jwtTokenProvider.getUsernameFromToken("token")).thenReturn(user.getUsername());
+        when(jwtTokenProvider.validateToken(eq("token"), any())).thenReturn(true);
+        when(userDetailsService.loadUserByUsername(anyString())).thenReturn(user);
     }
 }

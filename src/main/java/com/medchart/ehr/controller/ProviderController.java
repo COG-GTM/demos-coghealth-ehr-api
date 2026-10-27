@@ -3,6 +3,7 @@ package com.medchart.ehr.controller;
 import com.medchart.ehr.domain.provider.Provider;
 import com.medchart.ehr.dto.ProviderDTO;
 import com.medchart.ehr.service.ProviderService;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -80,9 +81,13 @@ public class ProviderController {
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Provider> update(@PathVariable Long id, @Valid @RequestBody ProviderDTO provider) {
-        return providerService.update(id, provider)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        try {
+            return providerService.update(id, provider)
+                    .map(ResponseEntity::ok)
+                    .orElse(ResponseEntity.notFound().build());
+        } catch (OptimisticLockingFailureException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
     }
 
     @DeleteMapping("/{id}")

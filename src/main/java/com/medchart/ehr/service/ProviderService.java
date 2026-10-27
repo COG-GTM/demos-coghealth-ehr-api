@@ -5,6 +5,7 @@ import com.medchart.ehr.dto.ProviderDTO;
 import com.medchart.ehr.repository.ProviderRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -72,6 +73,9 @@ public class ProviderService {
 
     public Optional<Provider> update(Long id, ProviderDTO dto) {
         return providerRepository.findById(id).map(provider -> {
+            if (dto.getExpectedVersion() != null && !dto.getExpectedVersion().equals(provider.getVersion())) {
+                throw new ObjectOptimisticLockingFailureException(Provider.class, id);
+            }
             dto.applyTo(provider);
             log.info("Updating provider: {}", id);
             return providerRepository.save(provider);
