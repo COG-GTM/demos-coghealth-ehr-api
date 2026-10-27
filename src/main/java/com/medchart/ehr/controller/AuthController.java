@@ -6,6 +6,7 @@ import com.medchart.ehr.config.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -14,6 +15,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import javax.validation.constraints.Email;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -23,6 +28,9 @@ import java.util.Set;
 @RequiredArgsConstructor
 @Slf4j
 public class AuthController {
+
+    /** Accounts created here get least privilege; clinical roles are granted via {@link UserAdminController}. */
+    static final User.Role NEW_ACCOUNT_ROLE = User.Role.STAFF;
 
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
@@ -49,7 +57,9 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@Valid @RequestBody SignUpRequest signUpRequest) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> registerUser(@Valid @RequestBody SignUpRequest signUpRequest,
+                                          Authentication currentUser) {
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {
             return ResponseEntity.badRequest()
                 .body("Username is already taken!");
@@ -67,7 +77,7 @@ public class AuthController {
             .firstName(signUpRequest.getFirstName())
             .lastName(signUpRequest.getLastName())
             .password(passwordEncoder.encode(signUpRequest.getPassword()))
-            .roles(Set.of(User.Role.PROVIDER)) // Default role
+            .roles(Set.of(NEW_ACCOUNT_ROLE))
             .enabled(true)
             .accountNonExpired(true)
             .accountNonLocked(true)
@@ -76,13 +86,18 @@ public class AuthController {
 
         userRepository.save(user);
 
-        log.info("Registered new user: {}", signUpRequest.getUsername());
-        
+        log.info("Admin {} created user {} with role {}",
+            currentUser.getName(), signUpRequest.getUsername(), NEW_ACCOUNT_ROLE);
+
         return ResponseEntity.ok("User registered successfully");
     }
 
     public static class LoginRequest {
+        @NotBlank
+        @Size(max = 50)
         private String username;
+        @NotBlank
+        @Size(max = 128)
         private String password;
 
         // Getters and setters
@@ -93,10 +108,22 @@ public class AuthController {
     }
 
     public static class SignUpRequest {
+        @NotBlank
+        @Size(min = 3, max = 50)
+        @Pattern(regexp = "^[A-Za-z0-9._-]+$", message = "may contain only letters, digits, '.', '_' and '-'")
         private String username;
+        @NotBlank
+        @Email
+        @Size(max = 100)
         private String email;
+        @NotBlank
+        @Size(min = 12, max = 72)
         private String password;
+        @NotBlank
+        @Size(max = 100)
         private String firstName;
+        @NotBlank
+        @Size(max = 100)
         private String lastName;
 
         // Getters and setters
