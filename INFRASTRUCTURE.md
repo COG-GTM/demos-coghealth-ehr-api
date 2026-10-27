@@ -118,6 +118,10 @@ git-ignored `.env` on first run (see `.env.example`):
 The direct password grant (`grant_type=password`) is disabled on both clients; sign in through the
 Keycloak login page (authorization code flow).
 
+Keycloak only imports the realm when it does not exist yet. A database that imported an older
+version of `coghealth-realm.json` keeps its old users, client secret and grant settings; reset it
+with `docker compose down -v` (this deletes local data) so the realm is imported again.
+
 | Username | Role | Access Level |
 |----------|------|--------------|
 | `dr.anderson` | Physician | Full clinical access, prescribing |

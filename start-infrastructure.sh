@@ -32,6 +32,11 @@ if [ ! -f .env ]; then
             esac
         done < .env.example > .env
     )
+    if docker volume inspect "$(basename "$PWD")_postgres_data" > /dev/null 2>&1; then
+        echo "⚠️  An existing postgres_data volume was found. Keycloak skips importing a realm"
+        echo "   that already exists, so it keeps the old credentials and settings. Reset it with:"
+        echo "   docker compose down -v"
+    fi
 fi
 
 # Stop any existing containers
