@@ -1,5 +1,7 @@
 package com.medchart.ehr.service;
 
+import com.medchart.ehr.audit.AuditAccess;
+import com.medchart.ehr.audit.AuditAction;
 import com.medchart.ehr.domain.encounter.Encounter;
 import com.medchart.ehr.domain.encounter.EncounterStatus;
 import com.medchart.ehr.domain.patient.Patient;
@@ -66,11 +68,13 @@ public class EncounterService {
     }
 
     @Transactional(readOnly = true)
+    @AuditAccess(action = AuditAction.READ, resourceType = "Encounter", description = "List patient encounters")
     public List<EncounterDTO> findByPatientId(Long patientId) {
         return toDtos(encounterRepository.findByPatientId(patientId));
     }
 
     @Transactional(readOnly = true)
+    @AuditAccess(action = AuditAction.READ, resourceType = "Encounter", description = "List patient encounters (paged)")
     public Page<EncounterDTO> findByPatientId(Long patientId, Pageable pageable) {
         return encounterRepository.findByPatientId(patientId, pageable).map(encounterMapper::toDto);
     }
@@ -119,7 +123,7 @@ public class EncounterService {
         encounter.setStatus(EncounterStatus.SCHEDULED);
 
         Encounter saved = encounterRepository.saveAndFlush(encounter);
-        log.info("Created encounter {} for patient {}", saved.getEncounterNumber(), patient.getMrn());
+        log.info("Created encounter {} for patient id {}", saved.getEncounterNumber(), patient.getId());
         return encounterMapper.toDto(saved);
     }
 
@@ -138,7 +142,7 @@ public class EncounterService {
             throw new IllegalArgumentException("An encounter cannot be moved to a different patient");
         }
 
-        if (request.getAttendingProvider() != null) {
+        if (request.getAttendingProvider() != null || request.isExplicitlySet("attendingProvider")) {
             existing.setAttendingProvider(resolveProvider(request));
         }
         encounterMapper.applyEditableFields(request, existing);

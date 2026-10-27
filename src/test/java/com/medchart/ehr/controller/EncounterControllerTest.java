@@ -98,4 +98,17 @@ class EncounterControllerTest {
                         && req.getStatus() == null
                         && "12B".equals(req.getRoom())));
     }
+
+    @Test
+    void explicitNullInRequestBodyIsDistinguishedFromOmittedField() throws Exception {
+        when(encounterService.update(eq(42L), any(EncounterDTO.class))).thenReturn(dto);
+
+        mockMvc.perform(put("/v1/encounters/42")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"room\":null}"))
+                .andExpect(status().isOk());
+
+        verify(encounterService).update(eq(42L), argThat(req ->
+                req.isExplicitlySet("room") && !req.isExplicitlySet("notes")));
+    }
 }

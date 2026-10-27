@@ -1,5 +1,6 @@
 package com.medchart.ehr.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.medchart.ehr.domain.encounter.EncounterPriority;
 import com.medchart.ehr.domain.encounter.EncounterStatus;
@@ -10,11 +11,14 @@ import javax.validation.Valid;
 import javax.validation.constraints.Size;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * API representation of an encounter. Patient data is limited to identifying
  * summary fields; the SSN and other demographics are never exposed here.
- * Server-managed fields are read-only and ignored on input.
+ * Server-managed fields are read-only and ignored on input. Optional fields
+ * sent as an explicit JSON null are recorded so updates can clear them.
  */
 @Data
 @NoArgsConstructor
@@ -70,6 +74,67 @@ public class EncounterDTO {
     private LocalDateTime updatedAt;
 
     private Long version;
+
+    @JsonIgnore
+    @Getter(AccessLevel.NONE)
+    @Setter(AccessLevel.NONE)
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private final Set<String> explicitlySet = new HashSet<>();
+
+    public boolean isExplicitlySet(String field) {
+        return explicitlySet.contains(field);
+    }
+
+    public void setAttendingProvider(ProviderSummary attendingProvider) {
+        this.attendingProvider = attendingProvider;
+        explicitlySet.add("attendingProvider");
+    }
+
+    public void setAdmitDateTime(LocalDateTime admitDateTime) {
+        this.admitDateTime = admitDateTime;
+        explicitlySet.add("admitDateTime");
+    }
+
+    public void setDischargeDateTime(LocalDateTime dischargeDateTime) {
+        this.dischargeDateTime = dischargeDateTime;
+        explicitlySet.add("dischargeDateTime");
+    }
+
+    public void setDepartment(String department) {
+        this.department = department;
+        explicitlySet.add("department");
+    }
+
+    public void setRoom(String room) {
+        this.room = room;
+        explicitlySet.add("room");
+    }
+
+    public void setBed(String bed) {
+        this.bed = bed;
+        explicitlySet.add("bed");
+    }
+
+    public void setChiefComplaint(String chiefComplaint) {
+        this.chiefComplaint = chiefComplaint;
+        explicitlySet.add("chiefComplaint");
+    }
+
+    public void setPriority(EncounterPriority priority) {
+        this.priority = priority;
+        explicitlySet.add("priority");
+    }
+
+    public void setVisitType(String visitType) {
+        this.visitType = visitType;
+        explicitlySet.add("visitType");
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
+        explicitlySet.add("notes");
+    }
 
     @Data
     @NoArgsConstructor

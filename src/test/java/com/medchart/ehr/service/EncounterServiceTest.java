@@ -4,6 +4,7 @@ import com.medchart.ehr.domain.encounter.Encounter;
 import com.medchart.ehr.domain.encounter.EncounterStatus;
 import com.medchart.ehr.domain.encounter.EncounterType;
 import com.medchart.ehr.domain.patient.Patient;
+import com.medchart.ehr.domain.provider.Provider;
 import com.medchart.ehr.dto.EncounterDTO;
 import com.medchart.ehr.mapper.EncounterMapper;
 import com.medchart.ehr.repository.EncounterRepository;
@@ -125,6 +126,34 @@ class EncounterServiceTest {
         assertEquals("dr.alice", enc.getCreatedBy());
         assertSame(patient, enc.getPatient());
         assertEquals("original notes", enc.getNotes());
+    }
+
+    @Test
+    void updateClearsExplicitNullButKeepsOmittedFields() {
+        Encounter enc = stored(EncounterStatus.SCHEDULED);
+        enc.setRoom("12B");
+        enc.setBed("2");
+        EncounterDTO request = new EncounterDTO();
+        request.setRoom(null);
+
+        service.update(42L, request);
+
+        assertNull(enc.getRoom());
+        assertEquals("2", enc.getBed());
+        assertEquals("original notes", enc.getNotes());
+        assertEquals(EncounterType.OUTPATIENT, enc.getEncounterType());
+    }
+
+    @Test
+    void updateClearsAttendingProviderWhenExplicitlyNull() {
+        Encounter enc = stored(EncounterStatus.SCHEDULED);
+        enc.setAttendingProvider(Provider.builder().id(5L).build());
+        EncounterDTO request = new EncounterDTO();
+        request.setAttendingProvider(null);
+
+        service.update(42L, request);
+
+        assertNull(enc.getAttendingProvider());
     }
 
     @Test
