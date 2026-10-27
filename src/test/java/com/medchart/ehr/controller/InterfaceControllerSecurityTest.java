@@ -76,6 +76,23 @@ class InterfaceControllerSecurityTest {
     }
 
     @Test
+    void disabledOrLockedAdminIsTreatedAsAnonymous() throws Exception {
+        User disabled = user("disabled-admin", User.Role.ADMIN);
+        disabled.setEnabled(false);
+        stubToken("disabled-token", disabled);
+        User locked = user("locked-admin", User.Role.ADMIN);
+        locked.setAccountNonLocked(false);
+        stubToken("locked-token", locked);
+        for (String token : new String[] {"disabled-token", "locked-token"}) {
+            for (RequestBuilder request : allRoutes(token)) {
+                mockMvc.perform(request).andExpect(status().isUnauthorized());
+            }
+        }
+        verify(hrPtoSyncJob, never()).runForDate(anyString());
+        verify(interfaceContractCheck, never()).run(anyString());
+    }
+
+    @Test
     void invalidTokenIsTreatedAsAnonymous() throws Exception {
         mockMvc.perform(post("/interfaces/hr-pto-sync/run").header("Authorization", "Bearer forged"))
                 .andExpect(status().isUnauthorized());
@@ -109,7 +126,7 @@ class InterfaceControllerSecurityTest {
 
     @Test
     void malformedExportDateIsRejectedWith400() throws Exception {
-        String[] bad = {"../x", "2026093", "202609300", "2026-09-30", "20260930/../../etc", "abcdefgh"};
+        String[] bad = {"../x", "2026093", "202609300", "2026-09-30", "20260930/../../etc", "abcdefgh", "${bad}"};
         for (String value : bad) {
             mockMvc.perform(post("/interfaces/hr-pto-sync/run").param("exportDate", value)
                             .header("Authorization", "Bearer " + ADMIN_TOKEN))

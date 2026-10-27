@@ -67,7 +67,7 @@ public class HrPtoSyncJob implements CommandLineRunner {
                 if (eq > 0) {
                     date = a.substring(eq + 1);
                 }
-                runForDate(hrExportReader.resolveExportDate(date));
+                runForDate(hrExportReader.resolveConfiguredExportDate(date));
             }
         }
     }

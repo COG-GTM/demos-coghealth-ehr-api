@@ -33,9 +33,16 @@ class HrExportReaderTest {
 
     @Test
     void resolveExportDateRejectsAnythingButYyyyMmDd() {
-        for (String bad : new String[] {"../x", "2026-09-30", "2026093", "202609300", "20260930/..", "abcdefgh"}) {
+        for (String bad : new String[] {"../x", "2026-09-30", "2026093", "202609300", "20260930/..", "abcdefgh", "${bad}"}) {
             assertThrows(IllegalArgumentException.class, () -> reader.resolveExportDate(bad), bad);
         }
+    }
+
+    @Test
+    void resolveConfiguredExportDateTreatsUnresolvedPlaceholderAsLatest() {
+        assertEquals(reader.latestExportDate(), reader.resolveConfiguredExportDate("${hr.export.date}"));
+        assertEquals("20260930", reader.resolveConfiguredExportDate("20260930"));
+        assertThrows(IllegalArgumentException.class, () -> reader.resolveConfiguredExportDate("../x"));
     }
 
     @Test

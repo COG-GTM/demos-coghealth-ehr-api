@@ -34,7 +34,7 @@ class HrPtoInterfaceContractTest {
     @BeforeAll
     void runContractCheck() {
         HrExportReader reader = new HrExportReader();
-        exportDate = reader.resolveExportDate(System.getProperty(HrExportReader.DATE_PROPERTY));
+        exportDate = reader.resolveConfiguredExportDate(System.getProperty(HrExportReader.DATE_PROPERTY));
         InterfaceContractCheck check = new InterfaceContractCheck(reader, new DepartmentMapping(),
                 new FhirR4ExportService(), new FhirR4ContractValidator());
         report = check.run(exportDate);

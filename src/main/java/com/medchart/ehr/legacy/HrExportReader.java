@@ -68,8 +68,13 @@ public class HrExportReader {
         return dates.get(dates.size() - 1);
     }
 
+    /** Like {@link #resolveExportDate} but treats an unresolved build placeholder such as {@code ${hr.export.date}} as unset. */
+    public String resolveConfiguredExportDate(String configured) {
+        return resolveExportDate(configured != null && configured.trim().startsWith("${") ? null : configured);
+    }
+
     public String resolveExportDate(String requested) {
-        if (requested == null || requested.trim().length() == 0 || requested.startsWith("${")
+        if (requested == null || requested.trim().length() == 0
                 || "latest".equalsIgnoreCase(requested.trim())) {
             return latestExportDate();
         }
