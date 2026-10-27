@@ -1,10 +1,13 @@
 package com.medchart.ehr.controller;
 
-import com.medchart.ehr.domain.provider.Provider;
+import com.medchart.ehr.dto.ProviderCreateRequest;
+import com.medchart.ehr.dto.ProviderResponse;
+import com.medchart.ehr.dto.ProviderUpdateRequest;
 import com.medchart.ehr.service.ProviderService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.util.List;
 
 @RestController
@@ -18,7 +21,7 @@ public class ProviderController {
     }
 
     @GetMapping
-    public List<Provider> getAll(@RequestParam(required = false) Boolean active) {
+    public List<ProviderResponse> getAll(@RequestParam(required = false) Boolean active) {
         if (Boolean.TRUE.equals(active)) {
             return providerService.findActive();
         }
@@ -26,26 +29,26 @@ public class ProviderController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Provider> getById(@PathVariable Long id) {
+    public ResponseEntity<ProviderResponse> getById(@PathVariable Long id) {
         return providerService.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/npi/{npi}")
-    public ResponseEntity<Provider> getByNpi(@PathVariable String npi) {
+    public ResponseEntity<ProviderResponse> getByNpi(@PathVariable String npi) {
         return providerService.findByNpi(npi)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/department/{department}")
-    public List<Provider> getByDepartment(@PathVariable String department) {
+    public List<ProviderResponse> getByDepartment(@PathVariable String department) {
         return providerService.findByDepartment(department);
     }
 
     @GetMapping("/specialty/{specialty}")
-    public List<Provider> getBySpecialty(@PathVariable String specialty) {
+    public List<ProviderResponse> getBySpecialty(@PathVariable String specialty) {
         return providerService.findBySpecialty(specialty);
     }
 
@@ -60,22 +63,20 @@ public class ProviderController {
     }
 
     @GetMapping("/search")
-    public List<Provider> search(@RequestParam String lastName) {
+    public List<ProviderResponse> search(@RequestParam String lastName) {
         return providerService.search(lastName);
     }
 
     @PostMapping
-    public Provider create(@RequestBody Provider provider) {
-        return providerService.save(provider);
+    public ProviderResponse create(@Valid @RequestBody ProviderCreateRequest request) {
+        return providerService.create(request);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Provider> update(@PathVariable Long id, @RequestBody Provider provider) {
-        return providerService.findById(id)
-                .map(existing -> {
-                    provider.setId(id);
-                    return ResponseEntity.ok(providerService.save(provider));
-                })
+    public ResponseEntity<ProviderResponse> update(@PathVariable Long id,
+                                                   @Valid @RequestBody ProviderUpdateRequest request) {
+        return providerService.update(id, request)
+                .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
