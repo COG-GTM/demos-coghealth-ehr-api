@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.time.LocalDateTime;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -20,7 +19,12 @@ class JwtTokenProviderTest {
     }
 
     private User user(boolean enabled, boolean nonLocked) {
+        return user(1L, enabled, nonLocked);
+    }
+
+    private User user(Long id, boolean enabled, boolean nonLocked) {
         return User.builder()
+                .id(id)
                 .username("clinic.admin")
                 .password("unused")
                 .roles(Set.of(User.Role.ADMIN))
@@ -54,19 +58,17 @@ class JwtTokenProviderTest {
     }
 
     @Test
-    void rejectsTokenIssuedBeforeAccountWithSameUsernameWasCreated() {
-        String token = tokenFor(user(true, true));
-        User replacement = user(true, true);
-        replacement.setCreatedAt(LocalDateTime.now().plusMinutes(1));
+    void rejectsTokenIssuedForEarlierAccountWithSameUsername() {
+        String token = tokenFor(user(1L, true, true));
+        User replacement = user(2L, true, true);
 
         assertThat(provider.validateToken(token, replacement)).isFalse();
     }
 
     @Test
-    void acceptsTokenIssuedInSameSecondAccountWasCreated() {
-        User user = user(true, true);
-        user.setCreatedAt(LocalDateTime.now());
+    void rejectsTokenWithoutAccountId() {
+        String token = provider.generateTokenFromUsername("clinic.admin");
 
-        assertThat(provider.validateToken(tokenFor(user), user)).isTrue();
+        assertThat(provider.validateToken(token, user(true, true))).isFalse();
     }
 }

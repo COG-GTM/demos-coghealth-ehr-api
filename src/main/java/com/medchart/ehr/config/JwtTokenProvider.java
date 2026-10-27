@@ -9,8 +9,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
-import java.time.ZoneId;
-import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -18,6 +16,8 @@ import java.util.function.Function;
 
 @Component
 public class JwtTokenProvider {
+
+    static final String USER_ID_CLAIM = "uid";
 
     @Value("${medchart.security.jwt.secret}")
     private String jwtSecret;
@@ -34,6 +34,9 @@ public class JwtTokenProvider {
         
         Map<String, Object> claims = new HashMap<>();
         claims.put("roles", userPrincipal.getAuthorities());
+        if (userPrincipal instanceof User && ((User) userPrincipal).getId() != null) {
+            claims.put(USER_ID_CLAIM, ((User) userPrincipal).getId());
+        }
         
         return createToken(claims, userPrincipal.getUsername());
     }
@@ -83,19 +86,18 @@ public class JwtTokenProvider {
                 && userDetails.isEnabled()
                 && userDetails.isAccountNonLocked()
                 && !isTokenExpired(token)
-                && !issuedBeforeAccountCreated(token, userDetails);
+                && issuedForSameAccount(token, userDetails);
     }
 
-    // A token minted for an earlier account with the same username must not
-    // authenticate a newer account that reused it.
-    private boolean issuedBeforeAccountCreated(String token, UserDetails userDetails) {
-        if (!(userDetails instanceof User) || ((User) userDetails).getCreatedAt() == null) {
-            return false;
+    // Binds the token to the account id, so a token minted for a retired account
+    // cannot authenticate a newer account that reused its username.
+    private boolean issuedForSameAccount(String token, UserDetails userDetails) {
+        if (!(userDetails instanceof User) || ((User) userDetails).getId() == null) {
+            return true;
         }
-        Date issuedAt = getClaimFromToken(token, Claims::getIssuedAt);
-        Date created = Date.from(((User) userDetails).getCreatedAt()
-                .truncatedTo(ChronoUnit.SECONDS).atZone(ZoneId.systemDefault()).toInstant());
-        return issuedAt == null || issuedAt.before(created);
+        Object tokenUserId = getClaimFromToken(token, claims -> claims.get(USER_ID_CLAIM));
+        return tokenUserId instanceof Number
+                && ((Number) tokenUserId).longValue() == ((User) userDetails).getId();
     }
 
     private Boolean isTokenExpired(String token) {

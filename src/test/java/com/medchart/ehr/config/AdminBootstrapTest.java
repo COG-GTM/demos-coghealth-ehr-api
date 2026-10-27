@@ -15,6 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -99,6 +100,19 @@ class AdminBootstrapTest {
         assertThatThrownBy(() -> bootstrap("root", STRONG_PASSWORD, " ").run(null))
                 .isInstanceOf(IllegalStateException.class);
         verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void releasesIdentityStillHeldByRetiredSeedAccount() {
+        bootstrap("admin", STRONG_PASSWORD, "admin@medchart.com").run(null);
+
+        InOrder order = inOrder(jdbcTemplate, userRepository);
+        order.verify(jdbcTemplate).update(startsWith("UPDATE users SET username"), any(String.class),
+                eq(AdminBootstrap.RETIRED_SEED_PASSWORD), eq("admin"));
+        order.verify(jdbcTemplate).update(startsWith("UPDATE users SET email"), any(String.class),
+                eq(AdminBootstrap.RETIRED_SEED_PASSWORD), eq("admin@medchart.com"));
+        order.verify(userRepository).existsByUsername("admin");
+        order.verify(userRepository).save(any());
     }
 
     @Test

@@ -13,6 +13,7 @@ import org.springframework.transaction.support.TransactionOperations;
 import org.springframework.util.StringUtils;
 
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * Creates the first administrator from BOOTSTRAP_ADMIN_* settings. Does nothing
@@ -26,6 +27,7 @@ public class AdminBootstrap implements ApplicationRunner {
 
     static final int MIN_PASSWORD_LENGTH = 12;
     static final long BOOTSTRAP_LOCK_KEY = 0x4D43_4144_4D49_4EL;
+    static final String RETIRED_SEED_PASSWORD = "{retired}seeded-admin-credential";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -76,6 +78,7 @@ public class AdminBootstrap implements ApplicationRunner {
             throw new IllegalStateException("Admin bootstrap password must be at least "
                     + MIN_PASSWORD_LENGTH + " characters and differ from the username");
         }
+        releaseRetiredSeedIdentity();
         if (userRepository.existsByUsername(username) || userRepository.existsByEmail(email)) {
             throw new IllegalStateException(
                     "Admin bootstrap refused: username or email already belongs to another account");
@@ -96,5 +99,17 @@ public class AdminBootstrap implements ApplicationRunner {
 
         log.info("Admin bootstrap created administrator '{}'. "
                 + "Remove BOOTSTRAP_ADMIN_PASSWORD from the environment.", username);
+    }
+
+    // V5 archives the disabled seed account's username/email only when its archival
+    // values are free; move any identity it still holds to a unique archival value.
+    private void releaseRetiredSeedIdentity() {
+        String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+        jdbcTemplate.update("UPDATE users SET username = 'retired-seed-admin-' || id || '-' || ? "
+                + "WHERE password = ? AND enabled = FALSE AND username = ?",
+                suffix, RETIRED_SEED_PASSWORD, username);
+        jdbcTemplate.update("UPDATE users SET email = 'retired-seed-admin-' || id || '-' || ? || '@invalid' "
+                + "WHERE password = ? AND enabled = FALSE AND email = ?",
+                suffix, RETIRED_SEED_PASSWORD, email);
     }
 }
