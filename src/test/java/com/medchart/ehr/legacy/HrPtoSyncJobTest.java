@@ -221,7 +221,17 @@ class HrPtoSyncJobTest {
             assertTrue(String.valueOf(errors.get(1).get("message")).startsWith("AR – Invalid employee id"));
             String queue = new String(Files.readAllBytes(outDir.resolve(HrPtoSyncJob.ERROR_QUEUE_FILE)), StandardCharsets.UTF_8);
             assertTrue(queue.contains("|E2\\F\\00002|AR – "), queue);
+            assertTrue(queue.startsWith("v2|"), queue);
             assertEquals(Collections.singletonMap("CC-200-5410", 2), job.errorCountsByCostCenter());
+
+            Files.write(outDir.resolve(HrPtoSyncJob.ERROR_QUEUE_FILE),
+                    ("2026-10-01 02:00:00|20261001|E9\\F\\1|AE – Unknown department for cost center CC-9\\S\\9\n" + queue)
+                            .getBytes(StandardCharsets.UTF_8));
+            List<Map<String, Object>> mixed = job.readErrors();
+            assertEquals(3, mixed.size());
+            assertEquals("E9\\F\\1", mixed.get(0).get("employeeId"));
+            assertEquals("AE – Unknown department for cost center CC-9\\S\\9", mixed.get(0).get("message"));
+            assertEquals("E2|00002", mixed.get(2).get("employeeId"));
         } finally {
             System.clearProperty(HrExportReader.DIR_PROPERTY);
             System.clearProperty(HrPtoSyncJob.OUT_DIR_PROPERTY);

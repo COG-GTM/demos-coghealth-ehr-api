@@ -32,6 +32,8 @@ public class HrPtoSyncJob implements CommandLineRunner {
     public static final String OUT_DIR_PROPERTY = "hr.pto.sync.out-dir";
     public static final String DEFAULT_OUT_DIR = "target/interfaces/ie-prod";
     public static final String ERROR_QUEUE_FILE = "error-queue.log";
+    /** Marks error-queue lines whose employee id and message fields are HL7-escaped; older lines are raw. */
+    static final String ERROR_QUEUE_ESCAPED_PREFIX = "v2|";
     public static final String RUNS_FILE = "runs.log";
     public static final String OUTBOUND_DIR = "outbound";
     public static final String RUN_ONCE_ARG = "--hr-pto-sync";
@@ -334,7 +336,8 @@ public class HrPtoSyncJob implements CommandLineRunner {
         dir.mkdirs();
         File f = new File(dir, ERROR_QUEUE_FILE);
         try (PrintWriter w = new PrintWriter(new FileWriter(f, true))) {
-            w.println(LocalDateTime.now().format(LOG_TS) + "|" + exportDate + "|" + hl7Escape(employeeId) + "|"
+            w.println(ERROR_QUEUE_ESCAPED_PREFIX + LocalDateTime.now().format(LOG_TS) + "|" + exportDate + "|"
+                    + hl7Escape(employeeId) + "|"
                     + hl7Escape(message));
         } catch (IOException e) {
             log.error("Cannot append to error queue " + f, e);
@@ -377,6 +380,10 @@ public class HrPtoSyncJob implements CommandLineRunner {
         try (BufferedReader br = new BufferedReader(new FileReader(f))) {
             String line;
             while ((line = br.readLine()) != null) {
+                boolean escaped = line.startsWith(ERROR_QUEUE_ESCAPED_PREFIX);
+                if (escaped) {
+                    line = line.substring(ERROR_QUEUE_ESCAPED_PREFIX.length());
+                }
                 String[] p = line.split("\\|", 4);
                 if (p.length < 4) {
                     continue;
@@ -384,8 +391,8 @@ public class HrPtoSyncJob implements CommandLineRunner {
                 Map<String, Object> e = new LinkedHashMap<String, Object>();
                 e.put("timestamp", p[0]);
                 e.put("exportDate", p[1]);
-                String message = hl7Unescape(p[3]);
-                e.put("employeeId", hl7Unescape(p[2]));
+                String message = escaped ? hl7Unescape(p[3]) : p[3];
+                e.put("employeeId", escaped ? hl7Unescape(p[2]) : p[2]);
                 e.put("code", message.startsWith("AE") ? "AE" : "AR");
                 e.put("message", message);
                 out.add(e);
