@@ -1,6 +1,9 @@
 package com.medchart.ehr.dto;
 
+import com.medchart.ehr.domain.clinical.Diagnosis;
+import com.medchart.ehr.domain.encounter.DiagnosisRole;
 import com.medchart.ehr.domain.encounter.Encounter;
+import com.medchart.ehr.domain.encounter.EncounterDiagnosis;
 import com.medchart.ehr.domain.encounter.EncounterPriority;
 import com.medchart.ehr.domain.encounter.EncounterStatus;
 import com.medchart.ehr.domain.encounter.EncounterType;
@@ -9,6 +12,9 @@ import com.medchart.ehr.domain.provider.Provider;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Data
 @NoArgsConstructor
@@ -30,6 +36,7 @@ public class EncounterResponseDTO {
     private String chiefComplaint;
     private EncounterPriority priority;
     private String visitType;
+    private List<DiagnosisSummary> diagnoses;
     private String notes;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -57,6 +64,19 @@ public class EncounterResponseDTO {
         private String specialty;
     }
 
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class DiagnosisSummary {
+        private Long id;
+        private String icd10Code;
+        private String description;
+        private DiagnosisRole role;
+        private Integer rank;
+        private Boolean primaryDiagnosis;
+    }
+
     public static EncounterResponseDTO from(Encounter encounter) {
         return EncounterResponseDTO.builder()
                 .id(encounter.getId())
@@ -74,6 +94,7 @@ public class EncounterResponseDTO {
                 .chiefComplaint(encounter.getChiefComplaint())
                 .priority(encounter.getPriority())
                 .visitType(encounter.getVisitType())
+                .diagnoses(toDiagnosisSummaries(encounter.getDiagnoses()))
                 .notes(encounter.getNotes())
                 .createdAt(encounter.getCreatedAt())
                 .updatedAt(encounter.getUpdatedAt())
@@ -102,6 +123,27 @@ public class EncounterResponseDTO {
                 .lastName(provider.getLastName())
                 .credentials(provider.getCredentials())
                 .specialty(provider.getSpecialty())
+                .build();
+    }
+
+    private static List<DiagnosisSummary> toDiagnosisSummaries(List<EncounterDiagnosis> diagnoses) {
+        if (diagnoses == null) {
+            return Collections.emptyList();
+        }
+        return diagnoses.stream()
+                .map(EncounterResponseDTO::toDiagnosisSummary)
+                .collect(Collectors.toList());
+    }
+
+    private static DiagnosisSummary toDiagnosisSummary(EncounterDiagnosis encounterDiagnosis) {
+        Diagnosis diagnosis = encounterDiagnosis.getDiagnosis();
+        return DiagnosisSummary.builder()
+                .id(encounterDiagnosis.getId())
+                .icd10Code(diagnosis != null ? diagnosis.getIcd10Code() : null)
+                .description(diagnosis != null ? diagnosis.getDescription() : null)
+                .role(encounterDiagnosis.getRole())
+                .rank(encounterDiagnosis.getRank())
+                .primaryDiagnosis(encounterDiagnosis.getPrimaryDiagnosis())
                 .build();
     }
 }

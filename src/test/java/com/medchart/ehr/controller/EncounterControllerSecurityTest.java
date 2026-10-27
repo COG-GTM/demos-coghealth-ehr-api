@@ -3,7 +3,10 @@ package com.medchart.ehr.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.medchart.ehr.config.JwtTokenProvider;
 import com.medchart.ehr.config.SecurityConfig;
+import com.medchart.ehr.domain.clinical.Diagnosis;
+import com.medchart.ehr.domain.encounter.DiagnosisRole;
 import com.medchart.ehr.domain.encounter.Encounter;
+import com.medchart.ehr.domain.encounter.EncounterDiagnosis;
 import com.medchart.ehr.domain.encounter.EncounterStatus;
 import com.medchart.ehr.domain.encounter.EncounterType;
 import com.medchart.ehr.domain.patient.Patient;
@@ -89,6 +92,8 @@ class EncounterControllerSecurityTest {
                 .andExpect(jsonPath("$.encounterNumber").value("ENC-2026-000101"))
                 .andExpect(jsonPath("$.patient.id").value(10))
                 .andExpect(jsonPath("$.patient.mrn").value("MRN0001"))
+                .andExpect(jsonPath("$.diagnoses[0].icd10Code").value("E11.9"))
+                .andExpect(jsonPath("$.diagnoses[0].primaryDiagnosis").value(true))
                 .andExpect(jsonPath("$.attendingProvider.lastName").value("House"))
                 .andReturn().getResponse().getContentAsString();
 
@@ -141,7 +146,7 @@ class EncounterControllerSecurityTest {
 
     private static Encounter sampleEncounter() {
         Provider provider = Provider.builder().id(20L).npi("1234567890").firstName("Greg").lastName("House").build();
-        return Encounter.builder()
+        Encounter encounter = Encounter.builder()
                 .id(1L)
                 .encounterNumber("ENC-2026-000101")
                 .patient(samplePatient())
@@ -150,5 +155,18 @@ class EncounterControllerSecurityTest {
                 .status(EncounterStatus.SCHEDULED)
                 .encounterDateTime(LocalDateTime.of(2026, 10, 27, 9, 0))
                 .build();
+        Diagnosis diagnosis = Diagnosis.builder()
+                .id(30L)
+                .patient(samplePatient())
+                .icd10Code("E11.9")
+                .description("Type 2 diabetes mellitus without complications")
+                .build();
+        encounter.addDiagnosis(EncounterDiagnosis.builder()
+                .id(40L)
+                .diagnosis(diagnosis)
+                .role(DiagnosisRole.ADMISSION)
+                .primaryDiagnosis(true)
+                .build());
+        return encounter;
     }
 }
