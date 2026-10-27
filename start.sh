@@ -1,6 +1,11 @@
 #!/bin/bash
 
 echo "=== CogHealth EHR API ==="
+
+if [ -z "$JWT_SECRET" ]; then
+  export JWT_SECRET="$(openssl rand -base64 64 | tr -d '\n')"
+  echo "JWT_SECRET not set; generated a random one for this run (tokens reset on restart)."
+fi
 echo ""
 echo "Select database:"
 echo "  1) Local PostgreSQL (Docker) - default"

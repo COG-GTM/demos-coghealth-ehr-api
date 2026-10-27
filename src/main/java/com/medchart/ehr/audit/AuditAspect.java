@@ -1,11 +1,15 @@
 package com.medchart.ehr.audit;
 
+import com.medchart.ehr.domain.auth.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -62,12 +66,28 @@ public class AuditAspect {
         return null;
     }
 
+    private Authentication currentAuthentication() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {
+            return null;
+        }
+        return auth;
+    }
+
     private String getCurrentUserId() {
-        return "system";
+        Authentication auth = currentAuthentication();
+        if (auth == null) {
+            return "system";
+        }
+        if (auth.getPrincipal() instanceof User && ((User) auth.getPrincipal()).getId() != null) {
+            return String.valueOf(((User) auth.getPrincipal()).getId());
+        }
+        return auth.getName();
     }
 
     private String getCurrentUserName() {
-        return "System User";
+        Authentication auth = currentAuthentication();
+        return auth == null ? "System User" : auth.getName();
     }
 
     private String getClientIpAddress() {
