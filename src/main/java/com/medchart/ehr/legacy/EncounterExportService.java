@@ -1,5 +1,7 @@
 package com.medchart.ehr.legacy;
 
+import com.medchart.ehr.audit.AuditAccess;
+import com.medchart.ehr.audit.AuditAction;
 import com.medchart.ehr.domain.encounter.Encounter;
 import com.medchart.ehr.domain.patient.Patient;
 import lombok.extern.slf4j.Slf4j;
@@ -83,6 +85,7 @@ public class EncounterExportService {
         return export.toString().getBytes();
     }
 
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Patient", description = "Bulk patient export to file")
     public void exportAllPatientsToFile(String filePath) {
         Query query = entityManager.createNativeQuery(
             "SELECT id, mrn, first_name, last_name, date_of_birth, " +
