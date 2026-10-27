@@ -1,6 +1,8 @@
 package com.medchart.ehr.config;
 
+import io.jsonwebtoken.JwtException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -45,7 +47,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
-        } catch (Exception ex) {
+        } catch (JwtException | IllegalArgumentException | IllegalStateException | AuthenticationException ex) {
             SecurityContextHolder.clearContext();
             logger.warn("Could not set user authentication in security context: " + ex.getClass().getSimpleName());
         }
