@@ -1,5 +1,6 @@
 package com.medchart.ehr.domain.encounter;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.medchart.ehr.domain.patient.Patient;
 import com.medchart.ehr.domain.provider.Provider;
 import lombok.*;
@@ -18,6 +19,8 @@ import java.util.List;
     @Index(name = "idx_encounter_date", columnList = "encounterDateTime"),
     @Index(name = "idx_encounter_status", columnList = "status")
 })
+@JsonIgnoreProperties(value = {"id", "encounterNumber", "patient", "attendingProvider", "status", "diagnoses",
+        "createdAt", "updatedAt", "createdBy", "version"}, allowGetters = true)
 @Getter
 @Setter
 @NoArgsConstructor
