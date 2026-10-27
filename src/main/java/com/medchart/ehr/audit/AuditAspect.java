@@ -10,6 +10,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionException;
+import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -62,9 +63,7 @@ public class AuditAspect {
             }
             return proceedWithinAuditTransaction(joinPoint, eventBuilder);
         } catch (InvocationFailure failure) {
-            Throwable cause = failure.getCause();
-            recordFailure(eventBuilder, cause);
-            throw cause;
+            throw recordFailure(eventBuilder, failure.getCause());
         }
     }
 
@@ -77,6 +76,7 @@ public class AuditAspect {
         try {
             return transactionTemplate.execute(status -> {
                 Object result = proceed(joinPoint);
+                flushInvocationWrites(status);
                 eventBuilder.success(true);
                 auditService.record(eventBuilder.build());
                 return result;
@@ -84,8 +84,7 @@ public class AuditAspect {
         } catch (TransactionException e) {
             AuditPersistenceException auditFailure =
                     new AuditPersistenceException("Audited transaction could not be committed", e);
-            recordFailure(eventBuilder, auditFailure);
-            throw auditFailure;
+            throw recordFailure(eventBuilder, auditFailure);
         }
     }
 
@@ -124,13 +123,33 @@ public class AuditAspect {
         }
     }
 
-    private void recordFailure(AuditEvent.AuditEventBuilder eventBuilder, Throwable cause) {
+    /**
+     * Records a failed call and returns the exception to throw: the original failure, or the audit
+     * failure (with the original suppressed) when the failed call could not be audited either.
+     */
+    private Throwable recordFailure(AuditEvent.AuditEventBuilder eventBuilder, Throwable cause) {
         eventBuilder.success(false);
         eventBuilder.errorMessage(AuditService.truncate(cause.getMessage(), AuditService.ERROR_MESSAGE_MAX_LENGTH));
         try {
             recordInNewTransaction(eventBuilder.build());
+            return cause;
         } catch (AuditPersistenceException auditFailure) {
-            cause.addSuppressed(auditFailure);
+            if (auditFailure != cause) {
+                auditFailure.addSuppressed(cause);
+            }
+            return auditFailure;
+        }
+    }
+
+    /**
+     * Flushes the audited call's pending writes before the audit insert, so a failing domain write is
+     * reported as the call's own failure rather than as an audit outage.
+     */
+    private static void flushInvocationWrites(TransactionStatus status) {
+        try {
+            status.flush();
+        } catch (RuntimeException e) {
+            throw new InvocationFailure(e);
         }
     }
 
