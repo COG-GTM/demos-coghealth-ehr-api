@@ -2,6 +2,8 @@ package com.medchart.ehr.controller;
 
 import com.medchart.ehr.domain.encounter.Encounter;
 import com.medchart.ehr.domain.encounter.EncounterStatus;
+import com.medchart.ehr.dto.EncounterCreateRequest;
+import com.medchart.ehr.dto.EncounterUpdateRequest;
 import com.medchart.ehr.service.EncounterService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -9,6 +11,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -71,17 +74,14 @@ public class EncounterController {
     }
 
     @PostMapping
-    public Encounter create(@RequestBody Encounter encounter) {
-        return encounterService.create(encounter);
+    public Encounter create(@Valid @RequestBody EncounterCreateRequest request) {
+        return encounterService.create(request);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Encounter> update(@PathVariable Long id, @RequestBody Encounter encounter) {
-        return encounterService.findById(id)
-                .map(existing -> {
-                    encounter.setId(id);
-                    return ResponseEntity.ok(encounterService.update(encounter));
-                })
+    public ResponseEntity<Encounter> update(@PathVariable Long id, @Valid @RequestBody EncounterUpdateRequest request) {
+        return encounterService.update(id, request)
+                .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 

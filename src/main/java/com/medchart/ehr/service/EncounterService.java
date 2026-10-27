@@ -2,11 +2,21 @@ package com.medchart.ehr.service;
 
 import com.medchart.ehr.domain.encounter.Encounter;
 import com.medchart.ehr.domain.encounter.EncounterStatus;
+import com.medchart.ehr.domain.patient.Patient;
+import com.medchart.ehr.domain.provider.Provider;
+import com.medchart.ehr.dto.EncounterCreateRequest;
+import com.medchart.ehr.dto.EncounterUpdateRequest;
 import com.medchart.ehr.repository.EncounterRepository;
+import com.medchart.ehr.repository.PatientRepository;
+import com.medchart.ehr.repository.ProviderRepository;
+import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,10 +35,16 @@ public class EncounterService {
     private static final DateTimeFormatter ENC_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy");
     
     private final EncounterRepository encounterRepository;
+    private final PatientRepository patientRepository;
+    private final ProviderRepository providerRepository;
     private final AtomicLong encounterSequence = new AtomicLong(100);
 
-    public EncounterService(EncounterRepository encounterRepository) {
+    public EncounterService(EncounterRepository encounterRepository,
+                            PatientRepository patientRepository,
+                            ProviderRepository providerRepository) {
         this.encounterRepository = encounterRepository;
+        this.patientRepository = patientRepository;
+        this.providerRepository = providerRepository;
     }
 
     @Transactional(readOnly = true)
@@ -78,19 +94,103 @@ public class EncounterService {
         return encounterRepository.findByStatus(status);
     }
 
-    public Encounter create(Encounter encounter) {
+    public Encounter create(EncounterCreateRequest request) {
+        Patient patient = patientRepository.findById(request.getPatientId())
+                .orElseThrow(() -> new InvalidEncounterRequestException("Unknown patientId"));
         String encNumber = generateEncounterNumber();
-        encounter.setEncounterNumber(encNumber);
-        encounter.setStatus(EncounterStatus.SCHEDULED);
-        
+
+        Encounter encounter = Encounter.builder()
+                .encounterNumber(encNumber)
+                .status(EncounterStatus.SCHEDULED)
+                .patient(patient)
+                .attendingProvider(resolveProvider(request.getAttendingProviderId()))
+                .encounterType(request.getEncounterType())
+                .encounterDateTime(request.getEncounterDateTime())
+                .admitDateTime(request.getAdmitDateTime())
+                .dischargeDateTime(request.getDischargeDateTime())
+                .department(request.getDepartment())
+                .room(request.getRoom())
+                .bed(request.getBed())
+                .chiefComplaint(request.getChiefComplaint())
+                .priority(request.getPriority())
+                .visitType(request.getVisitType())
+                .notes(request.getNotes())
+                .createdBy(currentUsername())
+                .build();
+
         Encounter saved = encounterRepository.save(encounter);
-        log.info("Created encounter {} for patient {}", encNumber, encounter.getPatient().getMrn());
+        log.info("Created encounter {} for patient id {}", encNumber, patient.getId());
         return saved;
     }
 
-    public Encounter update(Encounter encounter) {
-        log.info("Updating encounter {}", encounter.getEncounterNumber());
-        return encounterRepository.save(encounter);
+    public Optional<Encounter> update(Long id, EncounterUpdateRequest request) {
+        return encounterRepository.findById(id).map(existing -> {
+            applyUpdate(existing, request);
+            log.info("Updating encounter {}", existing.getEncounterNumber());
+            return unproxyAssociations(encounterRepository.save(existing));
+        });
+    }
+
+    private Encounter unproxyAssociations(Encounter encounter) {
+        encounter.setPatient((Patient) Hibernate.unproxy(encounter.getPatient()));
+        encounter.setAttendingProvider((Provider) Hibernate.unproxy(encounter.getAttendingProvider()));
+        return encounter;
+    }
+
+    private void applyUpdate(Encounter encounter, EncounterUpdateRequest request) {
+        if (request.isProvided(EncounterUpdateRequest.ATTENDING_PROVIDER_ID)) {
+            encounter.setAttendingProvider(resolveProvider(request.getAttendingProviderId()));
+        }
+        if (request.isProvided(EncounterUpdateRequest.ENCOUNTER_TYPE)) {
+            encounter.setEncounterType(request.getEncounterType());
+        }
+        if (request.isProvided(EncounterUpdateRequest.ENCOUNTER_DATE_TIME)) {
+            encounter.setEncounterDateTime(request.getEncounterDateTime());
+        }
+        if (request.isProvided(EncounterUpdateRequest.ADMIT_DATE_TIME)) {
+            encounter.setAdmitDateTime(request.getAdmitDateTime());
+        }
+        if (request.isProvided(EncounterUpdateRequest.DISCHARGE_DATE_TIME)) {
+            encounter.setDischargeDateTime(request.getDischargeDateTime());
+        }
+        if (request.isProvided(EncounterUpdateRequest.DEPARTMENT)) {
+            encounter.setDepartment(request.getDepartment());
+        }
+        if (request.isProvided(EncounterUpdateRequest.ROOM)) {
+            encounter.setRoom(request.getRoom());
+        }
+        if (request.isProvided(EncounterUpdateRequest.BED)) {
+            encounter.setBed(request.getBed());
+        }
+        if (request.isProvided(EncounterUpdateRequest.CHIEF_COMPLAINT)) {
+            encounter.setChiefComplaint(request.getChiefComplaint());
+        }
+        if (request.isProvided(EncounterUpdateRequest.PRIORITY)) {
+            encounter.setPriority(request.getPriority());
+        }
+        if (request.isProvided(EncounterUpdateRequest.VISIT_TYPE)) {
+            encounter.setVisitType(request.getVisitType());
+        }
+        if (request.isProvided(EncounterUpdateRequest.NOTES)) {
+            encounter.setNotes(request.getNotes());
+        }
+    }
+
+    private Provider resolveProvider(Long providerId) {
+        if (providerId == null) {
+            return null;
+        }
+        return providerRepository.findById(providerId)
+                .orElseThrow(() -> new InvalidEncounterRequestException("Unknown attendingProviderId"));
+    }
+
+    private String currentUsername() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
+            return null;
+        }
+        return authentication.getName();
     }
 
     public void checkIn(Long encounterId) {
