@@ -236,11 +236,7 @@ public class EncounterService {
     }
 
     private static String clientIp(HttpServletRequest request) {
-        String forwardedFor = request.getHeader("X-Forwarded-For");
-        String ip = forwardedFor != null && !forwardedFor.isEmpty()
-                ? forwardedFor.split(",")[0].trim()
-                : request.getRemoteAddr();
-        return truncate(ip, 50);
+        return truncate(request.getRemoteAddr(), 50);
     }
 
     private static String truncate(String value, int max) {
