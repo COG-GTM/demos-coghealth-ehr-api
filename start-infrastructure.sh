@@ -83,7 +83,17 @@ echo " ✅"
 
 # Wait for RabbitMQ
 echo -n "  RabbitMQ: "
-until docker exec coghealth-rabbitmq rabbitmq-diagnostics -q check_running > /dev/null 2>&1; do
+# Authenticate with the credentials Compose passed to the container. If they never
+# work (e.g. .env changed after the volume was created), stop instead of looping.
+tries=0
+until docker exec coghealth-rabbitmq sh -c 'rabbitmqctl -q authenticate_user "$RABBITMQ_DEFAULT_USER" "$RABBITMQ_DEFAULT_PASS"' > /dev/null 2>&1; do
+    tries=$((tries + 1))
+    if [ "$tries" -ge 40 ]; then
+        echo " ❌"
+        echo "RabbitMQ rejected the credentials from .env. If you changed .env after the"
+        echo "first run, reset the volumes with: $COMPOSE down -v"
+        exit 1
+    fi
     echo -n "."
     sleep 3
 done
