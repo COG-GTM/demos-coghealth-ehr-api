@@ -2,6 +2,15 @@
 
 echo "=== CogHealth EHR API ==="
 echo ""
+
+if [ -z "$JWT_SECRET" ]; then
+  # The API refuses to start without a 64+ byte signing key. An ephemeral key
+  # invalidates issued tokens on every restart; export JWT_SECRET to keep them.
+  JWT_SECRET="$(openssl rand -base64 64 | tr -d '\n')"
+  export JWT_SECRET
+  echo "JWT_SECRET not set; generated an ephemeral signing key for this run."
+  echo ""
+fi
 echo "Select database:"
 echo "  1) Local PostgreSQL (Docker) - default"
 echo "  2) Neon (cloud) - requires NEON_DB_* env vars"
