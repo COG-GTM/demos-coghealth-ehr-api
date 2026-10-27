@@ -95,7 +95,14 @@ docker compose down
 docker compose down -v
 ```
 
-Postgres and RabbitMQ only apply the `.env` passwords when their volumes are first created. If you change `.env` after that, run `docker compose down -v` so the new values take effect.
+Postgres, RabbitMQ, Elasticsearch (`ELASTIC_PASSWORD`) and Keycloak (`KEYCLOAK_ADMIN_PASSWORD` and the realm's
+`KC_REALM_ADMIN_PASSWORD` / `KC_DEMO_USER_PASSWORD` / `KC_API_CLIENT_SECRET`, imported only when the realm is first
+created) only apply the `.env` values when their volumes are first created. The old values stay valid until you reset,
+so after changing `.env` (or upgrading from the old committed passwords) run `docker compose down -v`.
+`start-infrastructure.sh` stops with this hint if Postgres or RabbitMQ reject the `.env` credentials.
+
+The API reads `REDIS_PASSWORD` and `RABBITMQ_USER` / `RABBITMQ_PASSWORD` from its own environment. `./start.sh` (local
+option) exports them from `.env`; if you run `mvn spring-boot:run` or `java -jar` directly, export them yourself.
 
 ## Service URLs
 

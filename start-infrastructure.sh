@@ -77,6 +77,15 @@ until docker exec coghealth-postgres pg_isready -U coghealth -d coghealth > /dev
     echo -n "."
     sleep 2
 done
+# Log in over TCP (the image trusts local socket connections) with the password from
+# .env. A volume created with older credentials keeps them, so stop instead of
+# leaving the stored password in place.
+if ! docker exec coghealth-postgres sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$(hostname -i | cut -d" " -f1)" -U coghealth -d coghealth -tAc "select 1"' > /dev/null 2>&1; then
+    echo " ❌"
+    echo "PostgreSQL rejected POSTGRES_PASSWORD from .env. The data volume was created with"
+    echo "different credentials (e.g. the old committed password); reset it with: $COMPOSE down -v"
+    exit 1
+fi
 echo " ✅"
 
 # Wait for Redis
