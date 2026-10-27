@@ -37,9 +37,13 @@ public class ReportGenerator {
         Query query = entityManager.createNativeQuery(sql);
         List<Object[]> results = query.getResultList();
         
-        String filename = "patient_roster_" + 
-            LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".csv";
-        String filePath = TEMP_DIR + File.separator + filename;
+        String filePath;
+        try {
+            filePath = Files.createTempFile("patient_roster_", ".csv").toString();
+        } catch (IOException e) {
+            log.error("Failed to create patient roster file", e);
+            throw new RuntimeException("Report generation failed", e);
+        }
         
         try (PrintWriter writer = new PrintWriter(new FileWriter(filePath))) {
             writer.println("ID,MRN,SSN,FirstName,LastName,DOB,PhoneHome,PhoneMobile,Email,Address,City,State,Zip,Insurance,MemberID");
