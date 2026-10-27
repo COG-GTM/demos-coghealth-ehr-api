@@ -5,6 +5,7 @@ import com.medchart.ehr.repository.UserRepository;
 import com.medchart.ehr.config.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -31,6 +32,7 @@ public class AuthController {
 
     /** Accounts created here get least privilege; clinical roles are granted via {@link UserAdminController}. */
     static final User.Role NEW_ACCOUNT_ROLE = User.Role.STAFF;
+    static final String ACCOUNT_CONFLICT_MESSAGE = "An account with these details already exists";
 
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
@@ -60,14 +62,9 @@ public class AuthController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignUpRequest signUpRequest,
                                           Authentication currentUser) {
-        if (userRepository.existsByUsername(signUpRequest.getUsername())) {
-            return ResponseEntity.badRequest()
-                .body("Username is already taken!");
-        }
-
-        if (userRepository.existsByEmail(signUpRequest.getEmail())) {
-            return ResponseEntity.badRequest()
-                .body("Email is already in use!");
+        if (userRepository.existsByUsername(signUpRequest.getUsername())
+                || userRepository.existsByEmail(signUpRequest.getEmail())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ACCOUNT_CONFLICT_MESSAGE);
         }
 
         // Create user's account

@@ -135,6 +135,24 @@ class UserRegistrationSecurityTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
+    void usernameAndEmailConflictsReturnTheSameGenericMessage() throws Exception {
+        when(userRepository.existsByUsername("mallory")).thenReturn(true);
+        String byUsername = mockMvc.perform(post(REGISTER).contentType(MediaType.APPLICATION_JSON).content(VALID_SIGNUP))
+            .andExpect(status().isConflict())
+            .andReturn().getResponse().getContentAsString();
+
+        when(userRepository.existsByUsername("mallory")).thenReturn(false);
+        when(userRepository.existsByEmail("mallory@example.com")).thenReturn(true);
+        String byEmail = mockMvc.perform(post(REGISTER).contentType(MediaType.APPLICATION_JSON).content(VALID_SIGNUP))
+            .andExpect(status().isConflict())
+            .andReturn().getResponse().getContentAsString();
+
+        assertThat(byUsername).isEqualTo(byEmail).isEqualTo(AuthController.ACCOUNT_CONFLICT_MESSAGE);
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
     void loginStaysPublic() throws Exception {
         User staff = user(2L, "bob", Set.of(User.Role.STAFF));
         staff.setPassword(passwordEncoder.encode("correct-horse-battery"));
