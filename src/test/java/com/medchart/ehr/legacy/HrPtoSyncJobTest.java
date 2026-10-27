@@ -105,9 +105,17 @@ class HrPtoSyncJobTest {
         assertEquals("line one line two", HrPtoSyncJob.hl7Escape("line one\rline two"));
         assertEquals("", HrPtoSyncJob.hl7Escape(null));
         assertEquals("Marquez", HrPtoSyncJob.hl7Escape("Marquez"));
-        String raw = "E2|0^0~0&0\\2 \\Z\\";
-        assertEquals(raw, HrPtoSyncJob.hl7Unescape(HrPtoSyncJob.hl7Escape(raw)));
-        assertEquals("plain E104422", HrPtoSyncJob.hl7Unescape("plain E104422"));
+    }
+
+    @Test
+    void errorQueueEncodingIsLossless() {
+        String raw = "E2|0^0~0&0\\2\t%41\r\nZ";
+        String encoded = HrPtoSyncJob.queueEncode(raw);
+        assertFalse(encoded.contains("|"));
+        assertFalse(encoded.contains("\t") || encoded.contains("\r") || encoded.contains("\n"));
+        assertEquals(raw, HrPtoSyncJob.queueDecode(encoded));
+        assertEquals("plain E104422", HrPtoSyncJob.queueDecode("plain E104422"));
+        assertEquals("100%", HrPtoSyncJob.queueDecode("100%"));
     }
 
     @Test
@@ -175,7 +183,8 @@ class HrPtoSyncJobTest {
                 "employee_id,last_name,first_name,npi,cost_center,pto_start,pto_end,pto_type,status,notes\n"
                 + "E104422,Marquez,Elena,1932405817,CC-200-5410,2026-10-13,2026-10-13,Vacation|X^Y,Approved,\n"
                 + "E200001,\"Smith|X^Y\",Mallory,1234567893,CC-200-5410,2026-10-13,2026-10-13,Vacation,Approved,\n"
-                + "E2|00002,Jones,Pat,1234567893,CC-200-5410,2026-10-13,2026-10-13,Vacation,Approved,\n")
+                + "E2|00002,Jones,Pat,1234567893,CC-200-5410,2026-10-13,2026-10-13,Vacation,Approved,\n"
+                + "E10\t4%22,Lee,Sam,1234567893,CC-200-5410,2026-10-13,2026-10-13,Vacation,Approved,\n")
                 .getBytes(StandardCharsets.UTF_8));
 
         HrPtoSyncJob job = new HrPtoSyncJob();
@@ -200,7 +209,7 @@ class HrPtoSyncJobTest {
         try {
             Map<String, Object> result = job.runForDate("20261013");
             assertEquals(1, result.get("messagesSent"));
-            assertEquals(2, result.get("recordsRejected"));
+            assertEquals(3, result.get("recordsRejected"));
             assertEquals("PARTIAL", result.get("status"));
 
             File[] outbound = outDir.resolve("outbound").resolve("20261013").toFile().listFiles();
@@ -209,26 +218,29 @@ class HrPtoSyncJobTest {
             String msg = new String(Files.readAllBytes(outbound[0].toPath()), StandardCharsets.UTF_8);
             assertFalse(msg.contains("Smith"));
             assertFalse(msg.contains("Jones"));
+            assertFalse(msg.contains("Lee"));
             String nte = msg.split("\r")[2];
             assertEquals("NTE|1||Vacation\\F\\X\\S\\Y 2026-10-13 - 2026-10-13", nte);
 
             List<Map<String, Object>> errors = job.readErrors();
-            assertEquals(2, errors.size());
+            assertEquals(3, errors.size());
             assertEquals("E200001", errors.get(0).get("employeeId"));
             assertEquals("AR", errors.get(0).get("code"));
             assertEquals("E2|00002", errors.get(1).get("employeeId"));
             assertEquals("AR", errors.get(1).get("code"));
             assertTrue(String.valueOf(errors.get(1).get("message")).startsWith("AR – Invalid employee id"));
+            assertEquals("E10\t4%22", errors.get(2).get("employeeId"));
             String queue = new String(Files.readAllBytes(outDir.resolve(HrPtoSyncJob.ERROR_QUEUE_FILE)), StandardCharsets.UTF_8);
-            assertTrue(queue.contains("|E2\\F\\00002|AR – "), queue);
+            assertTrue(queue.contains("|E2%007C00002|AR – "), queue);
+            assertTrue(queue.contains("|E10%00094%002522|AR – "), queue);
             assertTrue(queue.startsWith("v2|"), queue);
-            assertEquals(Collections.singletonMap("CC-200-5410", 2), job.errorCountsByCostCenter());
+            assertEquals(Collections.singletonMap("CC-200-5410", 3), job.errorCountsByCostCenter());
 
             Files.write(outDir.resolve(HrPtoSyncJob.ERROR_QUEUE_FILE),
                     ("2026-10-01 02:00:00|20261001|E9\\F\\1|AE – Unknown department for cost center CC-9\\S\\9\n" + queue)
                             .getBytes(StandardCharsets.UTF_8));
             List<Map<String, Object>> mixed = job.readErrors();
-            assertEquals(3, mixed.size());
+            assertEquals(4, mixed.size());
             assertEquals("E9\\F\\1", mixed.get(0).get("employeeId"));
             assertEquals("AE – Unknown department for cost center CC-9\\S\\9", mixed.get(0).get("message"));
             assertEquals("E2|00002", mixed.get(2).get("employeeId"));

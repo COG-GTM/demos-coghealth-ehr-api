@@ -32,7 +32,7 @@ public class HrPtoSyncJob implements CommandLineRunner {
     public static final String OUT_DIR_PROPERTY = "hr.pto.sync.out-dir";
     public static final String DEFAULT_OUT_DIR = "target/interfaces/ie-prod";
     public static final String ERROR_QUEUE_FILE = "error-queue.log";
-    /** Marks error-queue lines whose employee id and message fields are HL7-escaped; older lines are raw. */
+    /** Marks error-queue lines whose employee id and message fields are percent-encoded; older lines are raw. */
     static final String ERROR_QUEUE_ESCAPED_PREFIX = "v2|";
     public static final String RUNS_FILE = "runs.log";
     public static final String OUTBOUND_DIR = "outbound";
@@ -228,20 +228,38 @@ public class HrPtoSyncJob implements CommandLineRunner {
         return out.toString();
     }
 
-    public static String hl7Unescape(String value) {
-        if (value == null || value.indexOf('\\') < 0) {
+    /** Lossless encoding for error-queue fields: percent-encodes '%', '|' and control characters. */
+    static String queueEncode(String value) {
+        if (value == null) {
+            return "";
+        }
+        StringBuilder out = new StringBuilder(value.length());
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (c == '%' || c == '|' || Character.isISOControl(c)) {
+                out.append(String.format("%%%04X", (int) c));
+            } else {
+                out.append(c);
+            }
+        }
+        return out.toString();
+    }
+
+    static String queueDecode(String value) {
+        if (value == null || value.indexOf('%') < 0) {
             return value;
         }
         StringBuilder out = new StringBuilder(value.length());
         int i = 0;
         while (i < value.length()) {
             char c = value.charAt(i);
-            if (c == '\\' && i + 2 < value.length() && value.charAt(i + 2) == '\\') {
-                int code = "EFSRT".indexOf(value.charAt(i + 1));
-                if (code >= 0) {
-                    out.append("\\|^~&".charAt(code));
-                    i += 3;
+            if (c == '%' && i + 4 < value.length()) {
+                try {
+                    out.append((char) Integer.parseInt(value.substring(i + 1, i + 5), 16));
+                    i += 5;
                     continue;
+                } catch (NumberFormatException ignored) {
+                    // not an encoded sequence; keep the literal '%'
                 }
             }
             out.append(c);
@@ -337,12 +355,12 @@ public class HrPtoSyncJob implements CommandLineRunner {
         File f = new File(dir, ERROR_QUEUE_FILE);
         try (PrintWriter w = new PrintWriter(new FileWriter(f, true))) {
             w.println(ERROR_QUEUE_ESCAPED_PREFIX + LocalDateTime.now().format(LOG_TS) + "|" + exportDate + "|"
-                    + hl7Escape(employeeId) + "|"
-                    + hl7Escape(message));
+                    + queueEncode(employeeId) + "|"
+                    + queueEncode(message));
         } catch (IOException e) {
             log.error("Cannot append to error queue " + f, e);
         }
-        log.error("{} {} {}", JOB_NAME, hl7Escape(employeeId), message);
+        log.error("{} {} {}", JOB_NAME, queueEncode(employeeId), queueEncode(message));
     }
 
     private void appendRun(Map<String, Object> result) {
@@ -391,8 +409,8 @@ public class HrPtoSyncJob implements CommandLineRunner {
                 Map<String, Object> e = new LinkedHashMap<String, Object>();
                 e.put("timestamp", p[0]);
                 e.put("exportDate", p[1]);
-                String message = escaped ? hl7Unescape(p[3]) : p[3];
-                e.put("employeeId", escaped ? hl7Unescape(p[2]) : p[2]);
+                String message = escaped ? queueDecode(p[3]) : p[3];
+                e.put("employeeId", escaped ? queueDecode(p[2]) : p[2]);
                 e.put("code", message.startsWith("AE") ? "AE" : "AR");
                 e.put("message", message);
                 out.add(e);
