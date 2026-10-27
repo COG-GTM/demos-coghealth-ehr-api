@@ -93,46 +93,51 @@ public class EncounterService {
         return encounterRepository.save(encounter);
     }
 
-    public void checkIn(Long encounterId) {
-        encounterRepository.findById(encounterId).ifPresent(enc -> {
+    public Optional<Encounter> checkIn(Long encounterId) {
+        return encounterRepository.findById(encounterId).map(enc -> {
             enc.setStatus(EncounterStatus.CHECKED_IN);
             encounterRepository.save(enc);
             log.info("Patient checked in for encounter {}", enc.getEncounterNumber());
+            return enc;
         });
     }
 
-    public void startEncounter(Long encounterId) {
-        encounterRepository.findById(encounterId).ifPresent(enc -> {
+    public Optional<Encounter> startEncounter(Long encounterId) {
+        return encounterRepository.findById(encounterId).map(enc -> {
             enc.setStatus(EncounterStatus.IN_PROGRESS);
             encounterRepository.save(enc);
             log.info("Encounter {} started", enc.getEncounterNumber());
+            return enc;
         });
     }
 
-    public void completeEncounter(Long encounterId, String notes) {
-        encounterRepository.findById(encounterId).ifPresent(enc -> {
+    public Optional<Encounter> completeEncounter(Long encounterId, String notes) {
+        return encounterRepository.findById(encounterId).map(enc -> {
             enc.setStatus(EncounterStatus.COMPLETED);
             if (notes != null) {
                 enc.setNotes(notes);
             }
             encounterRepository.save(enc);
             log.info("Encounter {} completed", enc.getEncounterNumber());
+            return enc;
         });
     }
 
-    public void cancelEncounter(Long encounterId) {
-        encounterRepository.findById(encounterId).ifPresent(enc -> {
+    public Optional<Encounter> cancelEncounter(Long encounterId) {
+        return encounterRepository.findById(encounterId).map(enc -> {
             enc.setStatus(EncounterStatus.CANCELLED);
             encounterRepository.save(enc);
             log.info("Encounter {} cancelled", enc.getEncounterNumber());
+            return enc;
         });
     }
 
-    public void markNoShow(Long encounterId) {
-        encounterRepository.findById(encounterId).ifPresent(enc -> {
+    public Optional<Encounter> markNoShow(Long encounterId) {
+        return encounterRepository.findById(encounterId).map(enc -> {
             enc.setStatus(EncounterStatus.NO_SHOW);
             encounterRepository.save(enc);
             log.info("Encounter {} marked as no-show", enc.getEncounterNumber());
+            return enc;
         });
     }
 

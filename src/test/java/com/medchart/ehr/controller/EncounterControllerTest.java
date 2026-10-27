@@ -164,8 +164,11 @@ class EncounterControllerTest {
 
     @Test
     void statusTransitionsAreAudited() throws Exception {
-        when(encounterService.findById(1L)).thenReturn(Optional.of(encounter()));
+        when(encounterService.checkIn(1L)).thenReturn(Optional.of(encounter()));
+        when(encounterService.markNoShow(1L)).thenReturn(Optional.of(encounter()));
+        when(encounterService.cancelEncounter(2L)).thenReturn(Optional.empty());
 
+        mockMvc.perform(post("/v1/encounters/2/cancel")).andExpect(status().isOk());
         mockMvc.perform(post("/v1/encounters/1/check-in")).andExpect(status().isOk());
         mockMvc.perform(post("/v1/encounters/1/no-show")).andExpect(status().isOk());
 
