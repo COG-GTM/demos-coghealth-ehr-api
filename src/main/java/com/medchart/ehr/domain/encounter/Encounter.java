@@ -3,6 +3,7 @@ package com.medchart.ehr.domain.encounter;
 import com.medchart.ehr.domain.patient.Patient;
 import com.medchart.ehr.domain.provider.Provider;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -75,6 +76,7 @@ public class Encounter {
     private String visitType;
 
     @OneToMany(mappedBy = "encounter", cascade = CascadeType.ALL)
+    @BatchSize(size = 50)
     @Builder.Default
     private List<EncounterDiagnosis> diagnoses = new ArrayList<>();
 
