@@ -1,6 +1,7 @@
 package com.medchart.ehr.audit;
 
 import com.medchart.ehr.domain.auth.User;
+import com.medchart.ehr.dto.PatientDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -65,13 +66,28 @@ public class AuditAspect {
         try {
             Object result = joinPoint.proceed();
             eventBuilder.success(true);
-            auditService.saveAuditEventAsync(eventBuilder.build());
+            AuditEvent event = eventBuilder.build();
+            linkReturnedPatient(event, result);
+            auditService.saveAuditEventAsync(event);
             return result;
         } catch (Exception e) {
             eventBuilder.success(false);
             eventBuilder.errorMessage(truncate(e.getMessage(), ERROR_MESSAGE_MAX));
             auditService.saveAuditEventAsync(eventBuilder.build());
             throw e;
+        }
+    }
+
+    private static void linkReturnedPatient(AuditEvent event, Object result) {
+        if (!(result instanceof PatientDTO)) {
+            return;
+        }
+        PatientDTO patient = (PatientDTO) result;
+        if (event.getPatientId() == null) {
+            event.setPatientId(patient.getId());
+        }
+        if (event.getPatientMrn() == null) {
+            event.setPatientMrn(truncate(patient.getMrn(), PATIENT_MRN_MAX));
         }
     }
 

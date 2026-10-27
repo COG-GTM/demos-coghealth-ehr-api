@@ -1,6 +1,7 @@
 package com.medchart.ehr.audit;
 
 import com.medchart.ehr.domain.auth.User;
+import com.medchart.ehr.dto.PatientDTO;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -180,6 +181,28 @@ class AuditAspectTest {
         return request;
     }
 
+    @Test
+    void mrnLookupIsLinkedToReturnedPatientId() {
+        bindRequest("10.9.8.7", null);
+
+        proxy.viewPatientByMrn("MRN-000042");
+
+        AuditEvent event = captured();
+        assertThat(event.getPatientMrn()).isEqualTo("MRN-000042");
+        assertThat(event.getPatientId()).isEqualTo(42L);
+    }
+
+    @Test
+    void annotatedPatientIdWinsOverReturnedPatient() {
+        bindRequest("10.9.8.7", null);
+
+        proxy.updatePatient(7L);
+
+        AuditEvent event = captured();
+        assertThat(event.getPatientId()).isEqualTo(7L);
+        assertThat(event.getPatientMrn()).isEqualTo("MRN-000042");
+    }
+
     private AuditEvent captured() {
         ArgumentCaptor<AuditEvent> captor = ArgumentCaptor.forClass(AuditEvent.class);
         verify(auditService).saveAuditEventAsync(captor.capture());
@@ -191,6 +214,23 @@ class AuditAspectTest {
         @AuditAccess(action = AuditAction.READ, resourceType = "Patient")
         public String viewPatient(@PatientId Long patientId) {
             return "ok";
+        }
+
+        @AuditAccess(action = AuditAction.READ, resourceType = "Patient")
+        public PatientDTO viewPatientByMrn(@PatientMrn String mrn) {
+            return patient42();
+        }
+
+        @AuditAccess(action = AuditAction.UPDATE, resourceType = "Patient")
+        public PatientDTO updatePatient(@PatientId Long patientId) {
+            return patient42();
+        }
+
+        private static PatientDTO patient42() {
+            PatientDTO dto = new PatientDTO();
+            dto.setId(42L);
+            dto.setMrn("MRN-000042");
+            return dto;
         }
 
         @AuditAccess(action = AuditAction.CREATE, resourceType = "CriticalAlert")
