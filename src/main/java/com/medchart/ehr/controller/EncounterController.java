@@ -95,6 +95,7 @@ public class EncounterController {
     }
 
     @PostMapping("/{id}/start")
+    @PreAuthorize("hasAnyRole('PROVIDER', 'ADMIN')")
     public ResponseEntity<Void> start(@PathVariable Long id) {
         encounterService.startEncounter(id);
         return ResponseEntity.ok().build();

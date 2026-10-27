@@ -19,6 +19,8 @@ import com.medchart.ehr.service.EncounterService;
 import com.medchart.ehr.service.PatientService;
 import com.medchart.ehr.service.ProviderService;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataAccessResourceFailureException;
+
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -35,6 +37,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -183,6 +187,30 @@ class ApiAuthorizationTest {
             .andExpect(status().isForbidden());
         verify(encounterService, never()).update(any());
         verify(encounterService, never()).findById(anyLong());
+    }
+
+    @Test
+    void staffCannotStartEncounter() throws Exception {
+        signIn("frontdesk.wilson", User.Role.STAFF);
+
+        mockMvc.perform(authed(post("/v1/encounters/1/start"))).andExpect(status().isForbidden());
+        verify(encounterService, never()).startEncounter(anyLong());
+    }
+
+    @Test
+    void userStoreOutageIsNotReportedAs401() {
+        given(tokenProvider.getUsernameFromToken(TOKEN)).willReturn("dr.anderson");
+        given(userDetailsService.loadUserByUsername("dr.anderson"))
+            .willThrow(new DataAccessResourceFailureException("db down"));
+
+        Exception ex = assertThrows(Exception.class,
+            () -> mockMvc.perform(authed(get("/v1/patients/1"))));
+        Throwable root = ex;
+        while (root.getCause() != null && !(root instanceof DataAccessResourceFailureException)) {
+            root = root.getCause();
+        }
+        assertInstanceOf(DataAccessResourceFailureException.class, root);
+        verifyNoInteractions(patientService);
     }
 
     @Test
