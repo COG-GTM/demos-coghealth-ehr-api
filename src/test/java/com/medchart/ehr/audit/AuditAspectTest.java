@@ -1,11 +1,15 @@
 package com.medchart.ehr.audit;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
 import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.Arrays;
 import java.util.List;
@@ -38,6 +42,14 @@ class AuditAspectTest {
         }
     }
 
+    public static class VerboseFailure extends Records {
+        @Override
+        @AuditAccess(action = AuditAction.READ, resourceType = "Patient", description = "View patient record")
+        public String missing(Long patientId) {
+            throw new IllegalArgumentException(repeat('e', 2_000));
+        }
+    }
+
     private AuditEventRepository repository;
     private RecordingTransactionManager transactionManager;
     private Records target;
@@ -52,6 +64,45 @@ class AuditAspectTest {
         factory.setProxyTargetClass(true);
         factory.addAspect(new AuditAspect(transactionManager.transactional(new AuditService(repository)), transactionManager));
         proxy = factory.getProxy();
+    }
+
+    @AfterEach
+    void clearRequest() {
+        RequestContextHolder.resetRequestAttributes();
+    }
+
+    @Test
+    void oversizedUserAgentAndForwardedForAreBoundedAndStillAudited() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/patients/42");
+        request.addHeader("User-Agent", repeat('A', 300));
+        request.addHeader("X-Forwarded-For", repeat('1', 60) + ", 10.0.0.1");
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+
+        assertEquals("record-42", proxy.read(42L));
+
+        ArgumentCaptor<AuditEvent> saved = ArgumentCaptor.forClass(AuditEvent.class);
+        verify(repository).saveAndFlush(saved.capture());
+        AuditEvent event = saved.getValue();
+        assertTrue(event.getSuccess());
+        assertEquals(42L, event.getPatientId());
+        assertEquals(repeat('A', 200), event.getUserAgent());
+        assertEquals(repeat('1', 50), event.getIpAddress());
+        assertEquals(List.of("commit"), transactionManager.outcomes);
+    }
+
+    @Test
+    void oversizedErrorMessageOfFailedAccessIsBounded() {
+        Records failing = new VerboseFailure();
+        AspectJProxyFactory factory = new AspectJProxyFactory(failing);
+        factory.setProxyTargetClass(true);
+        factory.addAspect(new AuditAspect(transactionManager.transactional(new AuditService(repository)), transactionManager));
+        Records failingProxy = factory.getProxy();
+
+        assertThrows(IllegalArgumentException.class, () -> failingProxy.missing(9L));
+
+        ArgumentCaptor<AuditEvent> saved = ArgumentCaptor.forClass(AuditEvent.class);
+        verify(repository).saveAndFlush(saved.capture());
+        assertEquals(500, saved.getValue().getErrorMessage().length());
     }
 
     @Test
@@ -148,5 +199,13 @@ class AuditAspectTest {
         assertThrows(AuditPersistenceException.class, () -> caller.execute(status -> proxy.read(7L)));
 
         assertEquals(Arrays.asList("rollback", "rollback"), transactionManager.outcomes);
+    }
+
+    private static String repeat(char c, int n) {
+        StringBuilder sb = new StringBuilder(n);
+        for (int i = 0; i < n; i++) {
+            sb.append(c);
+        }
+        return sb.toString();
     }
 }
