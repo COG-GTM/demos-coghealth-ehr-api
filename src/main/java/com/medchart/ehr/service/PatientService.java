@@ -9,12 +9,18 @@ import com.medchart.ehr.repository.PatientRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.persistence.EntityManager;
 import javax.persistence.EntityNotFoundException;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Query;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -24,6 +30,9 @@ public class PatientService {
 
     private final PatientRepository patientRepository;
     private final PatientMapper patientMapper;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @AuditAccess(action = AuditAction.READ, resourceType = "Patient", description = "View patient record")
     public PatientDTO getPatientById(Long id) {
@@ -40,9 +49,32 @@ public class PatientService {
     }
 
     @AuditAccess(action = AuditAction.SEARCH, resourceType = "Patient", description = "Search patients")
-    public Page<PatientDTO> searchPatients(String searchTerm, Pageable pageable) {
-        return patientRepository.searchPatients(searchTerm, pageable)
-                .map(patientMapper::toDto);
+    public Page<PatientDTO> searchPatients(String searchTerm, String sort, Pageable pageable) {
+        if (sort == null || sort.isBlank()) {
+            return patientRepository.searchPatients(searchTerm, pageable)
+                    .map(patientMapper::toDto);
+        }
+
+        String where = "(LOWER(last_name) LIKE LOWER(?1) OR LOWER(first_name) LIKE LOWER(?1) OR mrn LIKE ?1)";
+        String term = "%" + searchTerm + "%";
+
+        Query countQuery = entityManager.createNativeQuery(
+                "SELECT COUNT(*) FROM patients WHERE " + where);
+        countQuery.setParameter(1, term);
+        long total = ((Number) countQuery.getSingleResult()).longValue();
+
+        Query query = entityManager.createNativeQuery(
+                "SELECT * FROM patients WHERE " + where + " ORDER BY " + sort, Patient.class);
+        query.setParameter(1, term);
+        query.setFirstResult((int) pageable.getOffset());
+        query.setMaxResults(pageable.getPageSize());
+
+        @SuppressWarnings("unchecked")
+        List<Patient> patients = query.getResultList();
+        List<PatientDTO> content = patients.stream()
+                .map(patientMapper::toDto)
+                .collect(Collectors.toList());
+        return new PageImpl<>(content, pageable, total);
     }
 
     @Transactional

@@ -129,7 +129,7 @@ class EncounterControllerSecurityTest {
     @Test
     @WithMockUser(roles = "STAFF")
     void singleEncounterResponseOmitsSsn() throws Exception {
-        when(encounterService.findByIdWithDetails(42L)).thenReturn(Optional.of(encounter()));
+        when(encounterService.findByIdForProvider(42L, null)).thenReturn(Optional.of(encounter()));
 
         mockMvc.perform(get("/v1/encounters/42"))
                 .andExpect(status().isOk())

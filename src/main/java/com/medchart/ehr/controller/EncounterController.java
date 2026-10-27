@@ -30,8 +30,10 @@ public class EncounterController {
 
     @AuditAccess(action = AuditAction.READ, resourceType = "Encounter", description = "View encounter")
     @GetMapping("/{id}")
-    public ResponseEntity<EncounterDTO> getById(@PathVariable Long id) {
-        return encounterService.findByIdWithDetails(id)
+    public ResponseEntity<EncounterDTO> getById(
+            @PathVariable Long id,
+            @RequestParam(required = false) Long providerId) {
+        return encounterService.findByIdForProvider(id, providerId)
                 .map(EncounterDTO::from)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
