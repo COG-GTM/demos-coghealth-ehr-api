@@ -2,6 +2,8 @@ package com.medchart.ehr.service.chronic;
 
 import com.medchart.ehr.audit.AuditAccess;
 import com.medchart.ehr.audit.AuditAction;
+import com.medchart.ehr.audit.PatientId;
+import com.medchart.ehr.audit.PatientMrn;
 import com.medchart.ehr.audit.PatientAccessLogger;
 import com.medchart.ehr.service.ProviderNotificationService;
 import lombok.RequiredArgsConstructor;
@@ -40,8 +42,8 @@ public class MedicationNotificationService {
     @Async
     @AuditAccess(action = AuditAction.CREATE, resourceType = "Alert",
                  description = "Send non-adherence alert")
-    public CompletableFuture<Void> sendNonAdherenceAlert(Long providerId, Long patientId,
-                                                          String patientMrn, String patientName,
+    public CompletableFuture<Void> sendNonAdherenceAlert(Long providerId, @PatientId Long patientId,
+                                                          @PatientMrn String patientMrn, String patientName,
                                                           String medicationName, double pdcScore) {
         log.warn("ALERT: Patient {} ({}) non-adherent to {} - PDC: {}%", 
                 patientName, patientMrn, medicationName, pdcScore * 100);
@@ -75,8 +77,8 @@ public class MedicationNotificationService {
     @Async
     @AuditAccess(action = AuditAction.CREATE, resourceType = "Alert",
                  description = "Send care gap alert")
-    public CompletableFuture<Void> sendCareGapAlert(Long providerId, Long patientId,
-                                                     String patientMrn, String patientName,
+    public CompletableFuture<Void> sendCareGapAlert(Long providerId, @PatientId Long patientId,
+                                                     @PatientMrn String patientMrn, String patientName,
                                                      String gapType, String gapDescription) {
         log.info("CARE GAP: Patient {} ({}) - {}: {}", 
                 patientName, patientMrn, gapType, gapDescription);

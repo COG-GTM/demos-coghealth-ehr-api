@@ -2,6 +2,7 @@ package com.medchart.ehr.service.chronic;
 
 import com.medchart.ehr.audit.AuditAccess;
 import com.medchart.ehr.audit.AuditAction;
+import com.medchart.ehr.audit.PatientId;
 import com.medchart.ehr.domain.chronic.MedicationAdherence;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,7 +62,7 @@ public class MedicationAdherenceTracker {
      */
     @AuditAccess(action = AuditAction.READ, resourceType = "MedicationAdherence",
                  description = "View medication adherence")
-    public List<MedicationAdherence> getPatientAdherence(Long patientId) {
+    public List<MedicationAdherence> getPatientAdherence(@PatientId Long patientId) {
         log.info("Retrieving medication adherence for patient {}", patientId);
         
         // TODO: Implement retrieval

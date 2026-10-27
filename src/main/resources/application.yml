@@ -36,6 +36,12 @@ server:
   port: 8080
   servlet:
     context-path: /api
+  # Audit rows record request.getRemoteAddr(). X-Forwarded-For is only honoured when the
+  # direct peer matches TRUSTED_PROXIES (a regex, e.g. 10\.0\.0\.\d+); unset = trust none.
+  forward-headers-strategy: native
+  tomcat:
+    remoteip:
+      internal-proxies: ${TRUSTED_PROXIES:}
 
 management:
   endpoints:
