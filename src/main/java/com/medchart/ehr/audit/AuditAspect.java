@@ -37,6 +37,8 @@ public class AuditAspect {
     private static final int USER_ID_MAX = 100;
     private static final int USER_NAME_MAX = 100;
     private static final int USER_AGENT_MAX = 200;
+    private static final int PATIENT_MRN_MAX = 20;
+    private static final int ERROR_MESSAGE_MAX = 500;
 
     private final AuditService auditService;
 
@@ -53,7 +55,7 @@ public class AuditAspect {
                 .userName(truncate(actor.userName, USER_NAME_MAX))
                 .requestDetails(actor.details)
                 .patientId(annotatedArgument(method, args, PatientId.class, Long.class))
-                .patientMrn(annotatedArgument(method, args, PatientMrn.class, String.class))
+                .patientMrn(truncate(annotatedArgument(method, args, PatientMrn.class, String.class), PATIENT_MRN_MAX))
                 .action(auditAccess.action())
                 .resourceType(auditAccess.resourceType())
                 .description(auditAccess.description())
@@ -67,7 +69,7 @@ public class AuditAspect {
             return result;
         } catch (Exception e) {
             eventBuilder.success(false);
-            eventBuilder.errorMessage(e.getMessage());
+            eventBuilder.errorMessage(truncate(e.getMessage(), ERROR_MESSAGE_MAX));
             auditService.saveAuditEventAsync(eventBuilder.build());
             throw e;
         }
