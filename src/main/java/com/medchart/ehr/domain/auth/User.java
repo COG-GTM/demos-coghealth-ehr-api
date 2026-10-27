@@ -1,5 +1,6 @@
 package com.medchart.ehr.domain.auth;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -44,6 +45,9 @@ public class User implements UserDetails {
     @Column(name = "role")
     private Set<Role> roles;
 
+    @Column(name = "provider_id")
+    private Long providerId;
+
     @Column(nullable = false)
     private Boolean enabled = true;
 
@@ -81,6 +85,12 @@ public class User implements UserDetails {
     @Override
     public boolean isEnabled() {
         return enabled;
+    }
+
+    @Transient
+    @JsonIgnore
+    public boolean isAdmin() {
+        return roles != null && roles.contains(Role.ADMIN);
     }
 
     public enum Role {
