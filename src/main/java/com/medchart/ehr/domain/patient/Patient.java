@@ -1,5 +1,6 @@
 package com.medchart.ehr.domain.patient;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -32,6 +33,7 @@ public class Patient {
     @Column(unique = true, nullable = false, length = 20)
     private String mrn;
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(length = 11)
     private String ssn;
 

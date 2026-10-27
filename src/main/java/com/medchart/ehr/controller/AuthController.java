@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
+import java.util.HashSet;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -67,7 +67,7 @@ public class AuthController {
             .firstName(signUpRequest.getFirstName())
             .lastName(signUpRequest.getLastName())
             .password(passwordEncoder.encode(signUpRequest.getPassword()))
-            .roles(Set.of(User.Role.PROVIDER)) // Default role
+            .roles(new HashSet<>()) // No role until an admin assigns one
             .enabled(true)
             .accountNonExpired(true)
             .accountNonLocked(true)
