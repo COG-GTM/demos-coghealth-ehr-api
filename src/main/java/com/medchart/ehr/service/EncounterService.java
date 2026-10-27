@@ -123,7 +123,7 @@ public class EncounterService {
         encounter.setStatus(EncounterStatus.SCHEDULED);
 
         Encounter saved = encounterRepository.saveAndFlush(encounter);
-        log.info("Created encounter {} for patient id {}", saved.getEncounterNumber(), patient.getId());
+        log.info("Created encounter {}", saved.getEncounterNumber());
         return encounterMapper.toDto(saved);
     }
 
