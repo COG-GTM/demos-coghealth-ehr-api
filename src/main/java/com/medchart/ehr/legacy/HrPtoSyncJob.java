@@ -184,10 +184,11 @@ public class HrPtoSyncJob implements CommandLineRunner {
 
     public static String identityRejection(HrPtoRecord r) {
         if (r.employeeId == null || !EMPLOYEE_ID.matcher(r.employeeId).matches()) {
-            return "AR – Invalid employee id on HR export line " + r.lineNumber;
+            return "AR – Invalid employee id on HR export line " + r.lineNumber + " for cost center " + r.costCenter;
         }
         if (!isSafeName(r.lastName) || !isSafeName(r.firstName)) {
-            return "AR – HL7 delimiter or control character in provider name on HR export line " + r.lineNumber;
+            return "AR – HL7 delimiter or control character in provider name on HR export line " + r.lineNumber
+                    + " for cost center " + r.costCenter;
         }
         return null;
     }
@@ -221,6 +222,28 @@ public class HrPtoSyncJob implements CommandLineRunner {
                 case '&': out.append("\\T\\"); break;
                 default: out.append(Character.isISOControl(c) ? ' ' : c);
             }
+        }
+        return out.toString();
+    }
+
+    public static String hl7Unescape(String value) {
+        if (value == null || value.indexOf('\\') < 0) {
+            return value;
+        }
+        StringBuilder out = new StringBuilder(value.length());
+        int i = 0;
+        while (i < value.length()) {
+            char c = value.charAt(i);
+            if (c == '\\' && i + 2 < value.length() && value.charAt(i + 2) == '\\') {
+                int code = "EFSRT".indexOf(value.charAt(i + 1));
+                if (code >= 0) {
+                    out.append("\\|^~&".charAt(code));
+                    i += 3;
+                    continue;
+                }
+            }
+            out.append(c);
+            i++;
         }
         return out.toString();
     }
@@ -361,9 +384,10 @@ public class HrPtoSyncJob implements CommandLineRunner {
                 Map<String, Object> e = new LinkedHashMap<String, Object>();
                 e.put("timestamp", p[0]);
                 e.put("exportDate", p[1]);
-                e.put("employeeId", p[2]);
-                e.put("code", p[3].startsWith("AE") ? "AE" : "AR");
-                e.put("message", p[3]);
+                String message = hl7Unescape(p[3]);
+                e.put("employeeId", hl7Unescape(p[2]));
+                e.put("code", message.startsWith("AE") ? "AE" : "AR");
+                e.put("message", message);
                 out.add(e);
             }
         } catch (IOException e) {
