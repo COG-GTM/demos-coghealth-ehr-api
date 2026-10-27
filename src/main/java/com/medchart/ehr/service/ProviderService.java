@@ -8,6 +8,7 @@ import com.medchart.ehr.mapper.ProviderMapper;
 import com.medchart.ehr.repository.ProviderRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +19,7 @@ import java.util.Optional;
 @Transactional
 public class ProviderService {
 
+    private static final String NPI_UNIQUE_CONSTRAINT = "providers_npi_key";
     private static final Logger log = LoggerFactory.getLogger(ProviderService.class);
 
     private final ProviderRepository providerRepository;
@@ -72,7 +74,7 @@ public class ProviderService {
         if (providerRepository.findByNpi(request.getNpi()).isPresent()) {
             throw new DuplicateNpiException();
         }
-        Provider saved = providerRepository.save(providerMapper.toEntity(request));
+        Provider saved = saveCheckingNpi(providerMapper.toEntity(request));
         log.info("Created provider id={}", saved.getId());
         return providerMapper.toResponse(saved);
     }
@@ -87,10 +89,40 @@ public class ProviderService {
                         });
             }
             providerMapper.applyUpdate(request, existing);
-            Provider saved = providerRepository.save(existing);
+            Provider saved = saveCheckingNpi(existing);
             log.info("Updated provider id={}", saved.getId());
             return providerMapper.toResponse(saved);
         });
+    }
+
+    // The pre-checks above cover the common case; flushing here turns a concurrent
+    // duplicate NPI insert into a 409 instead of a commit-time 500.
+    private Provider saveCheckingNpi(Provider provider) {
+        try {
+            return providerRepository.saveAndFlush(provider);
+        } catch (DataIntegrityViolationException e) {
+            if (violatesNpiUniqueConstraint(e)) {
+                throw new DuplicateNpiException();
+            }
+            throw e;
+        }
+    }
+
+    private static boolean violatesNpiUniqueConstraint(Throwable e) {
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            if (t instanceof org.hibernate.exception.ConstraintViolationException
+                    && NPI_UNIQUE_CONSTRAINT.equalsIgnoreCase(
+                            ((org.hibernate.exception.ConstraintViolationException) t).getConstraintName())) {
+                return true;
+            }
+            if (t.getMessage() != null && t.getMessage().contains(NPI_UNIQUE_CONSTRAINT)) {
+                return true;
+            }
+            if (t.getCause() == t) {
+                break;
+            }
+        }
+        return false;
     }
 
     public void deactivate(Long id) {

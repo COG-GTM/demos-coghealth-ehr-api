@@ -12,6 +12,7 @@ import com.medchart.ehr.repository.ProviderRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDate;
 import java.util.HashSet;
@@ -33,7 +34,7 @@ class ProviderServiceTest {
     void setUp() {
         repository = mock(ProviderRepository.class);
         service = new ProviderService(repository, new ProviderMapper());
-        when(repository.save(any(Provider.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(repository.saveAndFlush(any(Provider.class))).thenAnswer(inv -> inv.getArgument(0));
     }
 
     private Provider alice() {
@@ -59,7 +60,7 @@ class ProviderServiceTest {
 
         assertThat(result).isPresent();
         ArgumentCaptor<Provider> saved = ArgumentCaptor.forClass(Provider.class);
-        verify(repository).save(saved.capture());
+        verify(repository).saveAndFlush(saved.capture());
         Provider p = saved.getValue();
         assertThat(p).isSameAs(stored);
         assertThat(p.getId()).isEqualTo(12L);
@@ -94,7 +95,7 @@ class ProviderServiceTest {
 
         assertThatThrownBy(() -> service.update(12L, ProviderUpdateRequest.builder().npi("9999999999").build()))
                 .isInstanceOf(DuplicateNpiException.class);
-        verify(repository, never()).save(any());
+        verify(repository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -102,7 +103,7 @@ class ProviderServiceTest {
         when(repository.findById(99L)).thenReturn(Optional.empty());
 
         assertThat(service.update(99L, ProviderUpdateRequest.builder().npi("0000000000").build())).isEmpty();
-        verify(repository, never()).save(any());
+        verify(repository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -114,7 +115,7 @@ class ProviderServiceTest {
                 .build());
 
         ArgumentCaptor<Provider> saved = ArgumentCaptor.forClass(Provider.class);
-        verify(repository).save(saved.capture());
+        verify(repository).saveAndFlush(saved.capture());
         Provider p = saved.getValue();
         assertThat(p.getId()).isNull();
         assertThat(p.getVersion()).isNull();
@@ -131,7 +132,7 @@ class ProviderServiceTest {
                 .npi("1234567890").firstName("Mallory").lastName("X").providerType(ProviderType.PHYSICIAN)
                 .build()))
                 .isInstanceOf(DuplicateNpiException.class);
-        verify(repository, never()).save(any());
+        verify(repository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -143,5 +144,27 @@ class ProviderServiceTest {
         assertThat(response.getNpi()).isEqualTo("1234567890");
         assertThat(response.getFullName()).isEqualTo("Alice Nguyen, MD");
         assertThat(response.getLicenses()).hasSize(1);
+    }
+
+    @Test
+    void concurrentDuplicateNpiInsertMapsToConflict() {
+        when(repository.findByNpi("1112223334")).thenReturn(Optional.empty());
+        when(repository.saveAndFlush(any(Provider.class))).thenThrow(new DataIntegrityViolationException("x",
+                new org.hibernate.exception.ConstraintViolationException("dup", null, "providers_npi_key")));
+
+        assertThatThrownBy(() -> service.create(ProviderCreateRequest.builder()
+                .npi("1112223334").firstName("Bob").lastName("Lee").providerType(ProviderType.REGISTERED_NURSE)
+                .build()))
+                .isInstanceOf(DuplicateNpiException.class);
+    }
+
+    @Test
+    void otherIntegrityViolationsAreNotReportedAsDuplicateNpi() {
+        when(repository.findById(1L)).thenReturn(Optional.of(alice()));
+        DataIntegrityViolationException other = new DataIntegrityViolationException("x",
+                new org.hibernate.exception.ConstraintViolationException("null", null, "providers_first_name_check"));
+        when(repository.saveAndFlush(any(Provider.class))).thenThrow(other);
+
+        assertThatThrownBy(() -> service.update(1L, new ProviderUpdateRequest())).isSameAs(other);
     }
 }
