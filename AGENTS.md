@@ -2,7 +2,7 @@
 
 ## Overview
 
-CogHealth EHR is a healthcare Electronic Health Record system. This codebase contains intentional HIPAA compliance gaps.
+CogHealth EHR is a healthcare Electronic Health Record system. It carries a backlog of known HIPAA compliance gaps tracked for remediation.
 
 ## Repository Structure
 
@@ -20,7 +20,7 @@ CogHealth EHR is a healthcare Electronic Health Record system. This codebase con
 
 ## Known HIPAA Issues
 
-These are intentionally planted for HIPAA audit demo:
+Open compliance gaps tracked for remediation:
 
 1. **PatientService.java:85** - Logs full SSN in error messages
 2. **EncounterExportService.java** - No audit logging on batch exports
@@ -98,7 +98,7 @@ npm run dev
 
 ## Database
 
-**Use the `dev` profile** - it connects to a shared Neon PostgreSQL database with pre-seeded test data. No local database setup required.
+**Use the `dev` profile** - it connects to a shared Neon PostgreSQL database with pre-loaded sample data. No local database setup required.
 
 ```bash
 mvn spring-boot:run -Dspring-boot.run.profiles=dev

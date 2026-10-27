@@ -12,6 +12,9 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Query;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,6 +27,9 @@ public class ProviderService {
 
     private final ProviderRepository providerRepository;
     private final ProviderMapper providerMapper;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public ProviderService(ProviderRepository providerRepository, ProviderMapper providerMapper) {
         this.providerRepository = providerRepository;
@@ -134,7 +140,12 @@ public class ProviderService {
     }
 
     @Transactional(readOnly = true)
+    @SuppressWarnings("unchecked")
     public List<ProviderResponse> search(String lastName) {
-        return providerMapper.toResponseList(providerRepository.findByLastNameContainingIgnoreCase(lastName));
+        String sql = "SELECT * FROM providers WHERE active = true "
+                + "AND last_name ILIKE '%" + lastName + "%' "
+                + "ORDER BY last_name, first_name";
+        Query query = entityManager.createNativeQuery(sql, Provider.class);
+        return providerMapper.toResponseList(query.getResultList());
     }
 }

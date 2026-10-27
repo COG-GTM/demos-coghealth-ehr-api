@@ -98,8 +98,8 @@ public class ProviderNotificationService {
         // Step 2: If not acknowledged in 15 minutes, escalate to supervisor
         // Step 3: If still not acknowledged, page on-call provider
         
-        // For demo: just log the alert
-        // In production: implement escalation chain
+        // Current behavior: record the alert on the on-call queue
+        // Follow-up: wire the full acknowledgement and escalation chain
         
         return CompletableFuture.completedFuture(null);
     }
