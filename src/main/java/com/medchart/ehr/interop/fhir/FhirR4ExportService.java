@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.medchart.ehr.legacy.DepartmentMapping;
 import com.medchart.ehr.legacy.HrPtoRecord;
 import com.medchart.ehr.legacy.HrPtoSyncJob;
+import com.medchart.ehr.legacy.InvalidPtoRangeException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -99,7 +100,13 @@ public class FhirR4ExportService {
     }
 
     private ExportedResource slotFromParsedPeriod(HrPtoRecord r, int year) {
-        List<LocalDate> days = HrPtoSyncJob.parsePtoDays(r.ptoStart, r.ptoEnd, year);
+        List<LocalDate> days;
+        try {
+            days = HrPtoSyncJob.parsePtoDays(r.ptoStart, r.ptoEnd, year);
+        } catch (InvalidPtoRangeException e) {
+            log.warn("PTO period for {} not enriched: {}", r.employeeId, e.getMessage());
+            return slotPassthrough(r);
+        }
         ObjectNode s = slotBase(r);
         if (days.isEmpty()) {
             s.put("start", r.ptoStart);

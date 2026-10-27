@@ -13,10 +13,12 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.time.DateTimeException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -34,6 +36,10 @@ public class HrPtoSyncJob implements CommandLineRunner {
     public static final String RUNS_FILE = "runs.log";
     public static final String OUTBOUND_DIR = "outbound";
     public static final String RUN_ONCE_ARG = "--hr-pto-sync";
+    public static final int MAX_PTO_DAYS = 366;
+    public static final int MAX_YEARS_FROM_EXPORT = 1;
+    public static final String MAX_MESSAGES_PROPERTY = "hr.pto.sync.max-messages";
+    public static final int DEFAULT_MAX_MESSAGES = 5000;
 
     private static final String SENDING_APP = "COGHEALTH_EHR";
     private static final String SENDING_FACILITY = "HRPTO";
@@ -77,6 +83,7 @@ public class HrPtoSyncJob implements CommandLineRunner {
         log.info("{} start exportDate={}", JOB_NAME, exportDate);
         List<HrPtoRecord> records = hrExportReader.read(exportDate);
         int year = Integer.parseInt(exportDate.substring(0, 4));
+        int maxMessages = maxMessagesPerRun();
 
         int sent = 0;
         int rejected = 0;
@@ -96,17 +103,40 @@ public class HrPtoSyncJob implements CommandLineRunner {
                 skipped++;
                 continue;
             }
-            List<LocalDate> days = parsePtoDays(r.ptoStart, r.ptoEnd, year);
+            List<LocalDate> days;
+            try {
+                days = parsePtoDays(r.ptoStart, r.ptoEnd, year);
+            } catch (InvalidPtoRangeException e) {
+                String msg = "AR – Invalid PTO period on line " + r.lineNumber + ": " + e.getMessage();
+                errors.add(msg);
+                appendErrorQueue(exportDate, r.employeeId, msg);
+                rejected++;
+                continue;
+            }
             List<OrBlock> blocks = loadOrBlocks(r.employeeId);
+            List<LocalDate> blockDays = new ArrayList<LocalDate>();
+            List<OrBlock> dayBlocks = new ArrayList<OrBlock>();
             for (LocalDate day : days) {
                 for (OrBlock b : blocks) {
                     if (weekdayOf(day).equals(b.weekday)) {
-                        String ctl = nextControlId(exportDate);
-                        String msg = buildSiuS15(r, dept, b, day, ctl);
-                        writeOutbound(exportDate, ctl, msg);
-                        sent++;
+                        blockDays.add(day);
+                        dayBlocks.add(b);
                     }
                 }
+            }
+            if (sent + blockDays.size() > maxMessages) {
+                String msg = "AR – Run message cap of " + maxMessages + " reached; " + blockDays.size()
+                        + " OR block cancellation(s) for line " + r.lineNumber + " not sent";
+                errors.add(msg);
+                appendErrorQueue(exportDate, r.employeeId, msg);
+                rejected++;
+                continue;
+            }
+            for (int i = 0; i < blockDays.size(); i++) {
+                String ctl = nextControlId(exportDate);
+                String msg = buildSiuS15(r, dept, dayBlocks.get(i), blockDays.get(i), ctl);
+                writeOutbound(exportDate, ctl, msg);
+                sent++;
             }
         }
 
@@ -125,6 +155,11 @@ public class HrPtoSyncJob implements CommandLineRunner {
         return result;
     }
 
+    /**
+     * Expands a Workday PTO period into calendar days. Throws {@link InvalidPtoRangeException} when the period
+     * cannot be parsed, ends before it starts, spans more than {@link #MAX_PTO_DAYS} days, or falls outside
+     * {@link #MAX_YEARS_FROM_EXPORT} year(s) of the export year.
+     */
     public static List<LocalDate> parsePtoDays(String ptoStart, String ptoEnd, int year) {
         List<LocalDate> days = new ArrayList<LocalDate>();
         if (ptoStart == null || ptoStart.trim().length() == 0) {
@@ -132,14 +167,12 @@ public class HrPtoSyncJob implements CommandLineRunner {
         }
         String s = ptoStart.trim();
         if (s.matches("\\d{4}-\\d{2}-\\d{2}")) {
-            LocalDate start = LocalDate.parse(s);
+            LocalDate start = isoDate(s);
             LocalDate end = start;
             if (ptoEnd != null && ptoEnd.trim().matches("\\d{4}-\\d{2}-\\d{2}")) {
-                end = LocalDate.parse(ptoEnd.trim());
+                end = isoDate(ptoEnd.trim());
             }
-            for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
-                days.add(d);
-            }
+            addRange(days, start, end, year);
             return days;
         }
         String[] tokens = s.replace(",", "").split(" ");
@@ -149,11 +182,10 @@ public class HrPtoSyncJob implements CommandLineRunner {
             }
             if (t.indexOf('-') > 0) {
                 String[] range = t.split("-");
-                LocalDate start = mmdd(range[0], year);
-                LocalDate end = mmdd(range[1], year);
-                for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
-                    days.add(d);
+                if (range.length != 2) {
+                    throw new InvalidPtoRangeException("unparseable free-text PTO range");
                 }
+                addRange(days, mmdd(range[0], year), mmdd(range[1], year), year);
             } else {
                 days.add(mmdd(t, year));
             }
@@ -162,9 +194,57 @@ public class HrPtoSyncJob implements CommandLineRunner {
         return days;
     }
 
+    private static void addRange(List<LocalDate> days, LocalDate start, LocalDate end, int year) {
+        if (end.isBefore(start)) {
+            throw new InvalidPtoRangeException("PTO end " + end + " is before start " + start);
+        }
+        if (start.getYear() < year - MAX_YEARS_FROM_EXPORT || end.getYear() > year + MAX_YEARS_FROM_EXPORT) {
+            throw new InvalidPtoRangeException("PTO period " + start + " to " + end
+                    + " is outside " + (year - MAX_YEARS_FROM_EXPORT) + "-" + (year + MAX_YEARS_FROM_EXPORT));
+        }
+        long span = ChronoUnit.DAYS.between(start, end) + 1;
+        if (span > MAX_PTO_DAYS) {
+            throw new InvalidPtoRangeException("PTO period " + start + " to " + end + " spans " + span
+                    + " days (max " + MAX_PTO_DAYS + ")");
+        }
+        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+            days.add(d);
+        }
+    }
+
+    private static LocalDate isoDate(String value) {
+        try {
+            return LocalDate.parse(value);
+        } catch (DateTimeException e) {
+            throw new InvalidPtoRangeException("invalid PTO date " + value);
+        }
+    }
+
     private static LocalDate mmdd(String t, int year) {
         String[] p = t.split("/");
-        return LocalDate.of(year, Integer.parseInt(p[0]), Integer.parseInt(p[1]));
+        if (p.length != 2 || !p[0].matches("\\d{1,2}") || !p[1].matches("\\d{1,2}")) {
+            throw new InvalidPtoRangeException("unparseable free-text PTO date");
+        }
+        try {
+            return LocalDate.of(year, Integer.parseInt(p[0]), Integer.parseInt(p[1]));
+        } catch (DateTimeException e) {
+            throw new InvalidPtoRangeException("invalid free-text PTO date");
+        }
+    }
+
+    static int maxMessagesPerRun() {
+        String v = System.getProperty(MAX_MESSAGES_PROPERTY);
+        if (v != null) {
+            try {
+                int n = Integer.parseInt(v.trim());
+                if (n > 0) {
+                    return n;
+                }
+            } catch (NumberFormatException e) {
+                log.warn("Ignoring invalid {}={}", MAX_MESSAGES_PROPERTY, v);
+            }
+        }
+        return DEFAULT_MAX_MESSAGES;
     }
 
     public static String weekdayOf(LocalDate d) {
@@ -352,6 +432,9 @@ public class HrPtoSyncJob implements CommandLineRunner {
     public Map<String, Integer> errorCountsByCostCenter() {
         Map<String, Integer> counts = new HashMap<String, Integer>();
         for (Map<String, Object> e : readErrors()) {
+            if (!"AE".equals(e.get("code"))) {
+                continue;
+            }
             String msg = String.valueOf(e.get("message"));
             int i = msg.lastIndexOf(' ');
             String cc = i > 0 ? msg.substring(i + 1) : msg;

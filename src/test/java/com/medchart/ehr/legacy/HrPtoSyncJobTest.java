@@ -2,10 +2,13 @@ package com.medchart.ehr.legacy;
 
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class HrPtoSyncJobTest {
@@ -56,5 +59,51 @@ class HrPtoSyncJobTest {
         assertTrue(segments[3].startsWith("AIS|1||BLOCK^OR block^L|202610130700||480|MIN"));
         assertEquals("AIL|1||OR-4^^^2130|OR^Operating room", segments[4]);
         assertTrue(segments[5].startsWith("AIP|1||E104422^Marquez^Elena^^^Dr.^^^^^^^^NPI|SURGEON^Primary surgeon|202610130700||480|MIN"));
+    }
+
+    @Test
+    void rejectsMultiCenturyIsoRangeWithoutExpandingIt() {
+        InvalidPtoRangeException e = assertTimeoutPreemptively(Duration.ofSeconds(1), () ->
+                assertThrows(InvalidPtoRangeException.class,
+                        () -> HrPtoSyncJob.parsePtoDays("0001-01-01", "9999-12-31", 2026)));
+        assertTrue(e.getMessage().contains("outside 2025-2027"), e.getMessage());
+    }
+
+    @Test
+    void acceptsMaxSpanAndRejectsOneDayMore() {
+        List<LocalDate> days = HrPtoSyncJob.parsePtoDays("2026-01-01", "2027-01-01", 2026);
+        assertEquals(HrPtoSyncJob.MAX_PTO_DAYS, days.size());
+
+        InvalidPtoRangeException e = assertThrows(InvalidPtoRangeException.class,
+                () -> HrPtoSyncJob.parsePtoDays("2026-01-01", "2027-01-02", 2026));
+        assertTrue(e.getMessage().contains("spans 367 days"), e.getMessage());
+    }
+
+    @Test
+    void acceptsRangeCrossingIntoNextYear() {
+        List<LocalDate> days = HrPtoSyncJob.parsePtoDays("2026-12-28", "2027-01-03", 2026);
+        assertEquals(7, days.size());
+    }
+
+    @Test
+    void rejectsReversedIsoRange() {
+        assertThrows(InvalidPtoRangeException.class,
+                () -> HrPtoSyncJob.parsePtoDays("2026-10-17", "2026-10-13", 2026));
+    }
+
+    @Test
+    void rejectsInvalidIsoDate() {
+        assertThrows(InvalidPtoRangeException.class,
+                () -> HrPtoSyncJob.parsePtoDays("2026-13-45", "", 2026));
+    }
+
+    @Test
+    void rejectsMalformedFreeText() {
+        assertThrows(InvalidPtoRangeException.class,
+                () -> HrPtoSyncJob.parsePtoDays("13/45 vacation", "", 2026));
+        assertThrows(InvalidPtoRangeException.class,
+                () -> HrPtoSyncJob.parsePtoDays("10/17-10/13 vacation", "", 2026));
+        assertThrows(InvalidPtoRangeException.class,
+                () -> HrPtoSyncJob.parsePtoDays("10/13-10/15-10/17", "", 2026));
     }
 }
