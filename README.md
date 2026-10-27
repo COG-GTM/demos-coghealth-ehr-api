@@ -20,6 +20,9 @@ export NEON_DB_URL="jdbc:postgresql://<neon-host>/neondb?sslmode=require"
 export NEON_DB_USERNAME="<username>"
 export NEON_DB_PASSWORD="<password>"
 
+# JWT signing key (required, at least 64 bytes; the app refuses to start without it)
+export JWT_SECRET="$(openssl rand -base64 64 | tr -d '\n')"
+
 # Run with dev profile
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```

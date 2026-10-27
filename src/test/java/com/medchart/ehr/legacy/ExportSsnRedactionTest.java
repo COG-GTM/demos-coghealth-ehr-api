@@ -77,6 +77,24 @@ class ExportSsnRedactionTest {
     }
 
     @Test
+    void dailyReportDoesNotDeleteAConcurrentRoster() throws Exception {
+        when(query.getResultList()).thenReturn(Collections.emptyList());
+        ReportGenerator generator = reportGenerator();
+
+        Path roster = Path.of(generator.generatePatientRoster());
+        try {
+            Path second = Path.of(generator.generatePatientRoster());
+            Files.deleteIfExists(second);
+            generator.generateDailyReport();
+
+            assertThat(second).isNotEqualTo(roster);
+            assertThat(roster).exists();
+        } finally {
+            Files.deleteIfExists(roster);
+        }
+    }
+
+    @Test
     void encounterSummaryNoLongerSelectsSsnAndPrintsRealDob() throws Exception {
         List<Object[]> rows = new ArrayList<>();
         rows.add(new Object[]{1L, "ENC-1", LocalDateTime.of(2024, 3, 1, 9, 0), "OFFICE", "COMPLETED",

@@ -33,6 +33,16 @@ public class ReportGenerator {
         return "****" + lastFour;
     }
 
+    private static Path createRosterFile() {
+        String prefix = "patient_roster_" +
+            LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + "_";
+        try {
+            return Files.createTempFile(Path.of(TEMP_DIR), prefix, ".csv");
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
     public String generatePatientRoster() {
         String sql = "SELECT p.id, p.mrn, p.first_name, p.last_name, p.date_of_birth, " +
                      "p.phone_home, p.phone_mobile, p.email, " +
@@ -45,9 +55,7 @@ public class ReportGenerator {
         Query query = entityManager.createNativeQuery(sql);
         List<Object[]> results = query.getResultList();
         
-        String filename = "patient_roster_" + 
-            LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".csv";
-        String filePath = TEMP_DIR + File.separator + filename;
+        String filePath = createRosterFile().toString();
         
         try (PrintWriter writer = new PrintWriter(new FileWriter(filePath))) {
             writer.println("ID,MRN,FirstName,LastName,DOB,PhoneHome,PhoneMobile,Email,Address,City,State,Zip,Insurance,MemberID");
