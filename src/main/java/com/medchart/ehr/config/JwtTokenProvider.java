@@ -2,28 +2,53 @@ package com.medchart.ehr.config;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
+import javax.annotation.PostConstruct;
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+@Slf4j
 @Component
 public class JwtTokenProvider {
 
-    @Value("${medchart.security.jwt.secret}")
+    @Value("${medchart.security.jwt.secret:}")
     private String jwtSecret;
 
     @Value("${medchart.security.jwt.expiration}")
     private int jwtExpirationInMs;
 
+    private static final int MIN_HS512_KEY_BYTES = 64;
+
+    private SecretKey signingKey;
+
+    @PostConstruct
+    void initSigningKey() {
+        if (!StringUtils.hasText(jwtSecret)) {
+            log.warn("medchart.security.jwt.secret (JWT_SECRET) is not set; using a random per-process key. "
+                    + "Issued tokens will not survive a restart.");
+            signingKey = Keys.secretKeyFor(SignatureAlgorithm.HS512);
+            return;
+        }
+        byte[] secretBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
+        if (secretBytes.length < MIN_HS512_KEY_BYTES) {
+            throw new IllegalStateException("medchart.security.jwt.secret (JWT_SECRET) must be at least "
+                    + MIN_HS512_KEY_BYTES + " bytes for HS512");
+        }
+        signingKey = Keys.hmacShaKeyFor(secretBytes);
+    }
+
     private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        return signingKey;
     }
 
     public String generateToken(Authentication authentication) {

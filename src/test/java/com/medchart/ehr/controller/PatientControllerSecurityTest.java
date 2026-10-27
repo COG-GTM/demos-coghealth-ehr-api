@@ -91,6 +91,19 @@ class PatientControllerSecurityTest {
     }
 
     @Test
+    void disabledUserTokenIsRejected() throws Exception {
+        User disabled = User.builder().username("former.staff").password("x").email("f@example.com")
+                .firstName("Former").lastName("Staff").roles(Set.of(User.Role.STAFF))
+                .enabled(false).accountNonExpired(true).accountNonLocked(true).credentialsNonExpired(true).build();
+        when(userDetailsService.loadUserByUsername("former.staff")).thenReturn(disabled);
+        String token = tokenProvider.generateTokenFromUsername("former.staff");
+
+        mockMvc.perform(get("/v1/patients/1").header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnauthorized());
+        verifyNoInteractions(patientService);
+    }
+
+    @Test
     @WithMockUser(roles = "PROVIDER")
     void providerCanReadButNotWrite() throws Exception {
         when(patientService.getPatientById(1L)).thenReturn(PatientDTO.builder().id(1L).build());
