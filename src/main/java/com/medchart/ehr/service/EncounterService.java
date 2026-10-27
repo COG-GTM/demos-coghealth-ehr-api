@@ -1,21 +1,26 @@
 package com.medchart.ehr.service;
 
+import com.medchart.ehr.domain.auth.User;
 import com.medchart.ehr.domain.encounter.Encounter;
 import com.medchart.ehr.domain.encounter.EncounterStatus;
 import com.medchart.ehr.repository.EncounterRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 
 @Service
 @Transactional
@@ -32,60 +37,86 @@ public class EncounterService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<Encounter> findById(Long id) {
-        return encounterRepository.findById(id);
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<Encounter> findByIdWithDetails(Long id) {
-        return encounterRepository.findByIdWithDetails(id);
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<Encounter> findByIdForProvider(Long id, Long providerId) {
+    public Optional<Encounter> findByIdForRequester(Long id, User requester) {
         Optional<Encounter> encounter = encounterRepository.findByIdWithDetails(id);
-        encounter.ifPresent(enc -> log.info("Provider {} accessed encounter {}", providerId, enc.getEncounterNumber()));
+        encounter.ifPresent(enc -> {
+            assertCanAccess(enc, requester);
+            log.info("User {} accessed encounter {}", requester.getId(), enc.getEncounterNumber());
+        });
         return encounter;
     }
 
     @Transactional(readOnly = true)
-    public Optional<Encounter> findByEncounterNumber(String encounterNumber) {
-        return encounterRepository.findByEncounterNumber(encounterNumber);
+    public Optional<Encounter> findByEncounterNumberForRequester(String encounterNumber, User requester) {
+        Optional<Encounter> encounter = encounterRepository.findByEncounterNumber(encounterNumber);
+        encounter.ifPresent(enc -> {
+            assertCanAccess(enc, requester);
+            log.info("User {} accessed encounter {}", requester.getId(), enc.getEncounterNumber());
+        });
+        return encounter;
     }
 
     @Transactional(readOnly = true)
-    public List<Encounter> findByPatientId(Long patientId) {
-        return encounterRepository.findByPatientId(patientId);
+    public List<Encounter> findByPatientId(Long patientId, User requester) {
+        if (isAdmin(requester)) {
+            return encounterRepository.findByPatientId(patientId);
+        }
+        if (requester.getProviderId() == null) {
+            return Collections.emptyList();
+        }
+        return encounterRepository.findByPatientIdAndAttendingProviderId(patientId, requester.getProviderId());
     }
 
     @Transactional(readOnly = true)
-    public Page<Encounter> findByPatientId(Long patientId, Pageable pageable) {
-        return encounterRepository.findByPatientId(patientId, pageable);
+    public Page<Encounter> findByPatientId(Long patientId, Pageable pageable, User requester) {
+        if (isAdmin(requester)) {
+            return encounterRepository.findByPatientId(patientId, pageable);
+        }
+        if (requester.getProviderId() == null) {
+            return new PageImpl<>(Collections.emptyList(), pageable, 0);
+        }
+        return encounterRepository.findByPatientIdAndAttendingProviderId(patientId, requester.getProviderId(), pageable);
     }
 
     @Transactional(readOnly = true)
-    public List<Encounter> findByProviderId(Long providerId) {
+    public List<Encounter> findByProviderId(Long providerId, User requester) {
+        assertCanAccessProvider(providerId, requester);
         return encounterRepository.findByAttendingProviderId(providerId);
     }
 
     @Transactional(readOnly = true)
-    public List<Encounter> getProviderSchedule(Long providerId, LocalDate date) {
+    public List<Encounter> getProviderSchedule(Long providerId, LocalDate date, User requester) {
+        assertCanAccessProvider(providerId, requester);
         LocalDateTime startOfDay = date.atStartOfDay();
         LocalDateTime endOfDay = date.plusDays(1).atStartOfDay();
         return encounterRepository.findTodaysSchedule(providerId, startOfDay, endOfDay);
     }
 
     @Transactional(readOnly = true)
-    public List<Encounter> findByDateRange(LocalDate startDate, LocalDate endDate) {
+    public List<Encounter> findByDateRange(LocalDate startDate, LocalDate endDate, User requester) {
+        if (!isAdmin(requester)) {
+            if (requester.getProviderId() == null) {
+                return Collections.emptyList();
+            }
+            return encounterRepository.findByDateRangeAndProvider(
+                    startDate.atStartOfDay(), endDate.plusDays(1).atStartOfDay(), requester.getProviderId());
+        }
         return encounterRepository.findByDateRange(startDate.atStartOfDay(), endDate.plusDays(1).atStartOfDay());
     }
 
     @Transactional(readOnly = true)
-    public List<Encounter> findByStatus(EncounterStatus status) {
+    public List<Encounter> findByStatus(EncounterStatus status, User requester) {
+        if (!isAdmin(requester)) {
+            if (requester.getProviderId() == null) {
+                return Collections.emptyList();
+            }
+            return encounterRepository.findByStatusAndAttendingProviderId(status, requester.getProviderId());
+        }
         return encounterRepository.findByStatus(status);
     }
 
-    public Encounter create(Encounter encounter) {
+    public Encounter create(Encounter encounter, User requester) {
+        assertOwnProvider(encounter, requester);
         String encNumber = generateEncounterNumber();
         encounter.setEncounterNumber(encNumber);
         encounter.setStatus(EncounterStatus.SCHEDULED);
@@ -95,50 +126,52 @@ public class EncounterService {
         return saved;
     }
 
-    public Encounter update(Encounter encounter) {
+    public Optional<Encounter> update(Long id, Encounter encounter, User requester) {
+        Optional<Encounter> existing = encounterRepository.findByIdWithDetails(id);
+        if (!existing.isPresent()) {
+            return Optional.empty();
+        }
+        assertCanAccess(existing.get(), requester);
+        assertOwnProvider(encounter, requester);
+        encounter.setId(id);
         log.info("Updating encounter {}", encounter.getEncounterNumber());
-        return encounterRepository.save(encounter);
+        return Optional.of(encounterRepository.save(encounter));
     }
 
-    public void checkIn(Long encounterId) {
-        encounterRepository.findById(encounterId).ifPresent(enc -> {
+    public boolean checkIn(Long encounterId, User requester) {
+        return updateStatus(encounterId, requester, enc -> {
             enc.setStatus(EncounterStatus.CHECKED_IN);
-            encounterRepository.save(enc);
             log.info("Patient checked in for encounter {}", enc.getEncounterNumber());
         });
     }
 
-    public void startEncounter(Long encounterId) {
-        encounterRepository.findById(encounterId).ifPresent(enc -> {
+    public boolean startEncounter(Long encounterId, User requester) {
+        return updateStatus(encounterId, requester, enc -> {
             enc.setStatus(EncounterStatus.IN_PROGRESS);
-            encounterRepository.save(enc);
             log.info("Encounter {} started", enc.getEncounterNumber());
         });
     }
 
-    public void completeEncounter(Long encounterId, String notes) {
-        encounterRepository.findById(encounterId).ifPresent(enc -> {
+    public boolean completeEncounter(Long encounterId, String notes, User requester) {
+        return updateStatus(encounterId, requester, enc -> {
             enc.setStatus(EncounterStatus.COMPLETED);
             if (notes != null) {
                 enc.setNotes(notes);
             }
-            encounterRepository.save(enc);
             log.info("Encounter {} completed", enc.getEncounterNumber());
         });
     }
 
-    public void cancelEncounter(Long encounterId) {
-        encounterRepository.findById(encounterId).ifPresent(enc -> {
+    public boolean cancelEncounter(Long encounterId, User requester) {
+        return updateStatus(encounterId, requester, enc -> {
             enc.setStatus(EncounterStatus.CANCELLED);
-            encounterRepository.save(enc);
             log.info("Encounter {} cancelled", enc.getEncounterNumber());
         });
     }
 
-    public void markNoShow(Long encounterId) {
-        encounterRepository.findById(encounterId).ifPresent(enc -> {
+    public boolean markNoShow(Long encounterId, User requester) {
+        return updateStatus(encounterId, requester, enc -> {
             enc.setStatus(EncounterStatus.NO_SHOW);
-            encounterRepository.save(enc);
             log.info("Encounter {} marked as no-show", enc.getEncounterNumber());
         });
     }
@@ -146,6 +179,50 @@ public class EncounterService {
     @Transactional(readOnly = true)
     public long getPatientEncounterCount(Long patientId) {
         return encounterRepository.countByPatientId(patientId);
+    }
+
+    private boolean updateStatus(Long encounterId, User requester, Consumer<Encounter> update) {
+        Optional<Encounter> encounter = encounterRepository.findByIdWithDetails(encounterId);
+        if (!encounter.isPresent()) {
+            return false;
+        }
+        Encounter existing = encounter.get();
+        assertCanAccess(existing, requester);
+        update.accept(existing);
+        encounterRepository.save(existing);
+        return true;
+    }
+
+    private void assertCanAccessProvider(Long providerId, User requester) {
+        if (!isAdmin(requester) && !providerId.equals(requester.getProviderId())) {
+            throw new AccessDeniedException("Not authorized to access provider encounters");
+        }
+    }
+
+    private void assertOwnProvider(Encounter encounter, User requester) {
+        if (!isAdmin(requester)
+                && (requester.getProviderId() == null
+                || encounter.getAttendingProvider() == null
+                || !requester.getProviderId().equals(encounter.getAttendingProvider().getId()))) {
+            throw new AccessDeniedException("Not authorized to assign encounter to this provider");
+        }
+    }
+
+    private void assertCanAccess(Encounter encounter, User requester) {
+        if (!canAccess(encounter, requester)) {
+            throw new AccessDeniedException("Not authorized to access encounter");
+        }
+    }
+
+    private boolean canAccess(Encounter encounter, User requester) {
+        return isAdmin(requester)
+                || (requester.getProviderId() != null
+                && encounter.getAttendingProvider() != null
+                && requester.getProviderId().equals(encounter.getAttendingProvider().getId()));
+    }
+
+    private boolean isAdmin(User requester) {
+        return requester.getRoles() != null && requester.getRoles().contains(User.Role.ADMIN);
     }
 
     private String generateEncounterNumber() {
