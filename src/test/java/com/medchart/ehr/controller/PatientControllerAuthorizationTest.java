@@ -72,7 +72,7 @@ class PatientControllerAuthorizationTest {
         signIn("dr.anderson", User.Role.PROVIDER);
         given(patientService.getPatientById(1L)).willReturn(new PatientDTO());
         given(patientService.getPatientByMrn("MRN001")).willReturn(new PatientDTO());
-        given(patientService.searchPatients(anyString(), any())).willReturn(Page.empty());
+        given(patientService.searchPatients(anyString(), any(), any())).willReturn(Page.empty());
 
         mockMvc.perform(authed(get("/v1/patients/1"))).andExpect(status().isOk());
         mockMvc.perform(authed(get("/v1/patients/mrn/MRN001"))).andExpect(status().isOk());
@@ -114,13 +114,13 @@ class PatientControllerAuthorizationTest {
     @Test
     void searchPageSizeIsCappedAt100() throws Exception {
         signIn("dr.anderson", User.Role.PROVIDER);
-        given(patientService.searchPatients(anyString(), any())).willReturn(Page.empty());
+        given(patientService.searchPatients(anyString(), any(), any())).willReturn(Page.empty());
 
         mockMvc.perform(authed(get("/v1/patients/search").param("q", "a").param("size", "2000")))
             .andExpect(status().isOk());
 
         ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
-        verify(patientService).searchPatients(eq("a"), pageable.capture());
+        verify(patientService).searchPatients(eq("a"), any(), pageable.capture());
         assertEquals(100, pageable.getValue().getPageSize());
     }
 

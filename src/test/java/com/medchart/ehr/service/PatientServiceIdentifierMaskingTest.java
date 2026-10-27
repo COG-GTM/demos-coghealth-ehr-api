@@ -69,7 +69,7 @@ class PatientServiceIdentifierMaskingTest {
         assertEquals("***-**-6789",
             patientService.getPatientByMrn("MRN001").getIdentifiers().get(0).getIdentifierValue());
         assertEquals("***-**-****",
-            patientService.searchPatients("smi", PageRequest.of(0, 20)).getContent().get(0)
+            patientService.searchPatients("smi", null, PageRequest.of(0, 20)).getContent().get(0)
                 .getIdentifiers().get(0).getIdentifierValue());
     }
 

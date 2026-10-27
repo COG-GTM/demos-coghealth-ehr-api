@@ -149,7 +149,7 @@ class ApiAuthorizationTest {
     void clinicianWithValidTokenCanReadCharts() throws Exception {
         signIn("dr.anderson", User.Role.PROVIDER);
         given(patientService.getPatientById(1L)).willReturn(new PatientDTO());
-        given(encounterService.findByIdWithDetails(1L)).willReturn(Optional.of(new Encounter()));
+        given(encounterService.findByIdForProvider(1L, null)).willReturn(Optional.of(new Encounter()));
 
         mockMvc.perform(authed(get("/v1/patients/1"))).andExpect(status().isOk());
         mockMvc.perform(authed(get("/v1/encounters/1"))).andExpect(status().isOk());
