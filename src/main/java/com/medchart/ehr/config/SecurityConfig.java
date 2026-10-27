@@ -2,6 +2,8 @@ package com.medchart.ehr.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -26,6 +28,20 @@ import java.util.List;
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
+    // Relative to the /api servlet context path.
+    static final String[] PUBLIC_PATHS = {
+        "/api/auth/login",
+        "/api/auth/register",
+        "/actuator/health",
+        "/actuator/health/**",
+        "/actuator/info",
+        "/swagger-ui.html",
+        "/swagger-ui/**",
+        "/v3/api-docs",
+        "/v3/api-docs/**",
+        "/error"
+    };
+
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
@@ -47,10 +63,21 @@ public class SecurityConfig {
             .and()
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .authorizeRequests()
+                .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .antMatchers(PUBLIC_PATHS).permitAll()
                 .antMatchers("/v1/providers/**").hasAnyRole("PROVIDER", "ADMIN", "STAFF")
-                .antMatchers("/**").permitAll();
-        
+                .anyRequest().authenticated();
+
         return http.build();
+    }
+
+    // The JWT filter runs inside the security chain only; don't also register it as a servlet filter.
+    @Bean
+    public FilterRegistrationBean<JwtAuthenticationFilter> jwtAuthenticationFilterRegistration(
+            JwtAuthenticationFilter jwtAuthenticationFilter) {
+        FilterRegistrationBean<JwtAuthenticationFilter> registration = new FilterRegistrationBean<>(jwtAuthenticationFilter);
+        registration.setEnabled(false);
+        return registration;
     }
 
     @Bean

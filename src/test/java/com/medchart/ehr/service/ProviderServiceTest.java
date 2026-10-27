@@ -1,5 +1,6 @@
 package com.medchart.ehr.service;
 
+import com.medchart.ehr.domain.provider.License;
 import com.medchart.ehr.domain.provider.Provider;
 import com.medchart.ehr.domain.provider.ProviderType;
 import com.medchart.ehr.dto.ProviderDTO;
@@ -10,6 +11,7 @@ import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -28,6 +30,11 @@ class ProviderServiceTest {
         p.setVersion(8L);
         p.setActive(true);
         p.setFirstName("Alice");
+        p.setLastName("Chen");
+        p.setNpi("1111111111");
+        p.setDepartment("Surgery");
+        p.setPhoneMobile("555-0199");
+        p.getLicenses().add(License.builder().licenseType("MD").licenseNumber("A123456").state("CA").build());
         return p;
     }
 
@@ -62,5 +69,39 @@ class ProviderServiceTest {
         assertEquals(Boolean.TRUE, saved.getActive());
 
         service.update(4L, dto(null)).orElseThrow();
+    }
+
+    @Test
+    void updateNeverChangesNpiOrVersion() {
+        when(repository.findById(4L)).thenReturn(Optional.of(stored()));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Provider saved = service.update(4L, dto(8L)).orElseThrow();
+        assertEquals("1111111111", saved.getNpi());
+        assertEquals(8L, saved.getVersion());
+    }
+
+    @Test
+    void omittedFieldsKeepStoredValues() {
+        when(repository.findById(4L)).thenReturn(Optional.of(stored()));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        ProviderDTO partial = new ProviderDTO();
+        partial.setDepartment("Cardiology");
+        Provider saved = service.update(4L, partial).orElseThrow();
+
+        assertEquals("Cardiology", saved.getDepartment());
+        assertEquals("Alice", saved.getFirstName());
+        assertEquals("Chen", saved.getLastName());
+        assertEquals("555-0199", saved.getPhoneMobile());
+        assertEquals(1, saved.getLicenses().size());
+    }
+
+    @Test
+    void deactivateReportsUnknownProvider() {
+        when(repository.findById(99L)).thenReturn(Optional.empty());
+
+        assertFalse(service.deactivate(99L));
+        verify(repository, never()).save(any());
     }
 }

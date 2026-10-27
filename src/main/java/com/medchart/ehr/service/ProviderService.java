@@ -76,18 +76,19 @@ public class ProviderService {
             if (dto.getExpectedVersion() != null && !dto.getExpectedVersion().equals(provider.getVersion())) {
                 throw new ObjectOptimisticLockingFailureException(Provider.class, id);
             }
-            dto.applyTo(provider);
+            dto.applyUpdateTo(provider);
             log.info("Updating provider: {}", id);
             return providerRepository.save(provider);
         });
     }
 
-    public void deactivate(Long id) {
-        providerRepository.findById(id).ifPresent(provider -> {
+    public boolean deactivate(Long id) {
+        return providerRepository.findById(id).map(provider -> {
             provider.setActive(false);
             providerRepository.save(provider);
             log.info("Deactivated provider: {}", provider.getNpi());
-        });
+            return true;
+        }).orElse(false);
     }
 
     @Transactional(readOnly = true)

@@ -148,6 +148,7 @@ class ProviderControllerSecurityTest {
     @Test
     void enabledAdminJwtIsAuthenticated() throws Exception {
         stubJwtUser(User.withUsername("admin").password("x").roles("ADMIN").build());
+        when(providerService.deactivate(4L)).thenReturn(true);
 
         mockMvc.perform(delete("/v1/providers/4").header("Authorization", "Bearer token"))
                 .andExpect(status().isNoContent());
@@ -213,6 +214,50 @@ class ProviderControllerSecurityTest {
     void anonymousDeleteOfProviderReturns401() throws Exception {
         mockMvc.perform(delete("/v1/providers/1")).andExpect(status().isUnauthorized());
         verify(providerService, never()).deactivate(anyLong());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void deactivateOfUnknownProviderReturns404() throws Exception {
+        when(providerService.deactivate(99L)).thenReturn(false);
+
+        mockMvc.perform(delete("/v1/providers/99")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void createRequiresMandatoryFields() throws Exception {
+        mockMvc.perform(post("/v1/providers").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"firstName\":\"Alice\"}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/v1/providers").contentType(MediaType.APPLICATION_JSON)
+                        .content(BODY.replace("1234567890", "12345")))
+                .andExpect(status().isBadRequest());
+
+        verify(providerService, never()).create(any());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void partialUpdateIsAcceptedAndLicensesAreValidated() throws Exception {
+        when(providerService.update(eq(4L), any())).thenReturn(Optional.of(new Provider()));
+
+        mockMvc.perform(put("/v1/providers/4").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"department\":\"Cardiology\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(put("/v1/providers/4").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"licenses\":[{\"licenseType\":\"MD\"}]}"))
+                .andExpect(status().isBadRequest());
+
+        verify(providerService).update(eq(4L), any());
+    }
+
+    @Test
+    void anonymousRequestsOutsideTheAllowlistAreRejected() throws Exception {
+        mockMvc.perform(get("/v1/patients")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/v1/export/patients")).andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isNotFound());
     }
 
     private static Provider aliceChen() {

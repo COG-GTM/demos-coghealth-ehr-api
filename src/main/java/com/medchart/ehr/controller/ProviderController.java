@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -77,7 +78,7 @@ public class ProviderController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ProviderResponseDTO> create(@Valid @RequestBody ProviderDTO provider) {
+    public ResponseEntity<ProviderResponseDTO> create(@Validated(ProviderDTO.OnCreate.class) @RequestBody ProviderDTO provider) {
         if (provider.isIdSupplied()) {
             return ResponseEntity.badRequest().build();
         }
@@ -100,8 +101,9 @@ public class ProviderController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deactivate(@PathVariable Long id) {
-        providerService.deactivate(id);
-        return ResponseEntity.noContent().build();
+        return providerService.deactivate(id)
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.notFound().build();
     }
 
     private static List<ProviderResponseDTO> toResponses(List<Provider> providers, Authentication auth) {
