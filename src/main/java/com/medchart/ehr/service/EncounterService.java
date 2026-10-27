@@ -1,5 +1,8 @@
 package com.medchart.ehr.service;
 
+import com.medchart.ehr.audit.AuditAction;
+import com.medchart.ehr.audit.AuditEvent;
+import com.medchart.ehr.audit.AuditService;
 import com.medchart.ehr.domain.encounter.Encounter;
 import com.medchart.ehr.domain.encounter.EncounterStatus;
 import com.medchart.ehr.domain.patient.Patient;
@@ -37,14 +40,17 @@ public class EncounterService {
     private final EncounterRepository encounterRepository;
     private final PatientRepository patientRepository;
     private final ProviderRepository providerRepository;
+    private final AuditService auditService;
     private final AtomicLong encounterSequence = new AtomicLong(100);
 
     public EncounterService(EncounterRepository encounterRepository,
                             PatientRepository patientRepository,
-                            ProviderRepository providerRepository) {
+                            ProviderRepository providerRepository,
+                            AuditService auditService) {
         this.encounterRepository = encounterRepository;
         this.patientRepository = patientRepository;
         this.providerRepository = providerRepository;
+        this.auditService = auditService;
     }
 
     @Transactional(readOnly = true)
@@ -120,6 +126,7 @@ public class EncounterService {
 
         Encounter saved = encounterRepository.save(encounter);
         log.info("Created encounter {} for patient id {}", encNumber, patient.getId());
+        recordAudit(AuditAction.CREATE, saved, "Create encounter");
         return saved;
     }
 
@@ -127,7 +134,9 @@ public class EncounterService {
         return encounterRepository.findById(id).map(existing -> {
             applyUpdate(existing, request);
             log.info("Updating encounter {}", existing.getEncounterNumber());
-            return unproxyAssociations(encounterRepository.save(existing));
+            Encounter saved = encounterRepository.save(existing);
+            recordAudit(AuditAction.UPDATE, saved, "Update encounter");
+            return unproxyAssociations(saved);
         });
     }
 
@@ -182,6 +191,19 @@ public class EncounterService {
         }
         return providerRepository.findById(providerId)
                 .orElseThrow(() -> new InvalidEncounterRequestException("Unknown attendingProviderId"));
+    }
+
+    private void recordAudit(AuditAction action, Encounter encounter, String description) {
+        String username = currentUsername();
+        auditService.saveAuditEventAsync(AuditEvent.builder()
+                .userId(username != null ? username : "anonymous")
+                .userName(username)
+                .patientId(encounter.getPatient() != null ? encounter.getPatient().getId() : null)
+                .action(action)
+                .resourceType("Encounter")
+                .resourceId(encounter.getId())
+                .description(description)
+                .build());
     }
 
     private String currentUsername() {

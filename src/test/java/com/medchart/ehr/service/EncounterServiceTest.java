@@ -1,5 +1,8 @@
 package com.medchart.ehr.service;
 
+import com.medchart.ehr.audit.AuditAction;
+import com.medchart.ehr.audit.AuditEvent;
+import com.medchart.ehr.audit.AuditService;
 import com.medchart.ehr.domain.encounter.Encounter;
 import com.medchart.ehr.domain.encounter.EncounterPriority;
 import com.medchart.ehr.domain.encounter.EncounterStatus;
@@ -14,6 +17,7 @@ import com.medchart.ehr.repository.ProviderRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.AuthorityUtils;
@@ -33,6 +37,7 @@ class EncounterServiceTest {
     private EncounterRepository encounterRepository;
     private PatientRepository patientRepository;
     private ProviderRepository providerRepository;
+    private AuditService auditService;
     private EncounterService service;
 
     private Patient alice;
@@ -44,7 +49,8 @@ class EncounterServiceTest {
         encounterRepository = mock(EncounterRepository.class);
         patientRepository = mock(PatientRepository.class);
         providerRepository = mock(ProviderRepository.class);
-        service = new EncounterService(encounterRepository, patientRepository, providerRepository);
+        auditService = mock(AuditService.class);
+        service = new EncounterService(encounterRepository, patientRepository, providerRepository, auditService);
         when(encounterRepository.save(any(Encounter.class))).thenAnswer(inv -> inv.getArgument(0));
 
         alice = new Patient();
@@ -109,6 +115,12 @@ class EncounterServiceTest {
         assertEquals("4", saved.getRoom());
         assertEquals("Cough", saved.getChiefComplaint());
         assertTrue(saved.getDiagnoses().isEmpty());
+
+        AuditEvent audit = capturedAudit();
+        assertEquals(AuditAction.CREATE, audit.getAction());
+        assertEquals("Encounter", audit.getResourceType());
+        assertEquals(1L, audit.getPatientId());
+        assertEquals("nurse.kim", audit.getUserId());
     }
 
     @Test
@@ -131,6 +143,7 @@ class EncounterServiceTest {
         assertThrows(InvalidEncounterRequestException.class, () -> service.create(unknownPatient));
         assertThrows(InvalidEncounterRequestException.class, () -> service.create(unknownProvider));
         verify(encounterRepository, never()).save(any());
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -158,6 +171,18 @@ class EncounterServiceTest {
         assertEquals(EncounterType.OFFICE_VISIT, result.getEncounterType());
         assertEquals(WHEN, result.getEncounterDateTime());
         verify(encounterRepository).save(stored);
+
+        AuditEvent audit = capturedAudit();
+        assertEquals(AuditAction.UPDATE, audit.getAction());
+        assertEquals(42L, audit.getResourceId());
+        assertEquals(1L, audit.getPatientId());
+        assertEquals("anonymous", audit.getUserId());
+    }
+
+    private AuditEvent capturedAudit() {
+        ArgumentCaptor<AuditEvent> captor = ArgumentCaptor.forClass(AuditEvent.class);
+        verify(auditService).saveAuditEventAsync(captor.capture());
+        return captor.getValue();
     }
 
     @Test
@@ -183,6 +208,7 @@ class EncounterServiceTest {
 
         assertThrows(InvalidEncounterRequestException.class, () -> service.update(42L, request));
         verify(encounterRepository, never()).save(any());
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -191,5 +217,6 @@ class EncounterServiceTest {
 
         assertTrue(service.update(7L, new EncounterUpdateRequest()).isEmpty());
         verify(encounterRepository, never()).save(any());
+        verifyNoInteractions(auditService);
     }
 }
