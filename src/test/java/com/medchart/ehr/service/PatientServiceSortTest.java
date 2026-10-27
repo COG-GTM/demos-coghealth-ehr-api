@@ -24,6 +24,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -109,5 +110,41 @@ class PatientServiceSortTest {
         assertEquals(1, pageable.getPageNumber());
         assertEquals(12, pageable.getPageSize());
         assertEquals(Sort.unsorted(), pageable.getSort());
+    }
+
+    @Test
+    void preservesUnpagedRequestWhenSortIsNull() {
+        when(mockRepo.searchPatients(eq("a"), any(Pageable.class)))
+                .thenReturn(Page.<Patient>empty());
+
+        patientService.searchPatients("a", null, Pageable.unpaged());
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(mockRepo).searchPatients(eq("a"), pageableCaptor.capture());
+        assertTrue(pageableCaptor.getValue().isUnpaged());
+    }
+
+    @Test
+    void appliesSortToUnpagedRequest() {
+        when(mockRepo.searchPatients(eq("a"), any(Pageable.class)))
+                .thenReturn(Page.<Patient>empty());
+
+        patientService.searchPatients("a", "last_name,desc", Pageable.unpaged());
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(mockRepo).searchPatients(eq("a"), pageableCaptor.capture());
+        Pageable pageable = pageableCaptor.getValue();
+        assertEquals(0, pageable.getPageNumber());
+        assertEquals(Sort.by(Sort.Direction.DESC, "lastName"), pageable.getSort());
+    }
+
+    @Test
+    void rejectsUnsupportedSortForUnpagedRequestBeforeRepositoryCall() {
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> patientService.searchPatients("a", "(SELECT 1)", Pageable.unpaged()));
+
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatus());
+        assertEquals("Unsupported sort parameter", exception.getReason());
+        verifyNoInteractions(mockRepo);
     }
 }

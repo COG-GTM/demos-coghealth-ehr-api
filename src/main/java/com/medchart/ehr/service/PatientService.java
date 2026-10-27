@@ -56,15 +56,19 @@ public class PatientService {
     @AuditAccess(action = AuditAction.SEARCH, resourceType = "Patient", description = "Search patients")
     public Page<PatientDTO> searchPatients(String searchTerm, String sort, Pageable pageable) {
         if (sort == null || sort.isBlank()) {
-            return patientRepository.searchPatients(searchTerm,
-                    PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()))
+            return patientRepository.searchPatients(searchTerm, withSort(pageable, Sort.unsorted()))
                     .map(patientMapper::toDto);
         }
 
-        Sort resolvedSort = resolveSort(sort);
-        return patientRepository.searchPatients(searchTerm,
-                PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), resolvedSort))
+        return patientRepository.searchPatients(searchTerm, withSort(pageable, resolveSort(sort)))
                 .map(patientMapper::toDto);
+    }
+
+    private static Pageable withSort(Pageable pageable, Sort sort) {
+        if (pageable.isUnpaged()) {
+            return sort.isUnsorted() ? Pageable.unpaged() : PageRequest.of(0, Integer.MAX_VALUE, sort);
+        }
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
     }
 
     private Sort resolveSort(String sort) {
