@@ -6,6 +6,10 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import com.medchart.ehr.domain.auth.User;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -63,11 +67,37 @@ public class AuditAspect {
     }
 
     private String getCurrentUserId() {
-        return "system";
+        Authentication authentication = currentAuthentication();
+        if (authentication == null) {
+            return "anonymous";
+        }
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof User && ((User) principal).getId() != null) {
+            return String.valueOf(((User) principal).getId());
+        }
+        return authentication.getName();
     }
 
     private String getCurrentUserName() {
-        return "System User";
+        Authentication authentication = currentAuthentication();
+        if (authentication == null) {
+            return "Anonymous";
+        }
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof User) {
+            User user = (User) principal;
+            return user.getFirstName() + " " + user.getLastName();
+        }
+        return authentication.getName();
+    }
+
+    private Authentication currentAuthentication() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
+            return null;
+        }
+        return authentication;
     }
 
     private String getClientIpAddress() {

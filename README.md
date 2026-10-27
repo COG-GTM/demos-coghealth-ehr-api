@@ -80,7 +80,15 @@ src/main/java/com/medchart/ehr/
 
 ## Security
 
-JWT-based authentication. CORS allows `localhost:5173`, `localhost:5178`, `localhost:3000`.
+JWT-based authentication. Every endpoint requires a bearer token except `POST /api/auth/login` and `/actuator/health` (note the `/api` servlet context path, so login is served at `/api/api/auth/login`). Clinical endpoints under `/v1/**` require the `PROVIDER`, `STAFF`, or `ADMIN` role; `/v1/export/**`, `/interfaces/**`, provider writes, and `/api/auth/register` require `ADMIN`. Unauthenticated requests get `401`, insufficient roles get `403`.
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8080/api/api/auth/login \
+  -H 'Content-Type: application/json' -d '{"username":"<user>","password":"<password>"}' | jq -r .token)
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/encounters/1
+```
+
+CORS allows `localhost:5173`, `localhost:5178`, `localhost:3000`.
 
 ## Useful Commands
 
@@ -89,7 +97,7 @@ JWT-based authentication. CORS allows `localhost:5173`, `localhost:5178`, `local
 lsof -i :8080 | grep LISTEN | awk '{print $2}' | xargs kill -9
 
 # Test API response time
-curl -w "Time: %{time_total}s\n" -s -o /dev/null "http://localhost:8080/api/v1/patients/search?q=a&page=0&size=20"
+curl -w "Time: %{time_total}s\n" -s -o /dev/null -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v1/patients/search?q=a&page=0&size=20"
 
 # Connect to Neon directly
 PGPASSWORD=$NEON_DB_PASSWORD psql "postgresql://$NEON_DB_USERNAME@<neon-host>/neondb?sslmode=require"

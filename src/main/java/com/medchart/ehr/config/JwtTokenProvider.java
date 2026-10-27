@@ -49,7 +49,7 @@ public class JwtTokenProvider {
                 .setSubject(subject)
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
-                .signWith(getSigningKey(), SignatureAlgorithm.HS512)
+                .signWith(getSigningKey())
                 .compact();
     }
 
