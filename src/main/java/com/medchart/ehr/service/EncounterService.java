@@ -143,7 +143,7 @@ public class EncounterService {
             if (changes.getVisitType() != null) existing.setVisitType(changes.getVisitType());
             if (changes.getNotes() != null) existing.setNotes(changes.getNotes());
             log.info("Updating encounter {}", existing.getEncounterNumber());
-            return EncounterResponseDTO.from(encounterRepository.save(existing));
+            return EncounterResponseDTO.from(encounterRepository.saveAndFlush(existing));
         });
     }
 

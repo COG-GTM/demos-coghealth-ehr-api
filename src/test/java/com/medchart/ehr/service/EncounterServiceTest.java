@@ -91,7 +91,7 @@ class EncounterServiceTest {
             .diagnoses(new ArrayList<>(List.of(diagnosis)))
             .build();
         when(repository.findById(7L)).thenReturn(Optional.of(existing));
-        when(repository.save(existing)).thenReturn(existing);
+        when(repository.saveAndFlush(existing)).thenReturn(existing);
 
         Encounter roundTripped = Encounter.builder().room("202").status(EncounterStatus.COMPLETED).build();
         roundTripped.setDiagnoses(null);
@@ -110,7 +110,7 @@ class EncounterServiceTest {
     void updateOfUnknownEncounterReportsNotFound() {
         when(repository.findById(999L)).thenReturn(Optional.empty());
         assertFalse(service.update(999L, new Encounter()).isPresent());
-        verify(repository, never()).save(any());
+        verify(repository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -123,6 +123,6 @@ class EncounterServiceTest {
 
         assertThrows(ObjectOptimisticLockingFailureException.class, () -> service.update(7L, stale));
         assertEquals("202", existing.getRoom());
-        verify(repository, never()).save(any());
+        verify(repository, never()).saveAndFlush(any());
     }
 }
