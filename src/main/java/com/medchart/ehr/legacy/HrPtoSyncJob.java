@@ -22,6 +22,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -138,13 +139,14 @@ public class HrPtoSyncJob implements CommandLineRunner {
             for (LocalDate day : days) {
                 for (OrBlock b : blocks) {
                     if (weekdayOf(day).equals(b.weekday)) {
-                        String key = messageKey(r, b, day);
+                        String ctl = controlId(exportDate, seq + 1);
+                        String msg = buildSiuS15(r, dept, b, day, ctl);
+                        String key = messageKey(msg);
                         if (ledger.containsKey(key)) {
                             alreadySent++;
                             continue;
                         }
-                        String ctl = controlId(exportDate, ++seq);
-                        String msg = buildSiuS15(r, dept, b, day, ctl);
+                        seq++;
                         if (writeOutbound(exportDate, ctl, msg)) {
                             appendSentLedger(exportDate, key, ctl);
                             ledger.put(key, ctl);
@@ -279,9 +281,31 @@ public class HrPtoSyncJob implements CommandLineRunner {
         return "HRPTO" + exportDate + String.format("%05d", seq);
     }
 
-    static String messageKey(HrPtoRecord r, OrBlock b, LocalDate day) {
-        return r.employeeId + "^" + b.providerId + "^" + b.departmentId + "^" + b.room + "^" + day + "^"
-                + b.startTime + "^" + b.endTime;
+    /**
+     * Identity of a cancellation, taken from the HL7 payload itself so that messages queued before the sent ledger
+     * existed can be recognised: provider (AIP-3.1), location incl. mapped department (AIL-3), block start (AIS-4)
+     * and duration (AIS-6). Returns null if the message has none of these segments.
+     */
+    static String messageKey(String hl7) {
+        String provider = null;
+        String location = null;
+        String start = null;
+        String duration = null;
+        for (String segment : hl7.split("[\\r\\n]+")) {
+            String[] f = segment.split("\\|", -1);
+            if (f[0].equals("AIP") && f.length > 3) {
+                provider = f[3].split("\\^", -1)[0];
+            } else if (f[0].equals("AIL") && f.length > 3) {
+                location = f[3];
+            } else if (f[0].equals("AIS") && f.length > 6) {
+                start = f[4];
+                duration = f[6];
+            }
+        }
+        if (provider == null || location == null || start == null) {
+            return null;
+        }
+        return provider + "^" + location + "^" + start + "^" + duration;
     }
 
     private static int maxControlSeq(String exportDate, Iterable<String> controlIds) {
@@ -322,9 +346,40 @@ public class HrPtoSyncJob implements CommandLineRunner {
     private Map<String, String> readSentLedger(String exportDate) {
         Map<String, String> ledger = new LinkedHashMap<String, String>();
         File f = new File(outboundDir(exportDate), SENT_LEDGER_FILE);
-        if (!f.exists()) {
-            return ledger;
+        if (f.exists()) {
+            readLedgerFile(f, ledger);
         }
+        bootstrapFromOutboundFiles(exportDate, ledger);
+        return ledger;
+    }
+
+    /** Records outbound files that are not yet in the ledger, e.g. those queued before the ledger existed. */
+    private void bootstrapFromOutboundFiles(String exportDate, Map<String, String> ledger) {
+        File[] files = outboundDir(exportDate).listFiles((d, n) -> n.endsWith(".hl7"));
+        if (files == null) {
+            return;
+        }
+        Arrays.sort(files);
+        Set<String> known = new HashSet<String>(ledger.values());
+        for (File hl7 : files) {
+            String ctl = hl7.getName().substring(0, hl7.getName().length() - 4);
+            if (known.contains(ctl)) {
+                continue;
+            }
+            String key;
+            try {
+                key = messageKey(new String(Files.readAllBytes(hl7.toPath()), StandardCharsets.UTF_8));
+            } catch (IOException e) {
+                throw new IllegalStateException("Cannot read outbound message " + hl7, e);
+            }
+            if (key != null && !ledger.containsKey(key)) {
+                ledger.put(key, ctl);
+                appendSentLedger(exportDate, key, ctl);
+            }
+        }
+    }
+
+    private static void readLedgerFile(File f, Map<String, String> ledger) {
         try (BufferedReader br = new BufferedReader(new FileReader(f))) {
             String line;
             while ((line = br.readLine()) != null) {
@@ -336,7 +391,6 @@ public class HrPtoSyncJob implements CommandLineRunner {
         } catch (IOException e) {
             throw new IllegalStateException("Cannot read sent ledger " + f, e);
         }
-        return ledger;
     }
 
     private void appendSentLedger(String exportDate, String key, String controlId) {

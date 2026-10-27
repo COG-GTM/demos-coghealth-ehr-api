@@ -78,6 +78,37 @@ class HrPtoSyncJobIdempotencyTest {
     }
 
     @Test
+    void messagesQueuedBeforeLedgerExistedAreNotReplayed() throws IOException {
+        job().runForDate(DATE);
+        Files.delete(outDir.resolve(HrPtoSyncJob.OUTBOUND_DIR).resolve(DATE).resolve(HrPtoSyncJob.SENT_LEDGER_FILE));
+
+        Map<String, Object> rerun = job().runForDate(DATE);
+
+        assertEquals(0, rerun.get("messagesSent"));
+        assertEquals(2, rerun.get("messagesAlreadySent"));
+        assertEquals(2, outboundFiles().size());
+    }
+
+    @Test
+    void correctedDepartmentMappingQueuesNewMessages() throws IOException {
+        job().runForDate(DATE);
+
+        HrPtoSyncJob remapped = job();
+        ReflectionTestUtils.setField(remapped, "departmentMapping", new DepartmentMapping() {
+            @Override
+            public Integer lookup(String costCenter) {
+                Integer dept = super.lookup(costCenter);
+                return dept == null ? null : dept + 1;
+            }
+        });
+        Map<String, Object> rerun = remapped.runForDate(DATE);
+
+        assertEquals(2, rerun.get("messagesSent"));
+        assertEquals(0, rerun.get("messagesAlreadySent"));
+        assertEquals(4, outboundFiles().size());
+    }
+
+    @Test
     void errorQueueEntryIsNotDuplicatedOnRerun() {
         HrPtoSyncJob job = job();
         job.runForDate(DATE);

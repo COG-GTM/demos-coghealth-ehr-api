@@ -49,8 +49,11 @@ All `/api/interfaces/**` endpoints require a JWT (`Authorization: Bearer <token>
 anonymous requests get `401`, other roles `403`. `exportDate` must be `yyyyMMdd` and an existing export (`400` otherwise).
 Only one run (and one contract check) executes at a time; a concurrent call gets `409`.
 
-Re-running an export date is idempotent: each message is keyed by employee, provider, department, room, date and
-time, and recorded with its control id in `outbound/<exportDate>/sent.idx`. Messages already in the ledger are not
+Re-running an export date is idempotent: each message is keyed by provider (AIP-3), room and mapped department
+(AIL-3), block start (AIS-4) and duration (AIS-6), and recorded with its control id in `outbound/<exportDate>/sent.idx`.
+`.hl7` files already in that directory but not in the ledger (e.g. queued before it existed) are added to it first.
+A corrected cost-center mapping changes the key, so the cancellation is queued again for the new department
+(the earlier message is not retracted). Messages already in the ledger are not
 written again (counted as `messagesAlreadySent`), existing `.hl7` files are never overwritten, and identical
 error-queue entries are not appended twice.
 
