@@ -11,8 +11,10 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.OffsetDateTime;
@@ -101,12 +103,16 @@ public class InterfaceContractCheck {
     private void writeReport(InterfaceContractReport report, List<ExportedResource> resources) {
         Path dir = reportDir();
         try {
-            Path resourcesDir = dir.resolve("resources");
-            Files.createDirectories(resourcesDir);
-            Files.write(dir.resolve("report.json"), mapper.writeValueAsBytes(report));
-            Files.write(dir.resolve("report.md"), toMarkdown(report).getBytes(StandardCharsets.UTF_8));
+            Files.createDirectories(dir.resolve("resources"));
+            Path root = dir.toRealPath();
+            Path resourcesDir = dir.resolve("resources").toRealPath();
+            if (!resourcesDir.equals(root.resolve("resources"))) {
+                throw new IllegalStateException("Refusing to write contract resources through a link: " + resourcesDir);
+            }
+            writeNoFollow(root.resolve("report.json"), mapper.writeValueAsBytes(report));
+            writeNoFollow(root.resolve("report.md"), toMarkdown(report).getBytes(StandardCharsets.UTF_8));
             for (ExportedResource r : resources) {
-                Files.write(resourceFile(resourcesDir, r), r.getJson().getBytes(StandardCharsets.UTF_8));
+                writeNoFollow(resourceFile(resourcesDir, r), r.getJson().getBytes(StandardCharsets.UTF_8));
             }
         } catch (IOException e) {
             throw new IllegalStateException("Cannot write contract report to " + dir, e);
@@ -114,7 +120,7 @@ public class InterfaceContractCheck {
     }
 
     /**
-     * Resource ids come from the HR CSV, so the file name is built only from {@code [A-Za-z0-9_-]} and the
+     * Resource ids come from the HR CSV, so the file name is built only from {@code [A-Za-z0-9_-.]} and the
      * resolved path must stay inside {@code resourcesDir}.
      */
     static Path resourceFile(Path resourcesDir, ExportedResource r) {
@@ -126,6 +132,15 @@ public class InterfaceContractCheck {
         return file;
     }
 
+    private static void writeNoFollow(Path file, byte[] bytes) throws IOException {
+        Files.write(file, bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING,
+                StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS);
+    }
+
+    /**
+     * Ids made of {@code [A-Za-z0-9_-]} are kept as-is; anything else becomes {@code <cleaned>.<sha256 prefix>}.
+     * The '.' never occurs in a kept id, so transformed and kept ids cannot collide.
+     */
     static String safeFileToken(String value) {
         String v = value == null ? "" : value;
         if (SAFE_FILE_TOKEN.matcher(v).matches()) {
@@ -135,14 +150,14 @@ public class InterfaceContractCheck {
         if (cleaned.length() > 40) {
             cleaned = cleaned.substring(0, 40);
         }
-        return cleaned + "_" + sha256Prefix(v);
+        return cleaned + "." + sha256Prefix(v);
     }
 
     private static String sha256Prefix(String value) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
             StringBuilder hex = new StringBuilder();
-            for (int i = 0; i < 6; i++) {
+            for (int i = 0; i < 8; i++) {
                 hex.append(String.format("%02x", digest[i]));
             }
             return hex.toString();
