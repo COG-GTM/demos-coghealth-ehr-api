@@ -47,6 +47,7 @@ public class SecurityConfig {
             .and()
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .authorizeRequests()
+                .antMatchers("/v1/providers/**").hasAnyRole("PROVIDER", "ADMIN", "STAFF")
                 .antMatchers("/**").permitAll();
         
         return http.build();
