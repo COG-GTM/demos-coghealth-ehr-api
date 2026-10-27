@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @Component
 @Slf4j
@@ -40,6 +41,8 @@ public class HrPtoSyncJob implements CommandLineRunner {
     private static final String RECEIVING_APP = "IEPROD";
     private static final String RECEIVING_FACILITY = "OPTIME";
     private static final DateTimeFormatter HL7_TS = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+    private static final String HL7_DELIMITERS = "|^~\\&";
+    private static final Pattern EMPLOYEE_ID = Pattern.compile("[A-Za-z0-9][A-Za-z0-9-]{0,19}");
     private static final DateTimeFormatter LOG_TS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Autowired
@@ -94,6 +97,13 @@ public class HrPtoSyncJob implements CommandLineRunner {
             }
             if (!r.hasPto() || !r.isApproved()) {
                 skipped++;
+                continue;
+            }
+            String identityError = identityRejection(r);
+            if (identityError != null) {
+                errors.add(identityError);
+                appendErrorQueue(exportDate, r.employeeId, identityError);
+                rejected++;
                 continue;
             }
             List<LocalDate> days = parsePtoDays(r.ptoStart, r.ptoEnd, year);
@@ -172,11 +182,58 @@ public class HrPtoSyncJob implements CommandLineRunner {
         return dow.name().substring(0, 3);
     }
 
+    public static String identityRejection(HrPtoRecord r) {
+        if (r.employeeId == null || !EMPLOYEE_ID.matcher(r.employeeId).matches()) {
+            return "AR – Invalid employee id on HR export line " + r.lineNumber;
+        }
+        if (!isSafeName(r.lastName) || !isSafeName(r.firstName)) {
+            return "AR – HL7 delimiter or control character in provider name on HR export line " + r.lineNumber;
+        }
+        return null;
+    }
+
+    private static boolean isSafeName(String name) {
+        if (name == null || name.trim().length() == 0) {
+            return false;
+        }
+        for (int i = 0; i < name.length(); i++) {
+            char c = name.charAt(i);
+            if (Character.isISOControl(c) || HL7_DELIMITERS.indexOf(c) >= 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** Escapes HL7 v2 delimiters (|^~\&) and replaces control characters so a value stays inside its component. */
+    public static String hl7Escape(String value) {
+        if (value == null) {
+            return "";
+        }
+        StringBuilder out = new StringBuilder(value.length());
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            switch (c) {
+                case '\\': out.append("\\E\\"); break;
+                case '|': out.append("\\F\\"); break;
+                case '^': out.append("\\S\\"); break;
+                case '~': out.append("\\R\\"); break;
+                case '&': out.append("\\T\\"); break;
+                default: out.append(Character.isISOControl(c) ? ' ' : c);
+            }
+        }
+        return out.toString();
+    }
+
     public static String buildSiuS15(HrPtoRecord r, int deptId, OrBlock b, LocalDate day, String controlId) {
         String ts = LocalDateTime.now().format(HL7_TS);
         String ymd = day.format(DateTimeFormatter.BASIC_ISO_DATE);
         String start = ymd + b.startTime.replace(":", "").substring(0, 4);
         String end = ymd + b.endTime.replace(":", "").substring(0, 4);
+        String employeeId = hl7Escape(r.employeeId);
+        String lastName = hl7Escape(r.lastName);
+        String firstName = hl7Escape(r.firstName);
+        String ptoEnd = hl7Escape(r.ptoEnd);
         StringBuilder m = new StringBuilder();
         m.append("MSH|^~\\&|").append(SENDING_APP).append("|").append(SENDING_FACILITY).append("|")
          .append(RECEIVING_APP).append("|").append(RECEIVING_FACILITY).append("|").append(ts)
@@ -184,13 +241,13 @@ public class HrPtoSyncJob implements CommandLineRunner {
         m.append("SCH|").append(controlId).append("|||||PTO^Provider time off|BLOCK^OR block hold|")
          .append("|").append(b.endTime.compareTo(b.startTime) > 0 ? minutes(b) : "0").append("|MIN|^^")
          .append(minutes(b)).append("^").append(start).append("^").append(end).append("|||||")
-         .append(r.employeeId).append("^").append(r.lastName).append("^").append(r.firstName)
+         .append(employeeId).append("^").append(lastName).append("^").append(firstName)
          .append("||||||||Cancelled\r");
-        m.append("NTE|1||").append(r.ptoType).append(" ").append(r.ptoStart)
-         .append(r.ptoEnd.length() > 0 ? " - " + r.ptoEnd : "").append("\r");
+        m.append("NTE|1||").append(hl7Escape(r.ptoType)).append(" ").append(hl7Escape(r.ptoStart))
+         .append(ptoEnd.length() > 0 ? " - " + ptoEnd : "").append("\r");
         m.append("AIS|1||BLOCK^OR block^L|").append(start).append("||").append(minutes(b)).append("|MIN\r");
-        m.append("AIL|1||").append(b.room).append("^^^").append(deptId).append("|OR^Operating room\r");
-        m.append("AIP|1||").append(r.employeeId).append("^").append(r.lastName).append("^").append(r.firstName)
+        m.append("AIL|1||").append(hl7Escape(b.room)).append("^^^").append(deptId).append("|OR^Operating room\r");
+        m.append("AIP|1||").append(employeeId).append("^").append(lastName).append("^").append(firstName)
          .append("^^^Dr.");
         if (r.npi != null && r.npi.length() > 0) {
             m.append("^^^^^^^^NPI");
@@ -254,11 +311,12 @@ public class HrPtoSyncJob implements CommandLineRunner {
         dir.mkdirs();
         File f = new File(dir, ERROR_QUEUE_FILE);
         try (PrintWriter w = new PrintWriter(new FileWriter(f, true))) {
-            w.println(LocalDateTime.now().format(LOG_TS) + "|" + exportDate + "|" + employeeId + "|" + message);
+            w.println(LocalDateTime.now().format(LOG_TS) + "|" + exportDate + "|" + hl7Escape(employeeId) + "|"
+                    + hl7Escape(message));
         } catch (IOException e) {
             log.error("Cannot append to error queue " + f, e);
         }
-        log.error("{} {} {}", JOB_NAME, employeeId, message);
+        log.error("{} {} {}", JOB_NAME, hl7Escape(employeeId), message);
     }
 
     private void appendRun(Map<String, Object> result) {
