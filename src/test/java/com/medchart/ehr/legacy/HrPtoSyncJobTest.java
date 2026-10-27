@@ -105,6 +105,9 @@ class HrPtoSyncJobTest {
         assertEquals("line one line two", HrPtoSyncJob.hl7Escape("line one\rline two"));
         assertEquals("", HrPtoSyncJob.hl7Escape(null));
         assertEquals("Marquez", HrPtoSyncJob.hl7Escape("Marquez"));
+        String raw = "E2|0^0~0&0\\2 \\Z\\";
+        assertEquals(raw, HrPtoSyncJob.hl7Unescape(HrPtoSyncJob.hl7Escape(raw)));
+        assertEquals("plain E104422", HrPtoSyncJob.hl7Unescape("plain E104422"));
     }
 
     @Test
@@ -213,9 +216,12 @@ class HrPtoSyncJobTest {
             assertEquals(2, errors.size());
             assertEquals("E200001", errors.get(0).get("employeeId"));
             assertEquals("AR", errors.get(0).get("code"));
-            assertEquals("E2\\F\\00002", errors.get(1).get("employeeId"));
+            assertEquals("E2|00002", errors.get(1).get("employeeId"));
             assertEquals("AR", errors.get(1).get("code"));
             assertTrue(String.valueOf(errors.get(1).get("message")).startsWith("AR – Invalid employee id"));
+            String queue = new String(Files.readAllBytes(outDir.resolve(HrPtoSyncJob.ERROR_QUEUE_FILE)), StandardCharsets.UTF_8);
+            assertTrue(queue.contains("|E2\\F\\00002|AR – "), queue);
+            assertEquals(Collections.singletonMap("CC-200-5410", 2), job.errorCountsByCostCenter());
         } finally {
             System.clearProperty(HrExportReader.DIR_PROPERTY);
             System.clearProperty(HrPtoSyncJob.OUT_DIR_PROPERTY);
