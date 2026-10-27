@@ -104,6 +104,28 @@ class HrPtoSyncJobRunTest {
     }
 
     @Test
+    void failedOutboundWritesDoNotCountTowardRunCap() throws IOException {
+        System.setProperty(HrPtoSyncJob.MAX_MESSAGES_PROPERTY, "5");
+        writeExport("E104422,Marquez,Elena,1932405817,CC-200-5410,10/13-10/17 vacation,,Vacation,Approved,");
+        Files.createDirectories(outDir);
+        Path blocker = Files.createFile(outDir.resolve(HrPtoSyncJob.OUTBOUND_DIR));
+
+        Map<String, Object> failed = job.runForDate(EXPORT_DATE);
+
+        assertEquals(0, failed.get("messagesSent"));
+        assertEquals(1, failed.get("recordsRejected"));
+        assertTrue(String.valueOf(job.readErrors().get(0).get("message")).contains("Cannot write outbound message"),
+                String.valueOf(job.readErrors().get(0).get("message")));
+
+        Files.delete(blocker);
+        Map<String, Object> retried = job.runForDate(EXPORT_DATE);
+
+        assertEquals(5, retried.get("messagesSent"));
+        assertEquals(0, retried.get("recordsRejected"));
+        assertEquals(5, outboundFiles().size());
+    }
+
+    @Test
     void errorCountsByCostCenterIgnoresPtoRangeErrors() throws IOException {
         writeExport(
                 "E104422,Marquez,Elena,1932405817,CC-999-0000,10/13-10/17 vacation,,Vacation,Approved,",

@@ -135,7 +135,14 @@ public class HrPtoSyncJob implements CommandLineRunner {
             for (int i = 0; i < blockDays.size(); i++) {
                 String ctl = nextControlId(exportDate);
                 String msg = buildSiuS15(r, dept, dayBlocks.get(i), blockDays.get(i), ctl);
-                writeOutbound(exportDate, ctl, msg);
+                if (!writeOutbound(exportDate, ctl, msg)) {
+                    String err = "AR – Cannot write outbound message; " + (blockDays.size() - i)
+                            + " OR block cancellation(s) for line " + r.lineNumber + " not sent";
+                    errors.add(err);
+                    appendErrorQueue(exportDate, r.employeeId, err);
+                    rejected++;
+                    break;
+                }
                 sent++;
             }
         }
@@ -317,7 +324,7 @@ public class HrPtoSyncJob implements CommandLineRunner {
         return new File(System.getProperty(OUT_DIR_PROPERTY, DEFAULT_OUT_DIR));
     }
 
-    private void writeOutbound(String exportDate, String controlId, String message) {
+    private boolean writeOutbound(String exportDate, String controlId, String message) {
         File dir = new File(outDir(), OUTBOUND_DIR + File.separator + exportDate);
         dir.mkdirs();
         File f = new File(dir, controlId + ".hl7");
@@ -325,8 +332,10 @@ public class HrPtoSyncJob implements CommandLineRunner {
             w.print(message);
         } catch (IOException e) {
             log.error("Cannot write outbound message " + f, e);
+            return false;
         }
         log.debug("Queued {}", f.getName());
+        return true;
     }
 
     private void appendErrorQueue(String exportDate, String employeeId, String message) {
