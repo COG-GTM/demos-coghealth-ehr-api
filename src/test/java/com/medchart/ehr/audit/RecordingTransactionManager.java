@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.AnnotationTransactionAttribute
 import org.springframework.transaction.interceptor.TransactionInterceptor;
 import org.springframework.transaction.support.AbstractPlatformTransactionManager;
 import org.springframework.transaction.support.DefaultTransactionStatus;
+import org.springframework.transaction.support.SmartTransactionObject;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,11 +18,27 @@ public class RecordingTransactionManager extends AbstractPlatformTransactionMana
     public final List<String> outcomes = new ArrayList<>();
     public final List<Boolean> readOnlyBegins = new ArrayList<>();
     public boolean failNextCommit;
+    public RuntimeException failNextFlush;
     private boolean active;
 
     @Override
     protected Object doGetTransaction() {
-        return new Object();
+        return new SmartTransactionObject() {
+            @Override
+            public boolean isRollbackOnly() {
+                return false;
+            }
+
+            @Override
+            public void flush() {
+                if (failNextFlush != null) {
+                    RuntimeException failure = failNextFlush;
+                    failNextFlush = null;
+                    outcomes.add("flush-failed");
+                    throw failure;
+                }
+            }
+        };
     }
 
     @Override

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
 import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -139,14 +140,30 @@ class AuditAspectTest {
     }
 
     @Test
-    void failedAccessWhoseAuditAlsoFailsCarriesTheAuditFailure() {
+    void failedAccessWhoseAuditAlsoFailsSurfacesTheAuditOutage() {
         when(repository.saveAndFlush(any())).thenThrow(new DataAccessResourceFailureException("db down"));
 
-        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> proxy.missing(9L));
+        AuditPersistenceException thrown = assertThrows(AuditPersistenceException.class, () -> proxy.missing(9L));
 
         assertEquals(1, thrown.getSuppressed().length);
-        assertSame(AuditPersistenceException.class, thrown.getSuppressed()[0].getClass());
+        assertSame(IllegalArgumentException.class, thrown.getSuppressed()[0].getClass());
         verify(repository, times(1)).saveAndFlush(any());
+    }
+
+    @Test
+    void domainWriteFailingAtFlushIsReportedAsTheCallsFailureNotAnAuditOutage() {
+        DataIntegrityViolationException domainError = new DataIntegrityViolationException("value too long for first_name");
+        transactionManager.failNextFlush = domainError;
+
+        DataIntegrityViolationException thrown =
+                assertThrows(DataIntegrityViolationException.class, () -> proxy.read(7L));
+
+        assertSame(domainError, thrown);
+        ArgumentCaptor<AuditEvent> saved = ArgumentCaptor.forClass(AuditEvent.class);
+        verify(repository, times(1)).saveAndFlush(saved.capture());
+        assertFalse(saved.getValue().getSuccess());
+        assertEquals("value too long for first_name", saved.getValue().getErrorMessage());
+        assertEquals(Arrays.asList("flush-failed", "rollback", "commit"), transactionManager.outcomes);
     }
 
     @Test
