@@ -11,6 +11,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -25,7 +26,8 @@ public class HrExportReader {
     public static final String DATE_PROPERTY = "hr.export.date";
     public static final String DIR_PROPERTY = "hr.export.dir";
 
-    private static final String SPLIT_REGEX = ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)";
+    public static final int MAX_LINE_LENGTH = 4096;
+    public static final int MAX_FIELDS = 32;
 
     public List<String> listExportDates() {
         List<String> dates = new ArrayList<String>();
@@ -78,16 +80,22 @@ public class HrExportReader {
         String fileName = FILE_PREFIX + exportDate + FILE_SUFFIX;
         List<HrPtoRecord> out = new ArrayList<HrPtoRecord>();
         try (BufferedReader br = new BufferedReader(new InputStreamReader(open(fileName), "UTF-8"))) {
-            String line;
+            StringBuilder buf = new StringBuilder();
             int lineNo = 0;
-            while ((line = br.readLine()) != null) {
+            int status;
+            while ((status = readLine(br, buf, MAX_LINE_LENGTH)) != EOF) {
                 lineNo++;
+                if (status == TOO_LONG) {
+                    log.warn("Skipping line {} in {}: longer than {} characters", lineNo, fileName, MAX_LINE_LENGTH);
+                    continue;
+                }
+                String line = buf.toString();
                 if (lineNo == 1 || line.trim().length() == 0) {
                     continue;
                 }
-                String[] f = line.split(SPLIT_REGEX, -1);
-                if (f.length < 9) {
-                    log.warn("Skipping malformed line {} in {}: {}", lineNo, fileName, line);
+                String[] f = splitLine(line);
+                if (f == null || f.length < 9) {
+                    log.warn("Skipping malformed line {} in {} ({} characters)", lineNo, fileName, line.length());
                     continue;
                 }
                 HrPtoRecord r = new HrPtoRecord();
@@ -121,6 +129,65 @@ public class HrExportReader {
             throw new IOException("HR export not found: " + EXPORT_DIR + "/" + fileName);
         }
         return in;
+    }
+
+    static final int EOF = -1;
+    static final int OK = 0;
+    static final int TOO_LONG = 1;
+
+    /**
+     * Reads one line (terminated by LF, CR or CRLF) into {@code buf} without buffering more than
+     * {@code maxLength} characters; the rest of an over-long line is consumed and discarded.
+     */
+    static int readLine(Reader in, StringBuilder buf, int maxLength) throws IOException {
+        buf.setLength(0);
+        boolean tooLong = false;
+        int c = in.read();
+        if (c < 0) {
+            return EOF;
+        }
+        while (c >= 0 && c != '\n' && c != '\r') {
+            if (buf.length() < maxLength) {
+                buf.append((char) c);
+            } else {
+                tooLong = true;
+            }
+            c = in.read();
+        }
+        if (c == '\r') {
+            in.mark(1);
+            if (in.read() != '\n') {
+                in.reset();
+            }
+        }
+        return tooLong ? TOO_LONG : OK;
+    }
+
+    /**
+     * Splits a CSV line on commas outside double quotes in a single linear pass. Fields keep their quotes
+     * (stripped by {@link #clean}). Returns null for unbalanced quotes or more than {@link #MAX_FIELDS} fields.
+     */
+    static String[] splitLine(String line) {
+        List<String> fields = new ArrayList<String>();
+        boolean inQuotes = false;
+        int start = 0;
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (c == '"') {
+                inQuotes = !inQuotes;
+            } else if (c == ',' && !inQuotes) {
+                if (fields.size() == MAX_FIELDS - 1) {
+                    return null;
+                }
+                fields.add(line.substring(start, i));
+                start = i + 1;
+            }
+        }
+        if (inQuotes) {
+            return null;
+        }
+        fields.add(line.substring(start));
+        return fields.toArray(new String[0]);
     }
 
     private static String clean(String s) {
