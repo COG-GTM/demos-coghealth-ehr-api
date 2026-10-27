@@ -6,6 +6,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class HrExportReaderTest {
@@ -28,6 +29,13 @@ class HrExportReaderTest {
         assertEquals(reader.latestExportDate(), reader.resolveExportDate(""));
         assertEquals(reader.latestExportDate(), reader.resolveExportDate("latest"));
         assertEquals("20260930", reader.resolveExportDate(" 20260930 "));
+    }
+
+    @Test
+    void resolveExportDateRejectsAnythingButYyyyMmDd() {
+        for (String bad : new String[] {"../x", "2026-09-30", "2026093", "202609300", "20260930/..", "abcdefgh"}) {
+            assertThrows(IllegalArgumentException.class, () -> reader.resolveExportDate(bad), bad);
+        }
     }
 
     @Test

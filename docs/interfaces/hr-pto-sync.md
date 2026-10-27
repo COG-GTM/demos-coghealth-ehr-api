@@ -45,6 +45,9 @@ Rows for an employee with no `or_block` produce no messages.
 
 ## Endpoints
 
+All `/api/interfaces/**` routes require a JWT (`Authorization: Bearer <token>`) for a user with role `ADMIN`:
+401 without a valid token, 403 for other roles. `exportDate` must be `yyyyMMdd` (or empty / `latest`), otherwise 400.
+
 | Method | Path | Returns |
 |---|---|---|
 | GET | `/api/interfaces/hr-pto-sync/errors` | error queue entries `{timestamp, exportDate, employeeId, code, message}` |

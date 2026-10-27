@@ -14,6 +14,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Component
 @Slf4j
@@ -25,6 +26,7 @@ public class HrExportReader {
     public static final String DATE_PROPERTY = "hr.export.date";
     public static final String DIR_PROPERTY = "hr.export.dir";
 
+    private static final Pattern EXPORT_DATE_PATTERN = Pattern.compile("\\d{8}");
     private static final String SPLIT_REGEX = ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)";
 
     public List<String> listExportDates() {
@@ -71,7 +73,11 @@ public class HrExportReader {
                 || "latest".equalsIgnoreCase(requested.trim())) {
             return latestExportDate();
         }
-        return requested.trim();
+        String date = requested.trim();
+        if (!EXPORT_DATE_PATTERN.matcher(date).matches()) {
+            throw new IllegalArgumentException("exportDate must be yyyyMMdd");
+        }
+        return date;
     }
 
     public List<HrPtoRecord> read(String exportDate) {

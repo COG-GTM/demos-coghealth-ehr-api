@@ -4,18 +4,23 @@ import com.medchart.ehr.interop.fhir.InterfaceContractCheck;
 import com.medchart.ehr.interop.fhir.InterfaceContractReport;
 import com.medchart.ehr.legacy.HrExportReader;
 import com.medchart.ehr.legacy.HrPtoSyncJob;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/interfaces")
+@PreAuthorize("hasRole('ADMIN')")
 public class InterfaceController {
 
     private final HrPtoSyncJob hrPtoSyncJob;
@@ -55,5 +60,10 @@ public class InterfaceController {
     @GetMapping("/fhir/contract-report")
     public InterfaceContractReport contractReport(@RequestParam(required = false) String exportDate) {
         return interfaceContractCheck.run(hrExportReader.resolveExportDate(exportDate));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, Object>> badRequest(IllegalArgumentException e) {
+        return ResponseEntity.badRequest().body(Collections.<String, Object>singletonMap("error", e.getMessage()));
     }
 }
