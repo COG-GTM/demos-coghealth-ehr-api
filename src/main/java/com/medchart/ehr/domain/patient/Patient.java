@@ -1,5 +1,6 @@
 package com.medchart.ehr.domain.patient;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -32,6 +33,7 @@ public class Patient {
     @Column(unique = true, nullable = false, length = 20)
     private String mrn;
 
+    @JsonIgnore
     @Column(length = 11)
     private String ssn;
 
@@ -96,6 +98,7 @@ public class Patient {
     @Column(length = 100)
     private String religion;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "patient", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<PatientIdentifier> identifiers = new ArrayList<>();

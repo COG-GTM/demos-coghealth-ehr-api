@@ -24,7 +24,9 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
@@ -111,6 +113,32 @@ class PatientServiceIdentifierMaskingTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
         verify(patientRepository, never()).save(any());
+    }
+
+    @Test
+    void createWithNoncanonicalRedactedSsnIsRejected() {
+        for (String redacted : new String[] {"***-**-****", "*****6789", "XXX-**-678*", "***-**-6789 "}) {
+            ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> patientService.createPatient(dto(identifier(null, IdentifierType.SSN, redacted))));
+            assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
+        }
+        verify(patientRepository, never()).save(any());
+    }
+
+    @Test
+    void patientEntityJsonOmitsSsnAndIdentifiers() throws Exception {
+        Patient patient = new Patient();
+        patient.setMrn("MRN001");
+        patient.setSsn("123-45-6789");
+        PatientIdentifier stored = new PatientIdentifier();
+        stored.setIdentifierType(IdentifierType.SSN);
+        stored.setIdentifierValue("123-45-6789");
+        patient.setIdentifiers(new ArrayList<>(List.of(stored)));
+
+        String json = new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules().writeValueAsString(patient);
+
+        assertFalse(json.contains("6789"), json);
+        assertTrue(json.contains("MRN001"));
     }
 
     private static PatientDTO dto(PatientIdentifierDTO... identifiers) {

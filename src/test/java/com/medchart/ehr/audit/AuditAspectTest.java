@@ -1,5 +1,6 @@
 package com.medchart.ehr.audit;
 
+import com.medchart.ehr.domain.auth.User;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.jupiter.api.AfterEach;
@@ -34,6 +35,19 @@ class AuditAspectTest {
         assertEquals("nurse.johnson", event.getUserId());
         assertEquals("nurse.johnson", event.getUserName());
         assertEquals(42L, event.getPatientId());
+    }
+
+    @Test
+    void truncatesLongIdentitiesToAuditColumnLength() throws Throwable {
+        String longName = "x".repeat(60);
+        User user = User.builder().username("u".repeat(150)).password("x").firstName(longName).lastName(longName).build();
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+            user, null, AuthorityUtils.createAuthorityList("ROLE_STAFF")));
+
+        AuditEvent event = audit();
+
+        assertEquals(100, event.getUserId().length());
+        assertEquals(100, event.getUserName().length());
     }
 
     @Test

@@ -22,6 +22,8 @@ import java.lang.reflect.Method;
 @RequiredArgsConstructor
 public class AuditAspect {
 
+    private static final int AUDIT_IDENTITY_MAX_LENGTH = 100;
+
     private final AuditService auditService;
 
     @Around("@annotation(com.medchart.ehr.audit.AuditAccess)")
@@ -67,7 +69,7 @@ public class AuditAspect {
 
     private String getCurrentUserId() {
         Authentication authentication = currentAuthentication();
-        return authentication != null ? authentication.getName() : "anonymous";
+        return authentication != null ? truncate(authentication.getName()) : "anonymous";
     }
 
     private String getCurrentUserName() {
@@ -77,9 +79,16 @@ public class AuditAspect {
         }
         if (authentication.getPrincipal() instanceof com.medchart.ehr.domain.auth.User) {
             com.medchart.ehr.domain.auth.User user = (com.medchart.ehr.domain.auth.User) authentication.getPrincipal();
-            return user.getFirstName() + " " + user.getLastName();
+            return truncate(user.getFirstName() + " " + user.getLastName());
         }
-        return authentication.getName();
+        return truncate(authentication.getName());
+    }
+
+    // Matches the AuditEvent userId/userName column length so the insert can't fail.
+    private static String truncate(String value) {
+        return value != null && value.length() > AUDIT_IDENTITY_MAX_LENGTH
+            ? value.substring(0, AUDIT_IDENTITY_MAX_LENGTH)
+            : value;
     }
 
     private Authentication currentAuthentication() {
