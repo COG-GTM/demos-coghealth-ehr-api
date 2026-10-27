@@ -61,7 +61,8 @@ public class UserAdminController {
     /** Locks every ADMIN row first so concurrent demotions serialize, then re-counts committed state. */
     private boolean isLastUsableAdmin(User target) {
         userRepository.lockUsersWithRole(User.Role.ADMIN);
-        boolean targetCounts = target.isEnabled() && target.isAccountNonLocked() && target.isAccountNonExpired();
+        boolean targetCounts = target.isEnabled() && target.isAccountNonLocked()
+            && target.isAccountNonExpired() && target.isCredentialsNonExpired();
         return targetCounts && userRepository.countUsableUsersWithRole(User.Role.ADMIN) <= 1;
     }
 

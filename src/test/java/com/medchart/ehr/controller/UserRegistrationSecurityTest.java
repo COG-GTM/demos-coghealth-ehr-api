@@ -215,6 +215,21 @@ class UserRegistrationSecurityTest {
 
     @Test
     @WithMockUser(username = "admin", roles = "ADMIN")
+    void adminWithExpiredCredentialsCanBeDemotedWithoutCountingAsLastAdmin() throws Exception {
+        User expired = user(6L, "expired-admin", Set.of(User.Role.ADMIN));
+        expired.setCredentialsNonExpired(false);
+        when(userRepository.findById(6L)).thenReturn(Optional.of(expired));
+        when(userRepository.countUsableUsersWithRole(User.Role.ADMIN)).thenReturn(1L);
+
+        mockMvc.perform(put("/api/admin/users/6/roles").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"roles\":[\"STAFF\"]}"))
+            .andExpect(status().isOk());
+
+        verify(userRepository).save(expired);
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
     void adminCanBeDemotedWhenAnotherAdminRemains() throws Exception {
         User other = user(5L, "other-admin", Set.of(User.Role.ADMIN));
         when(userRepository.findById(5L)).thenReturn(Optional.of(other));

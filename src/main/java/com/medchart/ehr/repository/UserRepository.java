@@ -23,6 +23,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> lockUsersWithRole(@Param("role") User.Role role);
 
     @Query("select count(u) from User u where :role member of u.roles and u.enabled = true "
-         + "and u.accountNonLocked = true and u.accountNonExpired = true")
+         + "and u.accountNonLocked = true and u.accountNonExpired = true and u.credentialsNonExpired = true")
     long countUsableUsersWithRole(@Param("role") User.Role role);
 }
