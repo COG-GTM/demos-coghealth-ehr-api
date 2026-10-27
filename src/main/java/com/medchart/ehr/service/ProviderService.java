@@ -85,9 +85,14 @@ public class ProviderService {
     @SuppressWarnings("unchecked")
     public List<Provider> search(String lastName) {
         String sql = "SELECT * FROM providers WHERE active = true "
-                + "AND last_name ILIKE '%" + lastName + "%' "
+                + "AND last_name ILIKE ?1 ESCAPE '\\' "
                 + "ORDER BY last_name, first_name";
         Query query = entityManager.createNativeQuery(sql, Provider.class);
+        query.setParameter(1, "%" + escapeLikePattern(lastName) + "%");
         return query.getResultList();
+    }
+
+    private static String escapeLikePattern(String value) {
+        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 }
