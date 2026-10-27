@@ -86,7 +86,7 @@ Notes:
 
 Inconsistencies worth knowing about during the upgrade:
 - The default datasource (`medchart_ehr` / `medchart`) does not match the Postgres in `demos-coghealth-ehr-data`
-  (`coghealth` / `coghealth` / `coghealth_dev_2024`); override with `DB_*` env vars.
+  (db/user `coghealth`, password `POSTGRES_PASSWORD` from that repo's git-ignored `.env`); override with `DB_*` env vars.
 - `start.sh` defaults `JAVA_HOME` to `openjdk@17`, the README says "Java 11 (required)", CI uses 11, and the Devin
   environment blueprint starts the app on a Java 21 runtime. Only Java 11 is exercised by CI.
 - RabbitMQ is configured in YAML but `spring-boot-starter-amqp` is commented out in `pom.xml`.
@@ -113,7 +113,7 @@ Because CI runs no tests, the packaged jar was also started on Java 11 against P
 `docker compose up postgres`) and a local Redis:
 
 ```bash
-DB_URL=jdbc:postgresql://localhost:5432/coghealth DB_USERNAME=coghealth DB_PASSWORD=coghealth_dev_2024 \
+DB_URL=jdbc:postgresql://localhost:5432/coghealth DB_USERNAME=coghealth DB_PASSWORD="$POSTGRES_PASSWORD" \
   java -jar target/medchart-ehr-api-3.2.1.jar
 ```
 

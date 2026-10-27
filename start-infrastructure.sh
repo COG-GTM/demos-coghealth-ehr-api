@@ -19,10 +19,34 @@ echo "✅ Docker is running"
 # Navigate to script directory
 cd "$(dirname "$0")"
 
+if docker compose version > /dev/null 2>&1; then
+    COMPOSE="docker compose"
+else
+    COMPOSE="docker-compose"
+fi
+
+# Credentials live in an untracked .env file; generate one on first run.
+if [ ! -f .env ]; then
+    echo "Generating .env with random credentials (git-ignored)..."
+    gen() { openssl rand -base64 24 | tr -d '/+='; }
+    (
+        umask 077
+        while IFS= read -r line; do
+            case "$line" in
+                *PASSWORD=*|KC_API_CLIENT_SECRET=*) echo "${line%%=*}=$(gen)" ;;
+                *) echo "$line" ;;
+            esac
+        done < .env.example > .env
+    )
+fi
+set -a
+. ./.env
+set +a
+
 # Stop any existing containers
 echo ""
 echo "Stopping any existing containers..."
-docker-compose down 2>/dev/null || true
+$COMPOSE down 2>/dev/null || true
 
 # Start infrastructure
 echo ""
@@ -30,7 +54,7 @@ echo "Starting infrastructure services..."
 echo "This may take a few minutes on first run (downloading images)..."
 echo ""
 
-docker-compose up -d
+$COMPOSE up -d
 
 # Wait for services to be healthy
 echo ""
@@ -46,7 +70,7 @@ echo " ✅"
 
 # Wait for Redis
 echo -n "  Redis: "
-until docker exec coghealth-redis redis-cli ping > /dev/null 2>&1; do
+until docker exec coghealth-redis sh -c 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli ping' 2>/dev/null | grep -q PONG; do
     echo -n "."
     sleep 2
 done
@@ -62,7 +86,7 @@ echo " ✅"
 
 # Wait for RabbitMQ
 echo -n "  RabbitMQ: "
-until curl -s -u coghealth:coghealth_dev_2024 http://localhost:15672/api/overview > /dev/null 2>&1; do
+until curl -sf -u "${RABBITMQ_USER:-coghealth}:$RABBITMQ_PASSWORD" http://127.0.0.1:15672/api/overview > /dev/null 2>&1; do
     echo -n "."
     sleep 3
 done
@@ -76,37 +100,28 @@ until curl -s http://localhost:9200/_cluster/health > /dev/null 2>&1; do
 done
 echo " ✅"
 
-# Wait for HAPI FHIR
-echo -n "  HAPI FHIR: "
-until curl -s http://localhost:8090/fhir/metadata > /dev/null 2>&1; do
-    echo -n "."
-    sleep 3
-done
-echo " ✅"
-
 echo ""
 echo "=========================================="
 echo "  All services are running!"
 echo "=========================================="
 echo ""
-echo "Service URLs:"
-echo "  • PostgreSQL:    localhost:5432 (coghealth/coghealth_dev_2024)"
-echo "  • Redis:         localhost:6379"
-echo "  • Keycloak:      http://localhost:8180 (admin/admin)"
-echo "  • RabbitMQ:      http://localhost:15672 (coghealth/coghealth_dev_2024)"
+echo "Service URLs (bound to 127.0.0.1 only; credentials are in .env):"
+echo "  • PostgreSQL:    localhost:5432 (user coghealth, POSTGRES_PASSWORD)"
+echo "  • Redis:         localhost:6379 (REDIS_PASSWORD)"
+echo "  • Keycloak:      http://localhost:8180 (KEYCLOAK_ADMIN / KEYCLOAK_ADMIN_PASSWORD)"
+echo "  • RabbitMQ:      http://localhost:15672 (RABBITMQ_USER / RABBITMQ_PASSWORD)"
 echo "  • Elasticsearch: http://localhost:9200"
 echo "  • Kibana:        http://localhost:5601"
-echo "  • HAPI FHIR:     http://localhost:8090/fhir"
 echo ""
-echo "Demo Users (password: demo123):"
+echo "Demo Users (password: KC_DEMO_USER_PASSWORD):"
 echo "  • dr.anderson      - Physician"
 echo "  • nurse.johnson    - Nurse"
 echo "  • ma.smith         - Medical Assistant"
 echo "  • frontdesk.wilson - Front Desk"
 echo "  • billing.garcia   - Billing"
 echo "  • compliance.lee   - Compliance Officer"
-echo "  • admin (password: admin123) - System Admin"
+echo "  • admin (password: KC_REALM_ADMIN_PASSWORD) - System Admin"
 echo ""
-echo "To stop: docker-compose down"
-echo "To view logs: docker-compose logs -f [service]"
+echo "To stop: $COMPOSE down"
+echo "To view logs: $COMPOSE logs -f [service]"
 echo ""

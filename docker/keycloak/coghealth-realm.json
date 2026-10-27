@@ -2,7 +2,7 @@
   "realm": "coghealth",
   "enabled": true,
   "displayName": "CogHealth EHR",
-  "sslRequired": "none",
+  "sslRequired": "external",
   "registrationAllowed": false,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
@@ -58,7 +58,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "demo123",
+          "value": "${KC_DEMO_USER_PASSWORD}",
           "temporary": false
         }
       ],
@@ -78,7 +78,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "demo123",
+          "value": "${KC_DEMO_USER_PASSWORD}",
           "temporary": false
         }
       ],
@@ -97,7 +97,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "demo123",
+          "value": "${KC_DEMO_USER_PASSWORD}",
           "temporary": false
         }
       ],
@@ -115,7 +115,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "demo123",
+          "value": "${KC_DEMO_USER_PASSWORD}",
           "temporary": false
         }
       ],
@@ -130,7 +130,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "demo123",
+          "value": "${KC_DEMO_USER_PASSWORD}",
           "temporary": false
         }
       ],
@@ -145,7 +145,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "admin123",
+          "value": "${KC_REALM_ADMIN_PASSWORD}",
           "temporary": false
         }
       ],
@@ -160,7 +160,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "demo123",
+          "value": "${KC_DEMO_USER_PASSWORD}",
           "temporary": false
         }
       ],
@@ -172,7 +172,7 @@
       "clientId": "coghealth-api",
       "enabled": true,
       "publicClient": false,
-      "secret": "coghealth-api-secret-2024",
+      "secret": "${KC_API_CLIENT_SECRET}",
       "directAccessGrantsEnabled": true,
       "serviceAccountsEnabled": true,
       "authorizationServicesEnabled": true,
