@@ -7,7 +7,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -16,14 +18,24 @@ import java.util.function.Function;
 @Component
 public class JwtTokenProvider {
 
+    private static final int MIN_SECRET_BYTES = 64;
+
     @Value("${medchart.security.jwt.secret}")
     private String jwtSecret;
 
     @Value("${medchart.security.jwt.expiration}")
     private int jwtExpirationInMs;
 
+    @PostConstruct
+    void validateSecret() {
+        if (jwtSecret == null || jwtSecret.getBytes(StandardCharsets.UTF_8).length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException("medchart.security.jwt.secret (JWT_SECRET) must be set to at least "
+                    + MIN_SECRET_BYTES + " bytes for HS512");
+        }
+    }
+
     private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 
     public String generateToken(Authentication authentication) {

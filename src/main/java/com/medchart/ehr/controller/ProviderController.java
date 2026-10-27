@@ -3,6 +3,7 @@ package com.medchart.ehr.controller;
 import com.medchart.ehr.domain.provider.Provider;
 import com.medchart.ehr.service.ProviderService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -64,11 +65,13 @@ public class ProviderController {
         return providerService.search(lastName);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public Provider create(@RequestBody Provider provider) {
         return providerService.save(provider);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<Provider> update(@PathVariable Long id, @RequestBody Provider provider) {
         return providerService.findById(id)
@@ -79,6 +82,7 @@ public class ProviderController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deactivate(@PathVariable Long id) {
         providerService.deactivate(id);

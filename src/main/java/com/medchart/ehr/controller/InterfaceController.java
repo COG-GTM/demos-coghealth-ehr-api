@@ -4,6 +4,7 @@ import com.medchart.ehr.interop.fhir.InterfaceContractCheck;
 import com.medchart.ehr.interop.fhir.InterfaceContractReport;
 import com.medchart.ehr.legacy.HrExportReader;
 import com.medchart.ehr.legacy.HrPtoSyncJob;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -47,6 +48,7 @@ public class InterfaceController {
         return out;
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/hr-pto-sync/run")
     public Map<String, Object> run(@RequestParam(required = false) String exportDate) {
         return hrPtoSyncJob.runForDate(hrExportReader.resolveExportDate(exportDate));
