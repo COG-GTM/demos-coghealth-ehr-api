@@ -46,6 +46,7 @@ public class PatientController {
     @Operation(summary = "Search patients")
     public ResponseEntity<Page<PatientDTO>> searchPatients(
             @RequestParam String q,
+            @RequestParam(required = false) String sort,
             Pageable pageable) {
         String term = q.trim();
         if (term.length() < MIN_SEARCH_LENGTH) {
@@ -55,7 +56,7 @@ public class PatientController {
         Pageable bounded = pageable.getPageSize() > MAX_PAGE_SIZE
                 ? PageRequest.of(pageable.getPageNumber(), MAX_PAGE_SIZE, pageable.getSort())
                 : pageable;
-        return ResponseEntity.ok(patientService.searchPatients(term, bounded));
+        return ResponseEntity.ok(patientService.searchPatients(term, sort, bounded));
     }
 
     @PostMapping

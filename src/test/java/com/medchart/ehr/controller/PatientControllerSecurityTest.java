@@ -70,7 +70,7 @@ class PatientControllerSecurityTest {
         dto.setLastName("Example");
         when(patientService.getPatientById(anyLong())).thenReturn(dto);
         when(patientService.getPatientByMrn(anyString())).thenReturn(dto);
-        when(patientService.searchPatients(anyString(), any(Pageable.class)))
+        when(patientService.searchPatients(anyString(), any(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(Collections.singletonList(dto)));
         when(patientService.createPatient(any(PatientDTO.class))).thenReturn(dto);
         when(patientService.updatePatient(anyLong(), any(PatientDTO.class))).thenReturn(dto);
@@ -163,7 +163,7 @@ class PatientControllerSecurityTest {
                 .andExpect(status().isOk());
 
         ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
-        verify(patientService).searchPatients(eq("smi"), pageable.capture());
+        verify(patientService).searchPatients(eq("smi"), any(), pageable.capture());
         assertThat(pageable.getValue().getPageSize()).isEqualTo(PatientController.MAX_PAGE_SIZE);
     }
 
