@@ -14,4 +14,11 @@ public @interface AuditAccess {
     String resourceType();
     
     String description() default "";
+
+    /**
+     * Whether the first {@code Long} argument is the patient id. Set to false when the method is
+     * keyed by another id (encounter, provider); the patient is then taken from a
+     * {@link PatientScoped} result, if any.
+     */
+    boolean patientIdFromArgs() default true;
 }

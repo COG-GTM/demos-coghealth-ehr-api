@@ -9,7 +9,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -41,13 +44,32 @@ class AuditAspectTest {
         assertEquals("anonymous", audit().getUserId());
     }
 
+    @Test
+    void encounterKeyedAccessIsAttributedToThePatientFromTheResult() throws Throwable {
+        PatientScoped result = () -> 7L;
+
+        AuditEvent event = audit("viewEncounter", Optional.of(result));
+
+        assertEquals(7L, event.getPatientId());
+        assertEquals("Encounter", event.getResourceType());
+    }
+
+    @Test
+    void encounterIdIsNotRecordedAsPatientIdWhenEncounterIsMissing() throws Throwable {
+        assertNull(audit("viewEncounter", Optional.empty()).getPatientId());
+    }
+
     private AuditEvent audit() throws Throwable {
+        return audit("viewPatient", "ok");
+    }
+
+    private AuditEvent audit(String method, Object result) throws Throwable {
         ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
         MethodSignature signature = mock(MethodSignature.class);
         when(joinPoint.getSignature()).thenReturn(signature);
-        when(signature.getMethod()).thenReturn(Fixture.class.getDeclaredMethod("viewPatient", Long.class));
+        when(signature.getMethod()).thenReturn(Fixture.class.getDeclaredMethod(method, Long.class));
         when(joinPoint.getArgs()).thenReturn(new Object[] {42L});
-        when(joinPoint.proceed()).thenReturn("ok");
+        when(joinPoint.proceed()).thenReturn(result);
 
         aspect.auditAccess(joinPoint);
 
@@ -60,6 +82,12 @@ class AuditAspectTest {
         @AuditAccess(action = AuditAction.READ, resourceType = "Patient", description = "View patient")
         String viewPatient(Long id) {
             return "ok";
+        }
+
+        @AuditAccess(action = AuditAction.READ, resourceType = "Encounter", description = "View encounter",
+                patientIdFromArgs = false)
+        Optional<PatientScoped> viewEncounter(Long encounterId) {
+            return Optional.empty();
         }
     }
 }

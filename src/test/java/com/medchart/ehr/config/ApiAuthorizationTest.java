@@ -7,7 +7,7 @@ import com.medchart.ehr.controller.LegacyExportController;
 import com.medchart.ehr.controller.PatientController;
 import com.medchart.ehr.controller.ProviderController;
 import com.medchart.ehr.domain.auth.User;
-import com.medchart.ehr.domain.encounter.Encounter;
+import com.medchart.ehr.dto.EncounterResponseDTO;
 import com.medchart.ehr.dto.PatientDTO;
 import com.medchart.ehr.interop.fhir.InterfaceContractCheck;
 import com.medchart.ehr.legacy.EncounterExportService;
@@ -149,7 +149,8 @@ class ApiAuthorizationTest {
     void clinicianWithValidTokenCanReadCharts() throws Exception {
         signIn("dr.anderson", User.Role.PROVIDER);
         given(patientService.getPatientById(1L)).willReturn(new PatientDTO());
-        given(encounterService.findByIdWithDetails(1L)).willReturn(Optional.of(new Encounter()));
+        given(encounterService.findByIdWithDetails(1L)).willReturn(Optional.of(new EncounterResponseDTO()));
+        given(encounterService.completeEncounter(1L, null)).willReturn(Optional.of(new EncounterResponseDTO()));
 
         mockMvc.perform(authed(get("/v1/patients/1"))).andExpect(status().isOk());
         mockMvc.perform(authed(get("/v1/encounters/1"))).andExpect(status().isOk());

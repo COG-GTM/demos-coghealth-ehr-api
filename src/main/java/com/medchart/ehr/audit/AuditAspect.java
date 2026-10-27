@@ -15,6 +15,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
 import java.lang.reflect.Method;
+import java.util.Optional;
 
 @Aspect
 @Component
@@ -30,7 +31,7 @@ public class AuditAspect {
         Method method = signature.getMethod();
         AuditAccess auditAccess = method.getAnnotation(AuditAccess.class);
 
-        Long patientId = extractPatientId(joinPoint.getArgs());
+        Long patientId = auditAccess.patientIdFromArgs() ? extractPatientId(joinPoint.getArgs()) : null;
         String userId = getCurrentUserId();
 
         AuditEvent.AuditEventBuilder eventBuilder = AuditEvent.builder()
@@ -45,6 +46,10 @@ public class AuditAspect {
 
         try {
             Object result = joinPoint.proceed();
+            Long resultPatientId = patientIdFromResult(result);
+            if (resultPatientId != null) {
+                eventBuilder.patientId(resultPatientId);
+            }
             eventBuilder.success(true);
             auditService.saveAuditEventAsync(eventBuilder.build());
             return result;
@@ -63,6 +68,13 @@ public class AuditAspect {
             }
         }
         return null;
+    }
+
+    private Long patientIdFromResult(Object result) {
+        if (result instanceof Optional) {
+            result = ((Optional<?>) result).orElse(null);
+        }
+        return result instanceof PatientScoped ? ((PatientScoped) result).getPatientId() : null;
     }
 
     private String getCurrentUserId() {
