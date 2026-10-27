@@ -7,7 +7,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -16,14 +18,26 @@ import java.util.function.Function;
 @Component
 public class JwtTokenProvider {
 
+    static final int MIN_SECRET_BYTES = 64;
+    private static final String LEGACY_DEFAULT_SECRET = "dev-secret-key-change-in-production";
+
     @Value("${medchart.security.jwt.secret}")
     private String jwtSecret;
 
     @Value("${medchart.security.jwt.expiration}")
     private int jwtExpirationInMs;
 
+    @PostConstruct
+    void validateSecret() {
+        if (jwtSecret == null || LEGACY_DEFAULT_SECRET.equals(jwtSecret)
+                || jwtSecret.getBytes(StandardCharsets.UTF_8).length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException("JWT_SECRET (medchart.security.jwt.secret) must be set to a random value of at least "
+                    + MIN_SECRET_BYTES + " bytes");
+        }
+    }
+
     private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 
     public String generateToken(Authentication authentication) {
@@ -67,11 +81,14 @@ public class JwtTokenProvider {
     }
 
     private Claims getAllClaimsFromToken(String token) {
-        return Jwts.parserBuilder()
+        Jws<Claims> jws = Jwts.parserBuilder()
                 .setSigningKey(getSigningKey())
                 .build()
-                .parseClaimsJws(token)
-                .getBody();
+                .parseClaimsJws(token);
+        if (!SignatureAlgorithm.HS512.getValue().equals(jws.getHeader().getAlgorithm())) {
+            throw new UnsupportedJwtException("Unexpected JWT algorithm");
+        }
+        return jws.getBody();
     }
 
     public Boolean validateToken(String token, UserDetails userDetails) {

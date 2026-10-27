@@ -8,6 +8,12 @@ echo "  2) Neon (cloud) - requires NEON_DB_* env vars"
 echo ""
 read -p "Choice [1]: " choice
 
+if [ -z "${JWT_SECRET:-}" ]; then
+  echo "JWT_SECRET not set; generating an ephemeral one (tokens are invalidated on restart)."
+  JWT_SECRET="$(openssl rand -base64 64 | tr -d '\n')"
+  export JWT_SECRET
+fi
+
 case "${choice:-1}" in
   1)
     echo ""

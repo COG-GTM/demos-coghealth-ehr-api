@@ -45,6 +45,15 @@ Rows for an employee with no `or_block` produce no messages.
 
 ## Endpoints
 
+All `/api/interfaces/**` endpoints require a JWT (`Authorization: Bearer <token>`) for a user with role `ADMIN`;
+anonymous requests get `401`, other roles `403`. `exportDate` must be `yyyyMMdd` and an existing export (`400` otherwise).
+Only one run (and one contract check) executes at a time; a concurrent call gets `409`.
+
+Re-running an export date is idempotent: each message is keyed by employee, provider, department, room, date and
+time, and recorded with its control id in `outbound/<exportDate>/sent.idx`. Messages already in the ledger are not
+written again (counted as `messagesAlreadySent`), existing `.hl7` files are never overwritten, and identical
+error-queue entries are not appended twice.
+
 | Method | Path | Returns |
 |---|---|---|
 | GET | `/api/interfaces/hr-pto-sync/errors` | error queue entries `{timestamp, exportDate, employeeId, code, message}` |

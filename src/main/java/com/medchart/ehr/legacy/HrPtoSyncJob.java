@@ -13,15 +13,22 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Component
 @Slf4j
@@ -33,6 +40,7 @@ public class HrPtoSyncJob implements CommandLineRunner {
     public static final String ERROR_QUEUE_FILE = "error-queue.log";
     public static final String RUNS_FILE = "runs.log";
     public static final String OUTBOUND_DIR = "outbound";
+    public static final String SENT_LEDGER_FILE = "sent.idx";
     public static final String RUN_ONCE_ARG = "--hr-pto-sync";
 
     private static final String SENDING_APP = "COGHEALTH_EHR";
@@ -51,11 +59,15 @@ public class HrPtoSyncJob implements CommandLineRunner {
     @Autowired(required = false)
     private JdbcTemplate jdbcTemplate;
 
-    private int controlIdSeq = 0;
+    private final ReentrantLock runLock = new ReentrantLock();
 
     @Scheduled(cron = "0 0 2 * * *")
     public void nightly() {
-        runForDate(hrExportReader.latestExportDate());
+        try {
+            runForDate(hrExportReader.latestExportDate());
+        } catch (JobAlreadyRunningException e) {
+            log.warn("{} nightly run skipped: {}", JOB_NAME, e.getMessage());
+        }
     }
 
     @Override
@@ -72,7 +84,26 @@ public class HrPtoSyncJob implements CommandLineRunner {
         }
     }
 
+    /**
+     * Runs the job for one export date. Only one run executes at a time; a concurrent call fails fast with
+     * {@link JobAlreadyRunningException}. Re-running a date is idempotent: messages already recorded in the
+     * per-date sent ledger are not queued again, and identical error-queue entries are not appended twice.
+     */
     public Map<String, Object> runForDate(String exportDate) {
+        if (!runLock.tryLock()) {
+            throw new JobAlreadyRunningException(JOB_NAME + " is already running");
+        }
+        try {
+            return doRun(exportDate);
+        } finally {
+            runLock.unlock();
+        }
+    }
+
+    private Map<String, Object> doRun(String exportDate) {
+        if (exportDate == null || !exportDate.matches("\\d{8}")) {
+            throw new IllegalArgumentException("exportDate must be yyyyMMdd");
+        }
         LocalDateTime started = LocalDateTime.now();
         log.info("{} start exportDate={}", JOB_NAME, exportDate);
         List<HrPtoRecord> records = hrExportReader.read(exportDate);
@@ -81,14 +112,20 @@ public class HrPtoSyncJob implements CommandLineRunner {
         int sent = 0;
         int rejected = 0;
         int skipped = 0;
+        int alreadySent = 0;
         List<String> errors = new ArrayList<String>();
+        Map<String, String> ledger = readSentLedger(exportDate);
+        int seq = maxControlSeq(exportDate, usedControlIds(exportDate, ledger.values()));
+        Set<String> queuedErrors = queuedErrorKeys(exportDate);
 
         for (HrPtoRecord r : records) {
             Integer dept = departmentMapping.lookup(r.costCenter);
             if (dept == null) {
                 String msg = "AE – Unknown department for cost center " + r.costCenter;
                 errors.add(msg);
-                appendErrorQueue(exportDate, r.employeeId, msg);
+                if (queuedErrors.add(r.employeeId + "|" + msg)) {
+                    appendErrorQueue(exportDate, r.employeeId, msg);
+                }
                 rejected++;
                 continue;
             }
@@ -101,10 +138,18 @@ public class HrPtoSyncJob implements CommandLineRunner {
             for (LocalDate day : days) {
                 for (OrBlock b : blocks) {
                     if (weekdayOf(day).equals(b.weekday)) {
-                        String ctl = nextControlId(exportDate);
+                        String key = messageKey(r, b, day);
+                        if (ledger.containsKey(key)) {
+                            alreadySent++;
+                            continue;
+                        }
+                        String ctl = controlId(exportDate, ++seq);
                         String msg = buildSiuS15(r, dept, b, day, ctl);
-                        writeOutbound(exportDate, ctl, msg);
-                        sent++;
+                        if (writeOutbound(exportDate, ctl, msg)) {
+                            appendSentLedger(exportDate, key, ctl);
+                            ledger.put(key, ctl);
+                            sent++;
+                        }
                     }
                 }
             }
@@ -117,11 +162,13 @@ public class HrPtoSyncJob implements CommandLineRunner {
         result.put("finishedAt", LocalDateTime.now().format(LOG_TS));
         result.put("records", records.size());
         result.put("messagesSent", sent);
+        result.put("messagesAlreadySent", alreadySent);
         result.put("recordsRejected", rejected);
         result.put("recordsSkipped", skipped);
         result.put("status", rejected > 0 ? "PARTIAL" : "OK");
         appendRun(result);
-        log.info("{} done exportDate={} sent={} rejected={} skipped={}", JOB_NAME, exportDate, sent, rejected, skipped);
+        log.info("{} done exportDate={} sent={} alreadySent={} rejected={} skipped={}", JOB_NAME, exportDate, sent,
+                alreadySent, rejected, skipped);
         return result;
     }
 
@@ -228,25 +275,108 @@ public class HrPtoSyncJob implements CommandLineRunner {
         return blocks;
     }
 
-    private synchronized String nextControlId(String exportDate) {
-        controlIdSeq++;
-        return "HRPTO" + exportDate + String.format("%05d", controlIdSeq);
+    static String controlId(String exportDate, int seq) {
+        return "HRPTO" + exportDate + String.format("%05d", seq);
+    }
+
+    static String messageKey(HrPtoRecord r, OrBlock b, LocalDate day) {
+        return r.employeeId + "^" + b.providerId + "^" + b.departmentId + "^" + b.room + "^" + day + "^"
+                + b.startTime + "^" + b.endTime;
+    }
+
+    private static int maxControlSeq(String exportDate, Iterable<String> controlIds) {
+        String prefix = "HRPTO" + exportDate;
+        int max = 0;
+        for (String id : controlIds) {
+            if (id.startsWith(prefix) && id.length() > prefix.length()) {
+                try {
+                    max = Math.max(max, Integer.parseInt(id.substring(prefix.length())));
+                } catch (NumberFormatException ignored) {
+                    // not one of ours
+                }
+            }
+        }
+        return max;
+    }
+
+    private static List<String> usedControlIds(String exportDate, Iterable<String> ledgerIds) {
+        List<String> ids = new ArrayList<String>();
+        for (String id : ledgerIds) {
+            ids.add(id);
+        }
+        String[] names = outboundDir(exportDate).list();
+        if (names != null) {
+            for (String n : names) {
+                if (n.endsWith(".hl7")) {
+                    ids.add(n.substring(0, n.length() - 4));
+                }
+            }
+        }
+        return ids;
+    }
+
+    private static File outboundDir(String exportDate) {
+        return new File(outDir(), OUTBOUND_DIR + File.separator + exportDate);
+    }
+
+    private Map<String, String> readSentLedger(String exportDate) {
+        Map<String, String> ledger = new LinkedHashMap<String, String>();
+        File f = new File(outboundDir(exportDate), SENT_LEDGER_FILE);
+        if (!f.exists()) {
+            return ledger;
+        }
+        try (BufferedReader br = new BufferedReader(new FileReader(f))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                int bar = line.lastIndexOf('|');
+                if (bar > 0) {
+                    ledger.put(line.substring(0, bar), line.substring(bar + 1));
+                }
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException("Cannot read sent ledger " + f, e);
+        }
+        return ledger;
+    }
+
+    private void appendSentLedger(String exportDate, String key, String controlId) {
+        File f = new File(outboundDir(exportDate), SENT_LEDGER_FILE);
+        try (PrintWriter w = new PrintWriter(new FileWriter(f, true))) {
+            w.println(key + "|" + controlId);
+        } catch (IOException e) {
+            throw new IllegalStateException("Cannot append to sent ledger " + f, e);
+        }
+    }
+
+    private Set<String> queuedErrorKeys(String exportDate) {
+        Set<String> keys = new HashSet<String>();
+        for (Map<String, Object> e : readErrors()) {
+            if (exportDate.equals(e.get("exportDate"))) {
+                keys.add(e.get("employeeId") + "|" + e.get("message"));
+            }
+        }
+        return keys;
     }
 
     public static File outDir() {
         return new File(System.getProperty(OUT_DIR_PROPERTY, DEFAULT_OUT_DIR));
     }
 
-    private void writeOutbound(String exportDate, String controlId, String message) {
-        File dir = new File(outDir(), OUTBOUND_DIR + File.separator + exportDate);
+    private boolean writeOutbound(String exportDate, String controlId, String message) {
+        File dir = outboundDir(exportDate);
         dir.mkdirs();
         File f = new File(dir, controlId + ".hl7");
-        try (PrintWriter w = new PrintWriter(new FileWriter(f))) {
-            w.print(message);
+        try {
+            Files.write(f.toPath(), message.getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE_NEW);
+        } catch (FileAlreadyExistsException e) {
+            log.error("Outbound message {} already exists, not overwritten", f);
+            return false;
         } catch (IOException e) {
             log.error("Cannot write outbound message " + f, e);
+            return false;
         }
         log.debug("Queued {}", f.getName());
+        return true;
     }
 
     private void appendErrorQueue(String exportDate, String employeeId, String message) {
