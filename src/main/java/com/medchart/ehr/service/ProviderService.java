@@ -7,9 +7,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Query;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,9 +17,6 @@ public class ProviderService {
     private static final Logger log = LoggerFactory.getLogger(ProviderService.class);
 
     private final ProviderRepository providerRepository;
-
-    @PersistenceContext
-    private EntityManager entityManager;
 
     public ProviderService(ProviderRepository providerRepository) {
         this.providerRepository = providerRepository;
@@ -82,12 +76,8 @@ public class ProviderService {
     }
 
     @Transactional(readOnly = true)
-    @SuppressWarnings("unchecked")
     public List<Provider> search(String lastName) {
-        String sql = "SELECT * FROM providers WHERE active = true "
-                + "AND last_name ILIKE '%" + lastName + "%' "
-                + "ORDER BY last_name, first_name";
-        Query query = entityManager.createNativeQuery(sql, Provider.class);
-        return query.getResultList();
+        return providerRepository
+                .findByActiveTrueAndLastNameContainingIgnoreCaseOrderByLastNameAscFirstNameAsc(lastName);
     }
 }

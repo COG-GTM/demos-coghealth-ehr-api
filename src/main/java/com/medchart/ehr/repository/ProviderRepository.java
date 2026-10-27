@@ -19,6 +19,8 @@ public interface ProviderRepository extends JpaRepository<Provider, Long> {
 
     List<Provider> findBySpecialty(String specialty);
 
+    List<Provider> findByActiveTrueAndLastNameContainingIgnoreCaseOrderByLastNameAscFirstNameAsc(String lastName);
+
     @Query("SELECT DISTINCT p.department FROM Provider p WHERE p.active = true ORDER BY p.department")
     List<String> findAllDepartments();
 
