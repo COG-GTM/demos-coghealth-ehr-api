@@ -50,8 +50,10 @@ services:
     image: quay.io/keycloak/keycloak:23.0
     container_name: coghealth-keycloak
     environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      # Credentials come from the untracked .env file (see .env.example);
+      # ./start-infrastructure.sh generates random values on first run.
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?set KEYCLOAK_ADMIN_PASSWORD in .env (see .env.example)}
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/coghealth
       KC_DB_USERNAME: coghealth
@@ -59,6 +61,10 @@ services:
       KC_HOSTNAME: localhost
       KC_HTTP_ENABLED: "true"
       KC_HOSTNAME_STRICT: "false"
+      # Substituted into docker/keycloak/coghealth-realm.json on import
+      KC_REALM_ADMIN_PASSWORD: ${KC_REALM_ADMIN_PASSWORD:?set KC_REALM_ADMIN_PASSWORD in .env (see .env.example)}
+      KC_DEMO_USER_PASSWORD: ${KC_DEMO_USER_PASSWORD:?set KC_DEMO_USER_PASSWORD in .env (see .env.example)}
+      KC_API_CLIENT_SECRET: ${KC_API_CLIENT_SECRET:?set KC_API_CLIENT_SECRET in .env (see .env.example)}
     ports:
       - "8180:8080"
     command: start-dev --import-realm

@@ -100,7 +100,7 @@ docker-compose down -v
 |---------|-----|-------------|
 | PostgreSQL | `localhost:5432` | `coghealth` / `coghealth_dev_2024` |
 | Redis | `localhost:6379` | No auth (dev mode) |
-| Keycloak Admin | http://localhost:8180 | `admin` / `admin` |
+| Keycloak Admin | http://localhost:8180 | `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` from `.env` |
 | RabbitMQ Management | http://localhost:15672 | `coghealth` / `coghealth_dev_2024` |
 | Elasticsearch | http://localhost:9200 | No auth (dev mode) |
 | Kibana | http://localhost:5601 | No auth (dev mode) |
@@ -108,7 +108,15 @@ docker-compose down -v
 
 ## Demo Users
 
-All users have password: `demo123` (except admin: `admin123`)
+Passwords are not committed. Keycloak substitutes them from the environment when it imports
+`docker/keycloak/coghealth-realm.json`; `./start-infrastructure.sh` generates random values in the
+git-ignored `.env` on first run (see `.env.example`):
+
+- Demo users: `KC_DEMO_USER_PASSWORD`
+- `admin`: `KC_REALM_ADMIN_PASSWORD` (temporary, must be changed at first login)
+
+The direct password grant (`grant_type=password`) is disabled on both clients; sign in through the
+Keycloak login page (authorization code flow).
 
 | Username | Role | Access Level |
 |----------|------|--------------|
@@ -178,7 +186,7 @@ SPRING_REDIS_PORT: 6379
 KEYCLOAK_AUTH_SERVER_URL: http://localhost:8180
 KEYCLOAK_REALM: coghealth
 KEYCLOAK_RESOURCE: coghealth-api
-KEYCLOAK_CREDENTIALS_SECRET: coghealth-api-secret-2024
+KEYCLOAK_CREDENTIALS_SECRET: ${KC_API_CLIENT_SECRET}  # from .env, never committed
 
 # RabbitMQ
 SPRING_RABBITMQ_HOST: localhost
