@@ -115,7 +115,9 @@ git-ignored `.env` on first run (see `.env.example`):
 - Demo users: `KC_DEMO_USER_PASSWORD`
 - `admin`: `KC_REALM_ADMIN_PASSWORD` (temporary, must be changed at first login)
 
-The direct password grant (`grant_type=password`) is disabled on both clients; sign in through the
+These accounts exist only in Keycloak. The bundled frontend does not use Keycloak yet (it logs in
+through the API's `/auth/login`). For Keycloak clients, the direct password grant
+(`grant_type=password`) is disabled on both `coghealth-api` and `coghealth-web`; sign in through the
 Keycloak login page (authorization code flow).
 
 Keycloak only imports the realm when it does not exist yet. A database that imported an older

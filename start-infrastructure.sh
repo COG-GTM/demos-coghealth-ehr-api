@@ -39,6 +39,16 @@ if [ ! -f .env ]; then
     fi
 fi
 
+# Keycloak exits at startup if any credential is empty; catch an outdated .env here.
+missing=$(grep -oE '^[A-Z_]+(PASSWORD|SECRET)=' .env.example | tr -d '=' | while read -r v; do
+    grep -qE "^${v}=.+" .env || echo "$v"
+done)
+if [ -n "$missing" ]; then
+    echo "❌ .env has no value for:" $missing
+    echo "   Add them (see .env.example) or delete .env to regenerate it."
+    exit 1
+fi
+
 # Stop any existing containers
 echo ""
 echo "Stopping any existing containers..."
