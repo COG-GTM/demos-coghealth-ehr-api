@@ -68,7 +68,7 @@ class EncounterControllerTest {
 
     @Test
     void getByIdReturnsPatientSummaryWithoutSsnOrDemographics() throws Exception {
-        when(encounterService.findByIdWithDetails(1L)).thenReturn(Optional.of(encounter()));
+        when(encounterService.findByIdForProvider(1L, null)).thenReturn(Optional.of(encounter()));
 
         mockMvc.perform(get("/v1/encounters/1"))
                 .andExpect(status().isOk())
@@ -121,7 +121,7 @@ class EncounterControllerTest {
 
     @Test
     void readsAreAuditedAgainstTheEncounterPatient() throws Exception {
-        when(encounterService.findByIdWithDetails(1L)).thenReturn(Optional.of(encounter()));
+        when(encounterService.findByIdForProvider(1L, null)).thenReturn(Optional.of(encounter()));
         when(encounterService.findByPatientId(7L)).thenReturn(Collections.singletonList(encounter()));
         when(encounterService.findByStatus(EncounterStatus.SCHEDULED)).thenReturn(Collections.singletonList(encounter()));
 

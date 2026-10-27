@@ -42,6 +42,13 @@ public class EncounterService {
     }
 
     @Transactional(readOnly = true)
+    public Optional<Encounter> findByIdForProvider(Long id, Long providerId) {
+        Optional<Encounter> encounter = encounterRepository.findByIdWithDetails(id);
+        encounter.ifPresent(enc -> log.info("Provider {} accessed encounter {}", providerId, enc.getEncounterNumber()));
+        return encounter;
+    }
+
+    @Transactional(readOnly = true)
     public Optional<Encounter> findByEncounterNumber(String encounterNumber) {
         return encounterRepository.findByEncounterNumber(encounterNumber);
     }
