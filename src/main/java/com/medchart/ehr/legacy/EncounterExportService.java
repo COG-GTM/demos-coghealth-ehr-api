@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -38,18 +39,12 @@ public class EncounterExportService {
         csv.append("EncounterId,EncounterNumber,PatientMRN,PatientName,DOB,EncounterDate,Type,Status\n");
         
         for (Object[] row : results) {
-            csv.append(row[0]).append(",");
-            csv.append(row[1]).append(",");
-            csv.append(row[5]).append(",");
-            csv.append(row[6]).append(" ").append(row[7]).append(",");
-            csv.append(row[8]).append(",");
-            csv.append(row[4]).append(",");
-            csv.append(row[2]).append(",");
-            csv.append(row[3]).append("\n");
+            csv.append(SpreadsheetSafeCsv.row(row[0], row[1], row[5], row[6] + " " + row[7],
+                    row[8], row[4], row[2], row[3])).append("\n");
         }
         
         log.info("Exported {} encounters for date range {} to {}", results.size(), startDate, endDate);
-        return csv.toString().getBytes();
+        return csv.toString().getBytes(StandardCharsets.UTF_8);
     }
 
     public byte[] exportPatientEncounterHistory(Long patientId) {
@@ -95,11 +90,7 @@ public class EncounterExportService {
         try (PrintWriter writer = new PrintWriter(new FileWriter(filePath))) {
             writer.println("ID,MRN,FirstName,LastName,DOB,Email,PhoneHome,PhoneMobile,Street,City,State,Zip");
             for (Object[] p : patients) {
-                writer.println(String.join(",", 
-                    String.valueOf(p[0]), String.valueOf(p[1]), String.valueOf(p[2]),
-                    String.valueOf(p[3]), String.valueOf(p[4]), String.valueOf(p[5]),
-                    String.valueOf(p[6]), String.valueOf(p[7]), String.valueOf(p[8]),
-                    String.valueOf(p[9]), String.valueOf(p[10]), String.valueOf(p[11])));
+                writer.println(SpreadsheetSafeCsv.row(p));
             }
             log.info("Exported {} patients to file: {}", patients.size(), filePath);
         } catch (IOException e) {
