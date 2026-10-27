@@ -1,5 +1,6 @@
 package com.medchart.ehr.domain.encounter;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.medchart.ehr.domain.patient.Patient;
 import com.medchart.ehr.domain.provider.Provider;
 import lombok.*;
@@ -38,6 +39,8 @@ public class Encounter {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "attending_provider_id")
+    @JsonIgnoreProperties({"phoneMobile", "pager", "licenses", "hireDate", "terminationDate",
+            "createdAt", "updatedAt", "version", "hibernateLazyInitializer", "handler"})
     private Provider attendingProvider;
 
     @Enumerated(EnumType.STRING)
