@@ -280,4 +280,19 @@ class ProviderControllerSecurityTest {
                 .licenseType("MD").licenseNumber("A123456").state("CA").status("ACTIVE").build())));
         return provider;
     }
+
+    @Test
+    void selfRegistrationRequiresAdmin() throws Exception {
+        String signUp = "{\"username\":\"mallory\",\"email\":\"m@example.org\",\"password\":\"Passw0rd!\"}";
+        mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content(signUp))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(roles = "PROVIDER")
+    void nonAdminCannotRegisterAccounts() throws Exception {
+        String signUp = "{\"username\":\"mallory\",\"email\":\"m@example.org\",\"password\":\"Passw0rd!\"}";
+        mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content(signUp))
+                .andExpect(status().isForbidden());
+    }
 }

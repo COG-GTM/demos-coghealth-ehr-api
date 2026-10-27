@@ -6,7 +6,9 @@ import com.medchart.ehr.domain.provider.License;
 import com.medchart.ehr.domain.provider.Provider;
 import com.medchart.ehr.domain.provider.ProviderType;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 import javax.validation.Valid;
 import javax.validation.constraints.Email;
@@ -98,9 +100,76 @@ public class ProviderDTO {
     @JsonIgnore
     private boolean idSupplied;
 
+    /** Optional fields the request explicitly set to null, so an update can clear them. */
+    @JsonIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private final Set<String> explicitNulls = new HashSet<>();
+
     @JsonProperty("id")
     public void markIdSupplied(Object id) {
         this.idSupplied = id != null;
+    }
+
+    public void setMiddleName(String middleName) {
+        this.middleName = track("middleName", middleName);
+    }
+
+    public void setSuffix(String suffix) {
+        this.suffix = track("suffix", suffix);
+    }
+
+    public void setCredentials(String credentials) {
+        this.credentials = track("credentials", credentials);
+    }
+
+    public void setSpecialty(String specialty) {
+        this.specialty = track("specialty", specialty);
+    }
+
+    public void setSubspecialty(String subspecialty) {
+        this.subspecialty = track("subspecialty", subspecialty);
+    }
+
+    public void setDepartment(String department) {
+        this.department = track("department", department);
+    }
+
+    public void setEmail(String email) {
+        this.email = track("email", email);
+    }
+
+    public void setPhoneOffice(String phoneOffice) {
+        this.phoneOffice = track("phoneOffice", phoneOffice);
+    }
+
+    public void setPhoneMobile(String phoneMobile) {
+        this.phoneMobile = track("phoneMobile", phoneMobile);
+    }
+
+    public void setPager(String pager) {
+        this.pager = track("pager", pager);
+    }
+
+    public void setFax(String fax) {
+        this.fax = track("fax", fax);
+    }
+
+    public void setHireDate(LocalDate hireDate) {
+        this.hireDate = track("hireDate", hireDate);
+    }
+
+    public void setTerminationDate(LocalDate terminationDate) {
+        this.terminationDate = track("terminationDate", terminationDate);
+    }
+
+    private <T> T track(String field, T value) {
+        if (value == null) {
+            explicitNulls.add(field);
+        } else {
+            explicitNulls.remove(field);
+        }
+        return value;
     }
 
     /** Populates a new provider; every editable field, including the NPI, is taken from the request. */
@@ -133,25 +202,26 @@ public class ProviderDTO {
 
     /**
      * Applies an update to a loaded provider. Only fields present in the request are copied;
-     * omitted fields keep their stored values. The NPI is never changed by an update.
+     * omitted fields keep their stored values and an explicit null clears an optional field.
+     * Required fields ignore null, and the NPI is never changed by an update.
      */
     public void applyUpdateTo(Provider provider) {
         setIfPresent(firstName, provider::setFirstName);
-        setIfPresent(middleName, provider::setMiddleName);
+        setOrClear("middleName", middleName, provider::setMiddleName);
         setIfPresent(lastName, provider::setLastName);
-        setIfPresent(suffix, provider::setSuffix);
-        setIfPresent(credentials, provider::setCredentials);
+        setOrClear("suffix", suffix, provider::setSuffix);
+        setOrClear("credentials", credentials, provider::setCredentials);
         setIfPresent(providerType, provider::setProviderType);
-        setIfPresent(specialty, provider::setSpecialty);
-        setIfPresent(subspecialty, provider::setSubspecialty);
-        setIfPresent(department, provider::setDepartment);
-        setIfPresent(email, provider::setEmail);
-        setIfPresent(phoneOffice, provider::setPhoneOffice);
-        setIfPresent(phoneMobile, provider::setPhoneMobile);
-        setIfPresent(pager, provider::setPager);
-        setIfPresent(fax, provider::setFax);
-        setIfPresent(hireDate, provider::setHireDate);
-        setIfPresent(terminationDate, provider::setTerminationDate);
+        setOrClear("specialty", specialty, provider::setSpecialty);
+        setOrClear("subspecialty", subspecialty, provider::setSubspecialty);
+        setOrClear("department", department, provider::setDepartment);
+        setOrClear("email", email, provider::setEmail);
+        setOrClear("phoneOffice", phoneOffice, provider::setPhoneOffice);
+        setOrClear("phoneMobile", phoneMobile, provider::setPhoneMobile);
+        setOrClear("pager", pager, provider::setPager);
+        setOrClear("fax", fax, provider::setFax);
+        setOrClear("hireDate", hireDate, provider::setHireDate);
+        setOrClear("terminationDate", terminationDate, provider::setTerminationDate);
         setIfPresent(acceptingPatients, provider::setAcceptingPatients);
         if (licenses != null) {
             provider.getLicenses().clear();
@@ -167,6 +237,12 @@ public class ProviderDTO {
             }
         }
         return result;
+    }
+
+    private <T> void setOrClear(String field, T value, Consumer<T> setter) {
+        if (value != null || explicitNulls.contains(field)) {
+            setter.accept(value);
+        }
     }
 
     private static <T> void setIfPresent(T value, Consumer<T> setter) {

@@ -31,7 +31,6 @@ public class SecurityConfig {
     // Relative to the /api servlet context path.
     static final String[] PUBLIC_PATHS = {
         "/api/auth/login",
-        "/api/auth/register",
         "/actuator/health",
         "/actuator/health/**",
         "/actuator/info",
@@ -65,6 +64,8 @@ public class SecurityConfig {
             .authorizeRequests()
                 .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .antMatchers(PUBLIC_PATHS).permitAll()
+                // Self-registration would hand out the PROVIDER role to anyone; accounts are admin-provisioned.
+                .antMatchers("/api/auth/register").hasRole("ADMIN")
                 .antMatchers("/v1/providers/**").hasAnyRole("PROVIDER", "ADMIN", "STAFF")
                 .anyRequest().authenticated();
 
