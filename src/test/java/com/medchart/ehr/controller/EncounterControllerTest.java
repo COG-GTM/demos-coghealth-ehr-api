@@ -1,5 +1,9 @@
 package com.medchart.ehr.controller;
 
+import com.medchart.ehr.audit.AuditAction;
+import com.medchart.ehr.audit.AuditEvent;
+import com.medchart.ehr.audit.AuditService;
+import com.medchart.ehr.audit.EncounterAccessAuditor;
 import com.medchart.ehr.domain.encounter.Encounter;
 import com.medchart.ehr.domain.encounter.EncounterStatus;
 import com.medchart.ehr.domain.encounter.EncounterType;
@@ -13,6 +17,7 @@ import com.medchart.ehr.mapper.EncounterMapper;
 import com.medchart.ehr.service.EncounterService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
@@ -25,12 +30,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -43,13 +50,16 @@ class EncounterControllerTest {
     private static final String SSN = "123-45-6789";
 
     private EncounterService encounterService;
+    private AuditService auditService;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         encounterService = mock(EncounterService.class);
+        auditService = mock(AuditService.class);
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new EncounterController(encounterService, new EncounterMapper()))
+                .standaloneSetup(new EncounterController(encounterService, new EncounterMapper(),
+                        new EncounterAccessAuditor(auditService)))
                 .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
                 .build();
     }
@@ -105,6 +115,32 @@ class EncounterControllerTest {
                     .andExpect(content().string(not(containsString("ssn"))))
                     .andExpect(content().string(not(containsString(SSN))));
         }
+    }
+
+    @Test
+    void readsAreAuditedAgainstTheEncounterPatient() throws Exception {
+        when(encounterService.findByIdWithDetails(1L)).thenReturn(Optional.of(encounter()));
+        when(encounterService.findByPatientId(7L)).thenReturn(Collections.singletonList(encounter()));
+        when(encounterService.findByStatus(EncounterStatus.SCHEDULED)).thenReturn(Collections.singletonList(encounter()));
+
+        mockMvc.perform(get("/v1/encounters/1")).andExpect(status().isOk());
+        mockMvc.perform(get("/v1/encounters/patient/7")).andExpect(status().isOk());
+        mockMvc.perform(get("/v1/encounters/status/SCHEDULED")).andExpect(status().isOk());
+
+        ArgumentCaptor<AuditEvent> events = ArgumentCaptor.forClass(AuditEvent.class);
+        verify(auditService, times(3)).saveAuditEventAsync(events.capture());
+        AuditEvent detail = events.getAllValues().get(0);
+        assertThat(detail.getAction()).isEqualTo(AuditAction.READ);
+        assertThat(detail.getResourceType()).isEqualTo("Encounter");
+        assertThat(detail.getPatientId()).isEqualTo(7L);
+        assertThat(detail.getResourceId()).isEqualTo(1L);
+        assertThat(events.getAllValues().get(1).getAction()).isEqualTo(AuditAction.READ);
+        assertThat(events.getAllValues().get(1).getPatientId()).isEqualTo(7L);
+        AuditEvent search = events.getAllValues().get(2);
+        assertThat(search.getAction()).isEqualTo(AuditAction.SEARCH);
+        assertThat(search.getDescription()).contains("1 encounters, 1 patients");
+        assertThat(events.getAllValues()).allSatisfy(e ->
+                assertThat(String.valueOf(e.getDescription())).doesNotContain(SSN));
     }
 
     @Test

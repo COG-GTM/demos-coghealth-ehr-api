@@ -45,4 +45,12 @@ class PatientJsonTest {
 
         assertThat(json).doesNotContain("ENC-1");
     }
+
+    @Test
+    void encounterDiagnosisStillAcceptsItsEncounterReferenceOnInput() throws Exception {
+        EncounterDiagnosis diagnosis = mapper.readValue("{\"encounter\":{\"id\":5}}", EncounterDiagnosis.class);
+
+        assertThat(diagnosis.getEncounter()).isNotNull();
+        assertThat(diagnosis.getEncounter().getId()).isEqualTo(5L);
+    }
 }
