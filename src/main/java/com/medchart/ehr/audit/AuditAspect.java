@@ -126,7 +126,7 @@ public class AuditAspect {
 
     private void recordFailure(AuditEvent.AuditEventBuilder eventBuilder, Throwable cause) {
         eventBuilder.success(false);
-        eventBuilder.errorMessage(cause.getMessage());
+        eventBuilder.errorMessage(AuditService.truncate(cause.getMessage(), AuditService.ERROR_MESSAGE_MAX_LENGTH));
         try {
             recordInNewTransaction(eventBuilder.build());
         } catch (AuditPersistenceException auditFailure) {
@@ -180,9 +180,10 @@ public class AuditAspect {
                 HttpServletRequest request = attrs.getRequest();
                 String xForwardedFor = request.getHeader("X-Forwarded-For");
                 if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-                    return xForwardedFor.split(",")[0].trim();
+                    return AuditService.truncate(xForwardedFor.split(",")[0].trim(),
+                            AuditService.IP_ADDRESS_MAX_LENGTH);
                 }
-                return request.getRemoteAddr();
+                return AuditService.truncate(request.getRemoteAddr(), AuditService.IP_ADDRESS_MAX_LENGTH);
             }
         } catch (Exception e) {
             log.debug("Could not get client IP", e);
@@ -194,7 +195,8 @@ public class AuditAspect {
         try {
             ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
             if (attrs != null) {
-                return attrs.getRequest().getHeader("User-Agent");
+                return AuditService.truncate(attrs.getRequest().getHeader("User-Agent"),
+                        AuditService.USER_AGENT_MAX_LENGTH);
             }
         } catch (Exception e) {
             log.debug("Could not get user agent", e);

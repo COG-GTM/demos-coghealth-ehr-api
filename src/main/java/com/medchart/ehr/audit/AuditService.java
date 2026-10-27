@@ -15,6 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AuditService {
 
+    static final int IP_ADDRESS_MAX_LENGTH = 50;
+    static final int USER_AGENT_MAX_LENGTH = 200;
+    static final int ERROR_MESSAGE_MAX_LENGTH = 500;
+
     private final AuditEventRepository auditEventRepository;
 
     /**
@@ -50,13 +54,13 @@ public class AuditService {
         event.setPatientMrn(truncate(event.getPatientMrn(), 20));
         event.setResourceType(truncate(event.getResourceType(), 100));
         event.setDescription(truncate(event.getDescription(), 500));
-        event.setIpAddress(truncate(event.getIpAddress(), 50));
-        event.setUserAgent(truncate(event.getUserAgent(), 200));
+        event.setIpAddress(truncate(event.getIpAddress(), IP_ADDRESS_MAX_LENGTH));
+        event.setUserAgent(truncate(event.getUserAgent(), USER_AGENT_MAX_LENGTH));
         event.setSessionId(truncate(event.getSessionId(), 100));
-        event.setErrorMessage(truncate(event.getErrorMessage(), 500));
+        event.setErrorMessage(truncate(event.getErrorMessage(), ERROR_MESSAGE_MAX_LENGTH));
     }
 
-    private static String truncate(String value, int maxLength) {
+    static String truncate(String value, int maxLength) {
         if (value == null || value.length() <= maxLength) {
             return value;
         }
