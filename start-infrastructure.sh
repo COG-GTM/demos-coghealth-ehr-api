@@ -39,9 +39,15 @@ if [ ! -f .env ]; then
         done < .env.example > .env
     )
 fi
-set -a
-. ./.env
-set +a
+# Read values without sourcing .env, so its contents are never executed as shell.
+env_value() {
+    local v
+    v=$(grep -E "^[[:space:]]*$1=" .env | tail -n 1 | cut -d= -f2-)
+    v="${v%\"}"; v="${v#\"}"; v="${v%\'}"; v="${v#\'}"
+    printf '%s' "$v"
+}
+RABBITMQ_USER=$(env_value RABBITMQ_USER)
+RABBITMQ_PASSWORD=$(env_value RABBITMQ_PASSWORD)
 
 # Stop any existing containers
 echo ""
