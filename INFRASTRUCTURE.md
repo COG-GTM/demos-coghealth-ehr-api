@@ -109,8 +109,8 @@ while any required value is missing. Nothing in this repository contains a usabl
 | Redis | `127.0.0.1:6379` | `REDIS_PASSWORD` |
 | Keycloak Admin | http://127.0.0.1:8180 | `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` |
 | RabbitMQ Management | http://127.0.0.1:15672 | `RABBITMQ_USER` / `RABBITMQ_PASSWORD` |
-| Elasticsearch | http://127.0.0.1:9200 | None (security off for local dev; loopback only) |
-| Kibana | http://127.0.0.1:5601 | None (loopback only) |
+| Elasticsearch | http://127.0.0.1:9200 | `elastic` / `ELASTIC_PASSWORD` |
+| Kibana | http://127.0.0.1:5601 | `elastic` / `ELASTIC_PASSWORD` (Kibana itself connects as `kibana_system` / `KIBANA_SYSTEM_PASSWORD`) |
 | HAPI FHIR | http://127.0.0.1:8090/fhir | Disabled in compose |
 
 Do not reuse this compose file or `.env` for a shared or production deployment.
@@ -202,6 +202,8 @@ SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
 # Elasticsearch
 ELASTICSEARCH_HOST: localhost
 ELASTICSEARCH_PORT: 9200
+ELASTICSEARCH_USERNAME: elastic
+ELASTICSEARCH_PASSWORD: ${ELASTIC_PASSWORD}
 
 # FHIR
 HAPI_FHIR_URL: http://localhost:8090/fhir

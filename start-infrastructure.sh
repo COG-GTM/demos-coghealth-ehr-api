@@ -38,6 +38,20 @@ if [ ! -f .env ]; then
             esac
         done < .env.example > .env
     )
+else
+    # Add any credentials introduced since this .env was generated.
+    gen() { openssl rand -base64 24 | tr -d '/+='; }
+    while IFS= read -r line; do
+        case "$line" in
+            *PASSWORD=*|KC_API_CLIENT_SECRET=*)
+                key="${line%%=*}"
+                if ! grep -q "^${key}=" .env; then
+                    echo "Adding ${key} to .env"
+                    echo "${key}=$(gen)" >> .env
+                fi
+                ;;
+        esac
+    done < .env.example
 fi
 
 # Stop any existing containers
@@ -101,7 +115,7 @@ echo " ✅"
 
 # Wait for Elasticsearch
 echo -n "  Elasticsearch: "
-until curl -s http://localhost:9200/_cluster/health > /dev/null 2>&1; do
+until docker exec coghealth-elasticsearch sh -c 'curl -fs -u "elastic:$ELASTIC_PASSWORD" http://localhost:9200/_cluster/health' > /dev/null 2>&1; do
     echo -n "."
     sleep 3
 done
@@ -117,8 +131,8 @@ echo "  • PostgreSQL:    localhost:5432 (user coghealth, POSTGRES_PASSWORD)"
 echo "  • Redis:         localhost:6379 (REDIS_PASSWORD)"
 echo "  • Keycloak:      http://localhost:8180 (KEYCLOAK_ADMIN / KEYCLOAK_ADMIN_PASSWORD)"
 echo "  • RabbitMQ:      http://localhost:15672 (RABBITMQ_USER / RABBITMQ_PASSWORD)"
-echo "  • Elasticsearch: http://localhost:9200"
-echo "  • Kibana:        http://localhost:5601"
+echo "  • Elasticsearch: http://localhost:9200 (elastic / ELASTIC_PASSWORD)"
+echo "  • Kibana:        http://localhost:5601 (elastic / ELASTIC_PASSWORD)"
 echo ""
 echo "Demo Users (password: KC_DEMO_USER_PASSWORD):"
 echo "  • dr.anderson      - Physician"

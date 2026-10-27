@@ -136,15 +136,19 @@ services:
     container_name: coghealth-elasticsearch
     environment:
       - discovery.type=single-node
-      # Security is off for local dev; the port is published on loopback only.
-      - xpack.security.enabled=false
+      # Authentication is on (built-in `elastic` superuser). TLS stays off because
+      # the port is only published on loopback for local development.
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:?set ELASTIC_PASSWORD in .env (see .env.example)}
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     ports:
       - "127.0.0.1:9200:9200"
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q 'status.*green\\|yellow'"]
+      test: ["CMD-SHELL", "curl -s -u \"elastic:$$ELASTIC_PASSWORD\" http://localhost:9200/_cluster/health | grep -q 'status.*green\\|yellow'"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -154,16 +158,41 @@ services:
   # =============================================================================
   # AUDIT LOG UI - Kibana (for viewing audit logs)
   # =============================================================================
+  # One-shot job: sets the kibana_system password so Kibana can log in to
+  # Elasticsearch (Kibana 8 refuses to run as the `elastic` superuser).
+  elasticsearch-setup:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: coghealth-elasticsearch-setup
+    environment:
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:?set ELASTIC_PASSWORD in .env (see .env.example)}
+      KIBANA_SYSTEM_PASSWORD: ${KIBANA_SYSTEM_PASSWORD:?set KIBANA_SYSTEM_PASSWORD in .env (see .env.example)}
+    command:
+      - sh
+      - -c
+      - >-
+        printf '{"password":"%s"}' "$$KIBANA_SYSTEM_PASSWORD" |
+        curl -fsS -u "elastic:$$ELASTIC_PASSWORD" -H 'Content-Type: application/json'
+        -X POST http://elasticsearch:9200/_security/user/kibana_system/_password --data-binary @-
+        && echo ' kibana_system password set'
+    restart: "no"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - coghealth-network
+
   kibana:
     image: docker.elastic.co/kibana/kibana:8.11.0
     container_name: coghealth-kibana
     environment:
       ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      ELASTICSEARCH_USERNAME: kibana_system
+      ELASTICSEARCH_PASSWORD: ${KIBANA_SYSTEM_PASSWORD:?set KIBANA_SYSTEM_PASSWORD in .env (see .env.example)}
     ports:
       - "127.0.0.1:5601:5601"
     depends_on:
-      elasticsearch:
-        condition: service_healthy
+      elasticsearch-setup:
+        condition: service_completed_successfully
     networks:
       - coghealth-network
 
