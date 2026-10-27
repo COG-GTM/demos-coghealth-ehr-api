@@ -4,6 +4,7 @@ import com.medchart.ehr.domain.auth.User;
 import com.medchart.ehr.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -35,6 +36,10 @@ public class UserAdminController {
         return userRepository.findById(id)
             .<ResponseEntity<?>>map(user -> {
                 Set<User.Role> previous = user.getRoles();
+                if (removesAdmin(previous, request.getRoles()) && isLastUsableAdmin(user)) {
+                    return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body("Cannot remove ADMIN from the last active administrator");
+                }
                 user.setRoles(EnumSet.copyOf(request.getRoles()));
                 userRepository.save(user);
                 log.info("Admin {} changed roles of user {} from {} to {}",
@@ -47,6 +52,17 @@ public class UserAdminController {
                 return ResponseEntity.ok(body);
             })
             .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    private static boolean removesAdmin(Set<User.Role> previous, Set<User.Role> requested) {
+        return previous != null && previous.contains(User.Role.ADMIN) && !requested.contains(User.Role.ADMIN);
+    }
+
+    /** Locks every ADMIN row first so concurrent demotions serialize, then re-counts committed state. */
+    private boolean isLastUsableAdmin(User target) {
+        userRepository.lockUsersWithRole(User.Role.ADMIN);
+        boolean targetCounts = target.isEnabled() && target.isAccountNonLocked() && target.isAccountNonExpired();
+        return targetCounts && userRepository.countUsableUsersWithRole(User.Role.ADMIN) <= 1;
     }
 
     public static class RoleAssignmentRequest {

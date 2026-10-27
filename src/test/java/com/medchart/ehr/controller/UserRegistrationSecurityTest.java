@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -179,6 +180,67 @@ class UserRegistrationSecurityTest {
     }
 
     @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void lastAdminCannotBeDemoted() throws Exception {
+        User admin = user(1L, "admin", Set.of(User.Role.ADMIN));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
+        when(userRepository.countUsableUsersWithRole(User.Role.ADMIN)).thenReturn(1L);
+
+        mockMvc.perform(put("/api/admin/users/1/roles").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"roles\":[\"STAFF\"]}"))
+            .andExpect(status().isConflict());
+
+        verify(userRepository).lockUsersWithRole(User.Role.ADMIN);
+        verify(userRepository, never()).save(any());
+        assertThat(admin.getRoles()).containsExactly(User.Role.ADMIN);
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void adminCanBeDemotedWhenAnotherAdminRemains() throws Exception {
+        User other = user(5L, "other-admin", Set.of(User.Role.ADMIN));
+        when(userRepository.findById(5L)).thenReturn(Optional.of(other));
+        when(userRepository.countUsableUsersWithRole(User.Role.ADMIN)).thenReturn(2L);
+
+        mockMvc.perform(put("/api/admin/users/5/roles").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"roles\":[\"PROVIDER\"]}"))
+            .andExpect(status().isOk());
+
+        verify(userRepository).save(other);
+    }
+
+    @Test
+    void disabledUserTokenRunsRequestOnceUnauthenticated() throws Exception {
+        User disabled = user(3L, "carol", Set.of(User.Role.STAFF));
+        disabled.setEnabled(false);
+        disabled.setPassword(passwordEncoder.encode("correct-horse-battery"));
+        when(tokenProvider.getUsernameFromToken("t")).thenReturn("carol");
+        when(tokenProvider.validateToken(anyString(), any())).thenReturn(true);
+        when(userDetailsService.loadUserByUsername("carol")).thenReturn(disabled);
+        when(userDetailsService.loadUserByUsername("bob")).thenReturn(staffWithPassword());
+        when(tokenProvider.generateToken(any())).thenReturn("jwt");
+
+        mockMvc.perform(post("/api/auth/login").header("Authorization", "Bearer t")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"bob\",\"password\":\"correct-horse-battery\"}"))
+            .andExpect(status().isOk());
+
+        verify(tokenProvider, times(1)).generateToken(any());
+    }
+
+    @Test
+    void loginDoesNotCapLegacyPasswordLength() throws Exception {
+        String longPassword = "p".repeat(140);
+        User legacy = user(4L, "dave", Set.of(User.Role.STAFF));
+        legacy.setPassword("{noop}" + longPassword);
+        when(userDetailsService.loadUserByUsername("dave")).thenReturn(legacy);
+
+        mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"dave\",\"password\":\"" + longPassword + "\"}"))
+            .andExpect(status().is(org.hamcrest.Matchers.not(400)));
+    }
+
+    @Test
     @WithMockUser(roles = "ADMIN")
     void roleAssignmentValidatesInput() throws Exception {
         mockMvc.perform(put("/api/admin/users/2/roles").contentType(MediaType.APPLICATION_JSON)
@@ -192,6 +254,12 @@ class UserRegistrationSecurityTest {
                 .content("{\"roles\":[\"STAFF\"]}"))
             .andExpect(status().isNotFound());
         verify(userRepository, never()).save(any());
+    }
+
+    private User staffWithPassword() {
+        User staff = user(2L, "bob", Set.of(User.Role.STAFF));
+        staff.setPassword(passwordEncoder.encode("correct-horse-battery"));
+        return staff;
     }
 
     private static User user(Long id, String username, Set<User.Role> roles) {
