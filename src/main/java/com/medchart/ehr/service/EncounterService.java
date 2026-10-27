@@ -22,7 +22,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -195,7 +201,9 @@ public class EncounterService {
 
     private void recordAudit(AuditAction action, Encounter encounter, String description) {
         String username = currentUsername();
-        auditService.saveAuditEventAsync(AuditEvent.builder()
+        HttpServletRequest request = currentRequest();
+        HttpSession session = request != null ? request.getSession(false) : null;
+        AuditEvent event = AuditEvent.builder()
                 .userId(username != null ? username : "anonymous")
                 .userName(username)
                 .patientId(encounter.getPatient() != null ? encounter.getPatient().getId() : null)
@@ -203,7 +211,40 @@ public class EncounterService {
                 .resourceType("Encounter")
                 .resourceId(encounter.getId())
                 .description(description)
-                .build());
+                .ipAddress(request != null ? clientIp(request) : null)
+                .userAgent(request != null ? truncate(request.getHeader("User-Agent"), 200) : null)
+                .sessionId(session != null ? session.getId() : null)
+                .build();
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    auditService.saveAuditEventAsync(event);
+                }
+            });
+        } else {
+            auditService.saveAuditEventAsync(event);
+        }
+    }
+
+    private static HttpServletRequest currentRequest() {
+        if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes) {
+            return ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
+        }
+        return null;
+    }
+
+    private static String clientIp(HttpServletRequest request) {
+        String forwardedFor = request.getHeader("X-Forwarded-For");
+        String ip = forwardedFor != null && !forwardedFor.isEmpty()
+                ? forwardedFor.split(",")[0].trim()
+                : request.getRemoteAddr();
+        return truncate(ip, 50);
+    }
+
+    private static String truncate(String value, int max) {
+        return value != null && value.length() > max ? value.substring(0, max) : value;
     }
 
     private String currentUsername() {
