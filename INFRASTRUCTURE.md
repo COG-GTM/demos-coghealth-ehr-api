@@ -81,34 +81,44 @@
 ## Quick Start
 
 ```bash
-# Start all infrastructure
+# Start all infrastructure (generates a git-ignored .env with random credentials on first run)
 ./start-infrastructure.sh
 
-# Or manually with docker-compose
-docker-compose up -d
+# Or manually: create .env from .env.example and fill in every value first
+cp .env.example .env
+docker compose up -d
 
 # Stop everything
-docker-compose down
+docker compose down
 
 # Stop and remove all data
-docker-compose down -v
+docker compose down -v
 ```
 
 ## Service URLs
 
-| Service | URL | Credentials |
-|---------|-----|-------------|
-| PostgreSQL | `localhost:5432` | `coghealth` / `coghealth_dev_2024` |
-| Redis | `localhost:6379` | No auth (dev mode) |
-| Keycloak Admin | http://localhost:8180 | `admin` / `admin` |
-| RabbitMQ Management | http://localhost:15672 | `coghealth` / `coghealth_dev_2024` |
-| Elasticsearch | http://localhost:9200 | No auth (dev mode) |
-| Kibana | http://localhost:5601 | No auth (dev mode) |
-| HAPI FHIR | http://localhost:8090/fhir | No auth (dev mode) |
+Every published port is bound to `127.0.0.1`, so the services are only reachable from the machine running the
+stack. All credentials come from the untracked `.env` file (see `.env.example`); `docker compose` refuses to start
+while any required value is missing. Nothing in this repository contains a usable password.
+
+| Service | URL | Credentials (`.env`) |
+|---------|-----|----------------------|
+| PostgreSQL | `127.0.0.1:5432` | `coghealth` / `POSTGRES_PASSWORD` |
+| Redis | `127.0.0.1:6379` | `REDIS_PASSWORD` |
+| Keycloak Admin | http://127.0.0.1:8180 | `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` |
+| RabbitMQ Management | http://127.0.0.1:15672 | `RABBITMQ_USER` / `RABBITMQ_PASSWORD` |
+| Elasticsearch | http://127.0.0.1:9200 | None (security off for local dev; loopback only) |
+| Kibana | http://127.0.0.1:5601 | None (loopback only) |
+| HAPI FHIR | http://127.0.0.1:8090/fhir | Disabled in compose |
+
+Do not reuse this compose file or `.env` for a shared or production deployment.
 
 ## Demo Users
 
-All users have password: `demo123` (except admin: `admin123`)
+Imported into the `coghealth` realm from `docker/keycloak/coghealth-realm.json`, which only contains
+`${KC_*}` placeholders. Keycloak substitutes them from `.env` on first import: demo users get
+`KC_DEMO_USER_PASSWORD`, `admin` gets `KC_REALM_ADMIN_PASSWORD`, and the confidential `coghealth-api` client
+secret is `KC_API_CLIENT_SECRET`. The realm requires TLS for non-local (`sslRequired: external`) requests.
 
 | Username | Role | Access Level |
 |----------|------|--------------|
@@ -162,29 +172,30 @@ External System → RabbitMQ → Message Processor → Validate → Transform �
 
 ## Environment Variables
 
-The API expects these environment variables (set in application.yml or docker-compose):
+The API expects these environment variables (values for the local stack come from `.env`):
 
 ```yaml
 # Database
 SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/coghealth
 SPRING_DATASOURCE_USERNAME: coghealth
-SPRING_DATASOURCE_PASSWORD: coghealth_dev_2024
+SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
 
 # Redis
 SPRING_REDIS_HOST: localhost
 SPRING_REDIS_PORT: 6379
+SPRING_REDIS_PASSWORD: ${REDIS_PASSWORD}
 
 # Keycloak
 KEYCLOAK_AUTH_SERVER_URL: http://localhost:8180
 KEYCLOAK_REALM: coghealth
 KEYCLOAK_RESOURCE: coghealth-api
-KEYCLOAK_CREDENTIALS_SECRET: coghealth-api-secret-2024
+KEYCLOAK_CREDENTIALS_SECRET: ${KC_API_CLIENT_SECRET}
 
 # RabbitMQ
 SPRING_RABBITMQ_HOST: localhost
 SPRING_RABBITMQ_PORT: 5672
-SPRING_RABBITMQ_USERNAME: coghealth
-SPRING_RABBITMQ_PASSWORD: coghealth_dev_2024
+SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
+SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
 
 # Elasticsearch
 ELASTICSEARCH_HOST: localhost
@@ -207,12 +218,12 @@ lsof -i :6379  # Redis
 lsof -i :8180  # Keycloak
 
 # View logs
-docker-compose logs -f [service_name]
+docker compose logs -f [service_name]
 ```
 
 ### Reset everything
 ```bash
-docker-compose down -v
+docker compose down -v
 docker system prune -f
 ./start-infrastructure.sh
 ```
