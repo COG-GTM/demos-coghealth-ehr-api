@@ -13,12 +13,15 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * Runs the hr-pto-sync interface contract: cost center mapping, practitioner identity and FHIR R4
@@ -30,6 +33,8 @@ public class InterfaceContractCheck {
 
     public static final String REPORT_DIR_PROPERTY = "interface.contract.report-dir";
     public static final String DEFAULT_REPORT_DIR = "target/interface-contract";
+
+    private static final Pattern SAFE_FILE_TOKEN = Pattern.compile("[A-Za-z0-9_-]{1,64}");
 
     private final HrExportReader hrExportReader;
     private final DepartmentMapping departmentMapping;
@@ -96,15 +101,53 @@ public class InterfaceContractCheck {
     private void writeReport(InterfaceContractReport report, List<ExportedResource> resources) {
         Path dir = reportDir();
         try {
-            Files.createDirectories(dir.resolve("resources"));
+            Path resourcesDir = dir.resolve("resources");
+            Files.createDirectories(resourcesDir);
             Files.write(dir.resolve("report.json"), mapper.writeValueAsBytes(report));
             Files.write(dir.resolve("report.md"), toMarkdown(report).getBytes(StandardCharsets.UTF_8));
             for (ExportedResource r : resources) {
-                Files.write(dir.resolve("resources").resolve(r.getResourceType() + "-" + r.getId() + ".json"),
-                        r.getJson().getBytes(StandardCharsets.UTF_8));
+                Files.write(resourceFile(resourcesDir, r), r.getJson().getBytes(StandardCharsets.UTF_8));
             }
         } catch (IOException e) {
             throw new IllegalStateException("Cannot write contract report to " + dir, e);
+        }
+    }
+
+    /**
+     * Resource ids come from the HR CSV, so the file name is built only from {@code [A-Za-z0-9_-]} and the
+     * resolved path must stay inside {@code resourcesDir}.
+     */
+    static Path resourceFile(Path resourcesDir, ExportedResource r) {
+        Path base = resourcesDir.toAbsolutePath().normalize();
+        Path file = base.resolve(safeFileToken(r.getResourceType()) + "-" + safeFileToken(r.getId()) + ".json").normalize();
+        if (!base.equals(file.getParent())) {
+            throw new IllegalStateException("Refusing to write contract resource outside " + base);
+        }
+        return file;
+    }
+
+    static String safeFileToken(String value) {
+        String v = value == null ? "" : value;
+        if (SAFE_FILE_TOKEN.matcher(v).matches()) {
+            return v;
+        }
+        String cleaned = v.replaceAll("[^A-Za-z0-9_-]", "_");
+        if (cleaned.length() > 40) {
+            cleaned = cleaned.substring(0, 40);
+        }
+        return cleaned + "_" + sha256Prefix(v);
+    }
+
+    private static String sha256Prefix(String value) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder();
+            for (int i = 0; i < 6; i++) {
+                hex.append(String.format("%02x", digest[i]));
+            }
+            return hex.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
         }
     }
 
