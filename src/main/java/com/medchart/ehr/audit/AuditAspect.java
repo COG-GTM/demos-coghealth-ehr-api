@@ -1,11 +1,15 @@
 package com.medchart.ehr.audit;
 
+import com.medchart.ehr.domain.auth.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -26,16 +30,20 @@ public class AuditAspect {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = signature.getMethod();
         AuditAccess auditAccess = method.getAnnotation(AuditAccess.class);
+        String[] parameterNames = signature.getParameterNames();
+        Object[] arguments = joinPoint.getArgs();
+        String resourceType = auditAccess.resourceType();
 
-        Long patientId = extractPatientId(joinPoint.getArgs());
+        Long patientId = extractPatientId(parameterNames, arguments, resourceType);
         String userId = getCurrentUserId();
 
         AuditEvent.AuditEventBuilder eventBuilder = AuditEvent.builder()
                 .userId(userId)
                 .userName(getCurrentUserName())
                 .patientId(patientId)
+                .resourceId(extractResourceId(parameterNames, arguments, resourceType, patientId))
                 .action(auditAccess.action())
-                .resourceType(auditAccess.resourceType())
+                .resourceType(resourceType)
                 .description(auditAccess.description())
                 .ipAddress(getClientIpAddress())
                 .userAgent(getUserAgent());
@@ -53,21 +61,90 @@ public class AuditAspect {
         }
     }
 
-    private Long extractPatientId(Object[] args) {
-        for (Object arg : args) {
-            if (arg instanceof Long) {
-                return (Long) arg;
+    private Long extractPatientId(String[] parameterNames, Object[] arguments, String resourceType) {
+        Long patientId = findLongArgument(parameterNames, arguments, "patientId");
+        if (patientId != null) {
+            return patientId;
+        }
+        return "Patient".equals(resourceType) ? findFirstLongArgument(arguments) : null;
+    }
+
+    private Long extractResourceId(
+            String[] parameterNames,
+            Object[] arguments,
+            String resourceType,
+            Long patientId) {
+        if ("Patient".equals(resourceType)) {
+            return patientId;
+        }
+        if (parameterNames == null || arguments == null) {
+            return null;
+        }
+        int count = Math.min(parameterNames.length, arguments.length);
+        for (int i = 0; i < count; i++) {
+            if (arguments[i] instanceof Long
+                    && ("id".equals(parameterNames[i]) || "encounterId".equals(parameterNames[i]))) {
+                return (Long) arguments[i];
+            }
+        }
+        return null;
+    }
+
+    private Long findLongArgument(String[] parameterNames, Object[] arguments, String parameterName) {
+        if (parameterNames == null || arguments == null) {
+            return null;
+        }
+        int count = Math.min(parameterNames.length, arguments.length);
+        for (int i = 0; i < count; i++) {
+            if (parameterName.equals(parameterNames[i]) && arguments[i] instanceof Long) {
+                return (Long) arguments[i];
+            }
+        }
+        return null;
+    }
+
+    private Long findFirstLongArgument(Object[] arguments) {
+        if (arguments == null) {
+            return null;
+        }
+        for (Object argument : arguments) {
+            if (argument instanceof Long) {
+                return (Long) argument;
             }
         }
         return null;
     }
 
     private String getCurrentUserId() {
-        return "system";
+        Authentication authentication = getCurrentAuthentication();
+        if (authentication == null) {
+            return "system";
+        }
+        Object principal = authentication.getPrincipal();
+        return principal instanceof User
+                ? String.valueOf(((User) principal).getId())
+                : authentication.getName();
     }
 
     private String getCurrentUserName() {
-        return "System User";
+        Authentication authentication = getCurrentAuthentication();
+        if (authentication == null) {
+            return "System User";
+        }
+        Object principal = authentication.getPrincipal();
+        return principal instanceof User
+                ? ((User) principal).getUsername()
+                : authentication.getName();
+    }
+
+    private Authentication getCurrentAuthentication() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null
+                || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
+            return null;
+        }
+        return authentication;
     }
 
     private String getClientIpAddress() {
