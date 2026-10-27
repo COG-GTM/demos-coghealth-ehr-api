@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -15,6 +17,18 @@ class AuditServiceTest {
 
     private final AuditEventRepository repository = mock(AuditEventRepository.class);
     private final AuditService auditService = new AuditService(repository);
+
+    @Test
+    void failureDescriptionKeepsSqlStateButDropsMessagesThatEchoColumnValues() {
+        java.sql.SQLException sql = new java.sql.SQLException(
+                "value too long for type character varying(20): MRN-123456789", "22001");
+        String description = AuditService.describeFailure(
+                new DataIntegrityViolationException("could not execute statement: MRN-123456789", sql));
+
+        assertTrue(description.contains("sqlState=22001"));
+        assertTrue(description.contains("rootCause=java.sql.SQLException"));
+        assertFalse(description.contains("MRN-123456789"));
+    }
 
     @Test
     void recordPersistsSynchronously() {

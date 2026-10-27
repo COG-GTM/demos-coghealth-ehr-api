@@ -2,9 +2,12 @@ package com.medchart.ehr.audit;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.NestedExceptionUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.sql.SQLException;
 
 /**
  * Persists audit events synchronously. Any persistence failure is raised as
@@ -42,10 +45,28 @@ public class AuditService {
         try {
             auditEventRepository.saveAndFlush(event);
         } catch (RuntimeException e) {
-            log.error("Audit event persistence failed; rejecting audited operation (action={}, resourceType={}, cause={})",
-                    event.getAction(), event.getResourceType(), e.getClass().getName());
+            log.error("Audit event persistence failed; rejecting audited operation (action={}, resourceType={}, {})",
+                    event.getAction(), event.getResourceType(), describeFailure(e));
             throw new AuditPersistenceException("Failed to persist audit event", e);
         }
+    }
+
+    /**
+     * Diagnostics without exception messages, which can echo the rejected column values (PHI).
+     */
+    static String describeFailure(Throwable failure) {
+        String sqlState = null;
+        for (Throwable t = failure; t != null && sqlState == null; t = t.getCause()) {
+            if (t instanceof SQLException) {
+                sqlState = ((SQLException) t).getSQLState();
+            }
+        }
+        Throwable root = NestedExceptionUtils.getMostSpecificCause(failure);
+        StackTraceElement origin = root.getStackTrace().length > 0 ? root.getStackTrace()[0] : null;
+        return "exception=" + failure.getClass().getName()
+                + ", rootCause=" + root.getClass().getName()
+                + ", sqlState=" + sqlState
+                + ", origin=" + origin;
     }
 
     static void fitToColumns(AuditEvent event) {
