@@ -38,15 +38,15 @@ class AuditAspectTest {
     }
 
     @Test
-    void truncatesLongIdentitiesToAuditColumnLength() throws Throwable {
+    void truncatesLongDisplayNameButKeepsExactUserId() throws Throwable {
         String longName = "x".repeat(60);
-        User user = User.builder().username("u".repeat(150)).password("x").firstName(longName).lastName(longName).build();
+        User user = User.builder().username("u".repeat(50)).password("x").firstName(longName).lastName(longName).build();
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
             user, null, AuthorityUtils.createAuthorityList("ROLE_STAFF")));
 
         AuditEvent event = audit();
 
-        assertEquals(100, event.getUserId().length());
+        assertEquals("u".repeat(50), event.getUserId());
         assertEquals(100, event.getUserName().length());
     }
 

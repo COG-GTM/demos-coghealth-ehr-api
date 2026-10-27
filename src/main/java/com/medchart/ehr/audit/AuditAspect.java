@@ -22,7 +22,7 @@ import java.lang.reflect.Method;
 @RequiredArgsConstructor
 public class AuditAspect {
 
-    private static final int AUDIT_IDENTITY_MAX_LENGTH = 100;
+    private static final int AUDIT_USER_NAME_MAX_LENGTH = 100;
 
     private final AuditService auditService;
 
@@ -69,7 +69,7 @@ public class AuditAspect {
 
     private String getCurrentUserId() {
         Authentication authentication = currentAuthentication();
-        return authentication != null ? truncate(authentication.getName()) : "anonymous";
+        return authentication != null ? authentication.getName() : "anonymous";
     }
 
     private String getCurrentUserName() {
@@ -84,10 +84,10 @@ public class AuditAspect {
         return truncate(authentication.getName());
     }
 
-    // Matches the AuditEvent userId/userName column length so the insert can't fail.
+    // Display names can exceed the AuditEvent.userName column; usernames are capped at 50 by the users table.
     private static String truncate(String value) {
-        return value != null && value.length() > AUDIT_IDENTITY_MAX_LENGTH
-            ? value.substring(0, AUDIT_IDENTITY_MAX_LENGTH)
+        return value != null && value.length() > AUDIT_USER_NAME_MAX_LENGTH
+            ? value.substring(0, AUDIT_USER_NAME_MAX_LENGTH)
             : value;
     }
 
