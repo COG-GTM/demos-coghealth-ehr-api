@@ -159,6 +159,17 @@ class AuditAspectTest {
         assertThat(captured().getUserAgent()).hasSize(200);
     }
 
+    @Test
+    void oversizedMrnAndErrorMessageAreTruncatedToColumnLength() {
+        proxy.sendAlert(7L, 42L, "M".repeat(64));
+        assertThat(captured().getPatientMrn()).hasSize(20);
+
+        org.mockito.Mockito.clearInvocations(auditService);
+        assertThatThrownBy(() -> proxy.failingReadWithMessage(42L, "e".repeat(2000)))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(captured().getErrorMessage()).hasSize(500);
+    }
+
     private MockHttpServletRequest bindRequest(String remoteAddr, String xForwardedFor) {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/patients/42");
         request.setRemoteAddr(remoteAddr);
@@ -193,6 +204,11 @@ class AuditAspectTest {
         @AuditAccess(action = AuditAction.READ, resourceType = "Patient")
         public void failingRead(@PatientId Long patientId) {
             throw new IllegalStateException("boom");
+        }
+
+        @AuditAccess(action = AuditAction.READ, resourceType = "Patient")
+        public void failingReadWithMessage(@PatientId Long patientId, String message) {
+            throw new IllegalStateException(message);
         }
     }
 }
