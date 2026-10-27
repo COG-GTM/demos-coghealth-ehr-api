@@ -97,7 +97,6 @@ public class AuthController {
         @Size(max = 50)
         private String username;
         @NotBlank
-        @Size(max = 128)
         private String password;
 
         // Getters and setters
