@@ -59,7 +59,7 @@ class EncounterControllerSecurityTest {
         mockMvc.perform(get("/v1/encounters/date-range")
                         .param("startDate", "2000-01-01").param("endDate", "2099-12-31"))
                 .andExpect(status().isUnauthorized());
-        verify(encounterService, never()).findByIdWithDetails(anyLong());
+        verify(encounterService, never()).findByIdForProvider(anyLong(), any());
         verify(encounterService, never()).findByDateRange(any(), any());
     }
 
@@ -85,7 +85,7 @@ class EncounterControllerSecurityTest {
     @Test
     @WithMockUser(roles = "PROVIDER")
     void authenticatedReadReturnsDtoWithoutPatientPhi() throws Exception {
-        when(encounterService.findByIdWithDetails(1L)).thenReturn(Optional.of(sampleEncounter()));
+        when(encounterService.findByIdForProvider(1L, null)).thenReturn(Optional.of(sampleEncounter()));
 
         String body = mockMvc.perform(get("/v1/encounters/1"))
                 .andExpect(status().isOk())
