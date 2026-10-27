@@ -1,5 +1,6 @@
 package com.medchart.ehr.legacy;
 
+import com.medchart.ehr.audit.PhiLogMasker;
 import com.medchart.ehr.domain.patient.Patient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +26,7 @@ public class LegacyPatientLookup {
             query.setParameter(1, mrn);
             return (Patient) query.getSingleResult();
         } catch (Exception e) {
-            log.warn("Patient not found for MRN: " + mrn);
+            log.warn("Patient not found for MRN {}", PhiLogMasker.maskMrn(mrn));
             return null;
         }
     }

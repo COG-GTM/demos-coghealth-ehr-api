@@ -1,5 +1,6 @@
 package com.medchart.ehr.service;
 
+import com.medchart.ehr.audit.PhiLogMasker;
 import com.medchart.ehr.audit.AuditAccess;
 import com.medchart.ehr.audit.AuditAction;
 import com.medchart.ehr.legacy.InsuranceCache;
@@ -35,13 +36,13 @@ public class AppointmentService {
         EligibilityResult eligibility = checkInsuranceEligibility(patientMrn, payerId);
         
         if (!eligibility.isEligible()) {
-            log.warn("Patient {} not eligible for insurance {}", patientMrn, payerId);
+            log.warn("Patient {} not eligible for insurance {}", PhiLogMasker.maskMrn(patientMrn), payerId);
             throw new IllegalStateException("Patient insurance not eligible: " + eligibility.getReason());
         }
         
         // Step 2: Verify copay requirements
         if (eligibility.getCopayRequired() != null && eligibility.getCopayRequired().compareTo(java.math.BigDecimal.ZERO) > 0) {
-            log.info("Copay of {} required for patient {}", eligibility.getCopayRequired(), patientMrn);
+            log.info("Copay of {} required for patient {}", eligibility.getCopayRequired(), PhiLogMasker.maskMrn(patientMrn));
         }
         
         // Step 3: Create appointment record
@@ -55,7 +56,7 @@ public class AppointmentService {
         appointment.put("copayAmount", eligibility.getCopayRequired());
         appointment.put("status", "SCHEDULED");
         
-        log.info("Scheduled appointment for patient {} on {}", patientMrn, appointmentDate);
+        log.info("Scheduled appointment for patient {} on {}", PhiLogMasker.maskMrn(patientMrn), appointmentDate);
         return appointment;
     }
 
@@ -72,12 +73,12 @@ public class AppointmentService {
         InsuranceCache.CachedEligibility cached = insuranceCache.getEligibility(patientMrn, payerId);
         
         if (cached != null && !isStale(cached)) {
-            log.debug("Using cached eligibility for patient {}", patientMrn);
+            log.debug("Using cached eligibility for patient {}", PhiLogMasker.maskMrn(patientMrn));
             return EligibilityResult.fromCache(cached);
         }
         
         // Cache miss - call external gateway
-        log.info("Checking eligibility with payer {} for patient {}", payerId, patientMrn);
+        log.info("Checking eligibility with payer {} for patient {}", payerId, PhiLogMasker.maskMrn(patientMrn));
         EligibilityResult result = insuranceGateway.verifyEligibility(patientMrn, payerId);
         
         // Cache the result (NOTE: This caches PII - see InsuranceCache for HIPAA issue)

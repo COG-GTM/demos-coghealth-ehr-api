@@ -1,5 +1,6 @@
 package com.medchart.ehr.service.chronic;
 
+import com.medchart.ehr.audit.PhiLogMasker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -53,7 +54,7 @@ public class PharmacyIntegrationService {
      */
     public FormularyCheckResult checkFormulary(String patientMrn, String payerId,
                                                 String ndc, int quantity) {
-        log.info("Checking formulary for NDC {} patient {} payer {}", ndc, patientMrn, payerId);
+        log.info("Checking formulary for NDC {} patient {} payer {}", ndc, PhiLogMasker.maskMrn(patientMrn), payerId);
         
         // TODO: Implement formulary check
         // 1. Call PBM formulary service

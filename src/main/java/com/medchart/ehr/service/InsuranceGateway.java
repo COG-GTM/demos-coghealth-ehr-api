@@ -1,5 +1,6 @@
 package com.medchart.ehr.service;
 
+import com.medchart.ehr.audit.PhiLogMasker;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -27,7 +28,7 @@ public class InsuranceGateway {
      * PATTERN: External API call with retry logic
      */
     public AppointmentService.EligibilityResult verifyEligibility(String patientMrn, String payerId) {
-        log.info("Calling insurance gateway for patient {} with payer {}", patientMrn, payerId);
+        log.info("Calling insurance gateway for patient {} with payer {}", PhiLogMasker.maskMrn(patientMrn), payerId);
         
         // Simulate external API call
         // In production, this would call X12 270/271 eligibility service

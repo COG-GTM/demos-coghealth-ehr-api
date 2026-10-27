@@ -1,5 +1,6 @@
 package com.medchart.ehr.service;
 
+import com.medchart.ehr.audit.PhiLogMasker;
 import com.medchart.ehr.audit.AuditAccess;
 import com.medchart.ehr.audit.AuditAction;
 import lombok.RequiredArgsConstructor;
@@ -92,7 +93,7 @@ public class ProviderNotificationService {
             String alertMessage,
             String severity) {
         
-        log.warn("CRITICAL ALERT for patient {}: {} - {}", patientMrn, alertType, alertMessage);
+        log.warn("CRITICAL ALERT for patient {}: {} - {}", PhiLogMasker.maskMrn(patientMrn), alertType, alertMessage);
         
         // Step 1: Send immediate notification
         // Step 2: If not acknowledged in 15 minutes, escalate to supervisor
