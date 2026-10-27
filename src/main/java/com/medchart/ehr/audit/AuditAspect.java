@@ -15,7 +15,9 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
 import java.lang.reflect.Method;
+import java.util.LinkedHashSet;
 import java.util.Optional;
+import java.util.Set;
 
 @Aspect
 @Component
@@ -46,12 +48,14 @@ public class AuditAspect {
 
         try {
             Object result = joinPoint.proceed();
-            Long resultPatientId = patientIdFromResult(result);
-            if (resultPatientId != null) {
-                eventBuilder.patientId(resultPatientId);
-            }
             eventBuilder.success(true);
-            auditService.saveAuditEventAsync(eventBuilder.build());
+            Set<Long> resultPatientIds = patientIdsFromResult(result);
+            if (resultPatientIds.isEmpty()) {
+                auditService.saveAuditEventAsync(eventBuilder.build());
+            }
+            for (Long resultPatientId : resultPatientIds) {
+                auditService.saveAuditEventAsync(eventBuilder.patientId(resultPatientId).build());
+            }
             return result;
         } catch (Exception e) {
             eventBuilder.success(false);
@@ -70,11 +74,26 @@ public class AuditAspect {
         return null;
     }
 
-    private Long patientIdFromResult(Object result) {
+    /** Distinct patients whose records were returned, so list reads produce one audit event per patient. */
+    private Set<Long> patientIdsFromResult(Object result) {
         if (result instanceof Optional) {
             result = ((Optional<?>) result).orElse(null);
         }
-        return result instanceof PatientScoped ? ((PatientScoped) result).getPatientId() : null;
+        Set<Long> ids = new LinkedHashSet<>();
+        if (result instanceof Iterable) {
+            for (Object item : (Iterable<?>) result) {
+                addPatientId(ids, item);
+            }
+        } else {
+            addPatientId(ids, result);
+        }
+        return ids;
+    }
+
+    private static void addPatientId(Set<Long> ids, Object item) {
+        if (item instanceof PatientScoped && ((PatientScoped) item).getPatientId() != null) {
+            ids.add(((PatientScoped) item).getPatientId());
+        }
     }
 
     private String getCurrentUserId() {

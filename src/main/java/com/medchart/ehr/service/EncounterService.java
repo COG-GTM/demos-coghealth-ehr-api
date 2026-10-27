@@ -114,10 +114,32 @@ public class EncounterService {
         return EncounterResponseDTO.from(saved);
     }
 
-    @AuditAccess(action = AuditAction.UPDATE, resourceType = "Encounter", description = "Update encounter")
-    public EncounterResponseDTO update(Encounter encounter) {
-        log.info("Updating encounter {}", encounter.getEncounterNumber());
-        return EncounterResponseDTO.from(encounterRepository.save(encounter));
+    /**
+     * Applies the editable scheduling/clinical fields from {@code changes} onto the stored encounter.
+     * Identity, patient, provider, status, diagnoses and audit metadata are never taken from the request,
+     * so a round-tripped {@link EncounterResponseDTO} cannot null them out. Null fields are left unchanged.
+     */
+    @AuditAccess(action = AuditAction.UPDATE, resourceType = "Encounter", description = "Update encounter",
+            patientIdFromArgs = false)
+    public Optional<EncounterResponseDTO> update(Long id, Encounter changes) {
+        if (changes.getNotes() != null && changes.getNotes().length() > MAX_NOTES_LENGTH) {
+            throw new IllegalArgumentException("notes must not exceed " + MAX_NOTES_LENGTH + " characters");
+        }
+        return encounterRepository.findById(id).map(existing -> {
+            if (changes.getEncounterType() != null) existing.setEncounterType(changes.getEncounterType());
+            if (changes.getEncounterDateTime() != null) existing.setEncounterDateTime(changes.getEncounterDateTime());
+            if (changes.getAdmitDateTime() != null) existing.setAdmitDateTime(changes.getAdmitDateTime());
+            if (changes.getDischargeDateTime() != null) existing.setDischargeDateTime(changes.getDischargeDateTime());
+            if (changes.getDepartment() != null) existing.setDepartment(changes.getDepartment());
+            if (changes.getRoom() != null) existing.setRoom(changes.getRoom());
+            if (changes.getBed() != null) existing.setBed(changes.getBed());
+            if (changes.getChiefComplaint() != null) existing.setChiefComplaint(changes.getChiefComplaint());
+            if (changes.getPriority() != null) existing.setPriority(changes.getPriority());
+            if (changes.getVisitType() != null) existing.setVisitType(changes.getVisitType());
+            if (changes.getNotes() != null) existing.setNotes(changes.getNotes());
+            log.info("Updating encounter {}", existing.getEncounterNumber());
+            return EncounterResponseDTO.from(encounterRepository.save(existing));
+        });
     }
 
     @AuditAccess(action = AuditAction.UPDATE, resourceType = "Encounter", description = "Check in encounter",

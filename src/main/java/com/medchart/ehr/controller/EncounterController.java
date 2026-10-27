@@ -80,12 +80,7 @@ public class EncounterController {
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('PROVIDER', 'ADMIN')")
     public ResponseEntity<EncounterResponseDTO> update(@PathVariable Long id, @RequestBody Encounter encounter) {
-        return encounterService.findById(id)
-                .map(existing -> {
-                    encounter.setId(id);
-                    return ResponseEntity.ok(encounterService.update(encounter));
-                })
-                .orElse(ResponseEntity.notFound().build());
+        return okOrNotFound(encounterService.update(id, encounter));
     }
 
     @PostMapping("/{id}/check-in")

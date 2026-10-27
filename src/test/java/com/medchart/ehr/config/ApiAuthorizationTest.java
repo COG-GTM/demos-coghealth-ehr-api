@@ -186,8 +186,7 @@ class ApiAuthorizationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"status\":\"COMPLETED\",\"notes\":\"x\"}"))
             .andExpect(status().isForbidden());
-        verify(encounterService, never()).update(any());
-        verify(encounterService, never()).findById(anyLong());
+        verify(encounterService, never()).update(anyLong(), any());
     }
 
     @Test

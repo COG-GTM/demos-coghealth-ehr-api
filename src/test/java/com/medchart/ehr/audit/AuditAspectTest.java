@@ -9,11 +9,14 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -59,23 +62,46 @@ class AuditAspectTest {
         assertNull(audit("viewEncounter", Optional.empty()).getPatientId());
     }
 
+    @Test
+    void listReadsRecordOneEventPerDistinctPatient() throws Throwable {
+        PatientScoped first = () -> 1L;
+        PatientScoped second = () -> 5L;
+        PatientScoped sameAsFirst = () -> 1L;
+        ProceedingJoinPoint joinPoint = joinPoint("listEncounters", List.of(first, second, sameAsFirst));
+
+        aspect.auditAccess(joinPoint);
+
+        ArgumentCaptor<AuditEvent> captor = ArgumentCaptor.forClass(AuditEvent.class);
+        verify(auditService, times(2)).saveAuditEventAsync(captor.capture());
+        assertEquals(List.of(1L, 5L),
+            captor.getAllValues().stream().map(AuditEvent::getPatientId).collect(Collectors.toList()));
+    }
+
+    @Test
+    void emptyListReadStillRecordsOneEvent() throws Throwable {
+        assertNull(audit("listEncounters", List.of()).getPatientId());
+    }
+
     private AuditEvent audit() throws Throwable {
         return audit("viewPatient", "ok");
     }
 
     private AuditEvent audit(String method, Object result) throws Throwable {
+        aspect.auditAccess(joinPoint(method, result));
+
+        ArgumentCaptor<AuditEvent> captor = ArgumentCaptor.forClass(AuditEvent.class);
+        verify(auditService).saveAuditEventAsync(captor.capture());
+        return captor.getValue();
+    }
+
+    private ProceedingJoinPoint joinPoint(String method, Object result) throws Throwable {
         ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
         MethodSignature signature = mock(MethodSignature.class);
         when(joinPoint.getSignature()).thenReturn(signature);
         when(signature.getMethod()).thenReturn(Fixture.class.getDeclaredMethod(method, Long.class));
         when(joinPoint.getArgs()).thenReturn(new Object[] {42L});
         when(joinPoint.proceed()).thenReturn(result);
-
-        aspect.auditAccess(joinPoint);
-
-        ArgumentCaptor<AuditEvent> captor = ArgumentCaptor.forClass(AuditEvent.class);
-        verify(auditService).saveAuditEventAsync(captor.capture());
-        return captor.getValue();
+        return joinPoint;
     }
 
     static class Fixture {
@@ -88,6 +114,12 @@ class AuditAspectTest {
                 patientIdFromArgs = false)
         Optional<PatientScoped> viewEncounter(Long encounterId) {
             return Optional.empty();
+        }
+
+        @AuditAccess(action = AuditAction.SEARCH, resourceType = "Encounter", description = "List encounters",
+                patientIdFromArgs = false)
+        List<PatientScoped> listEncounters(Long providerId) {
+            return List.of();
         }
     }
 }

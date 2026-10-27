@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "diagnoses", indexes = {
     @Index(name = "idx_diagnosis_patient", columnList = "patient_id"),
-    @Index(name = "idx_diagnosis_icd10", columnList = "icd10Code"),
+    @Index(name = "idx_diagnosis_icd10", columnList = "icd10_code"),
     @Index(name = "idx_diagnosis_status", columnList = "status")
 })
 @Getter
@@ -30,7 +30,7 @@ public class Diagnosis {
     @JoinColumn(name = "patient_id", nullable = false)
     private Patient patient;
 
-    @Column(nullable = false, length = 20)
+    @Column(name = "icd10_code", nullable = false, length = 20)
     private String icd10Code;
 
     @Column(nullable = false, length = 500)
