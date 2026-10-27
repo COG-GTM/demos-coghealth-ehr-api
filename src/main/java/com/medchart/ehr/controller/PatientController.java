@@ -42,8 +42,9 @@ public class PatientController {
     @Operation(summary = "Search patients")
     public ResponseEntity<Page<PatientDTO>> searchPatients(
             @RequestParam String q,
+            @RequestParam(required = false) String sort,
             Pageable pageable) {
-        return ResponseEntity.ok(patientService.searchPatients(q, pageable));
+        return ResponseEntity.ok(patientService.searchPatients(q, sort, pageable));
     }
 
     @PostMapping

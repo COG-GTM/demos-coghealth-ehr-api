@@ -102,7 +102,7 @@ class PatientControllerSecurityTest {
     @Test
     @WithMockUser(roles = "PROVIDER")
     void invalidSearchTermReturnsBadRequest() throws Exception {
-        when(patientService.searchPatients(eq(""), any()))
+        when(patientService.searchPatients(eq(""), any(), any()))
                 .thenThrow(new IllegalArgumentException("Search term must be between 2 and 100 characters"));
 
         mockMvc.perform(get("/v1/patients/search").param("q", ""))
@@ -112,9 +112,9 @@ class PatientControllerSecurityTest {
     @Test
     @WithMockUser(roles = "PROVIDER")
     void searchPassesRequestToService() throws Exception {
-        when(patientService.searchPatients(eq("doe"), any())).thenReturn(Page.empty());
+        when(patientService.searchPatients(eq("doe"), any(), any())).thenReturn(Page.empty());
 
         mockMvc.perform(get("/v1/patients/search").param("q", "doe")).andExpect(status().isOk());
-        verify(patientService).searchPatients(eq("doe"), any());
+        verify(patientService).searchPatients(eq("doe"), any(), any());
     }
 }

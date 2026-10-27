@@ -17,12 +17,18 @@ import org.springframework.security.authentication.AuthenticationCredentialsNotF
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.Query;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -39,6 +45,9 @@ class PatientServiceTest {
     @MockBean
     private PatientMapper patientMapper;
 
+    @MockBean
+    private EntityManagerFactory entityManagerFactory;
+
     @Test
     void unauthenticatedCallIsRejected() {
         assertThatThrownBy(() -> patientService.getPatientById(17L))
@@ -50,7 +59,7 @@ class PatientServiceTest {
     @WithMockUser(roles = "PATIENT")
     void nonClinicalRoleCannotReadOrSearch() {
         assertThatThrownBy(() -> patientService.getPatientByMrn("MRN123")).isInstanceOf(AccessDeniedException.class);
-        assertThatThrownBy(() -> patientService.searchPatients("doe", PageRequest.of(0, 20)))
+        assertThatThrownBy(() -> patientService.searchPatients("doe", null, PageRequest.of(0, 20)))
                 .isInstanceOf(AccessDeniedException.class);
         verifyNoInteractions(patientRepository);
     }
@@ -78,10 +87,10 @@ class PatientServiceTest {
     @WithMockUser(roles = "PROVIDER")
     void blankOrShortSearchTermIsRejected() {
         for (String term : new String[] {null, "", "   ", "a", " a "}) {
-            assertThatThrownBy(() -> patientService.searchPatients(term, PageRequest.of(0, 20)))
+            assertThatThrownBy(() -> patientService.searchPatients(term, null, PageRequest.of(0, 20)))
                     .isInstanceOf(IllegalArgumentException.class);
         }
-        assertThatThrownBy(() -> patientService.searchPatients("x".repeat(101), PageRequest.of(0, 20)))
+        assertThatThrownBy(() -> patientService.searchPatients("x".repeat(101), null, PageRequest.of(0, 20)))
                 .isInstanceOf(IllegalArgumentException.class);
         verifyNoInteractions(patientRepository);
     }
@@ -91,7 +100,7 @@ class PatientServiceTest {
     void searchEscapesWildcardsAndCapsPageSize() {
         when(patientRepository.searchPatients(anyString(), any())).thenReturn(Page.empty());
 
-        patientService.searchPatients(" %_! ", PageRequest.of(3, 2000));
+        patientService.searchPatients(" %_! ", null, PageRequest.of(3, 2000));
 
         ArgumentCaptor<String> term = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<Pageable> page = ArgumentCaptor.forClass(Pageable.class);
@@ -106,10 +115,33 @@ class PatientServiceTest {
     void unpagedSearchIsBounded() {
         when(patientRepository.searchPatients(anyString(), any())).thenReturn(Page.empty());
 
-        patientService.searchPatients("doe", Pageable.unpaged());
+        patientService.searchPatients("doe", null, Pageable.unpaged());
 
         ArgumentCaptor<Pageable> page = ArgumentCaptor.forClass(Pageable.class);
         verify(patientRepository).searchPatients(any(), page.capture());
         assertThat(page.getValue().getPageSize()).isEqualTo(PatientService.MAX_SEARCH_PAGE_SIZE);
+    }
+
+    @Test
+    @WithMockUser(roles = "STAFF")
+    void sortedSearchIsAlsoValidatedEscapedAndBounded() {
+        assertThatThrownBy(() -> patientService.searchPatients("", "last_name", PageRequest.of(0, 20)))
+                .isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(entityManagerFactory);
+
+        EntityManager entityManager = mock(EntityManager.class);
+        Query query = mock(Query.class);
+        when(entityManagerFactory.createEntityManager()).thenReturn(entityManager);
+        when(entityManager.createNativeQuery(anyString())).thenReturn(query);
+        when(entityManager.createNativeQuery(anyString(), eq(Patient.class))).thenReturn(query);
+        when(query.getSingleResult()).thenReturn(0L);
+        when(query.getResultList()).thenReturn(List.of());
+
+        Page<PatientDTO> result = patientService.searchPatients("%_", "last_name", PageRequest.of(1, 2000));
+
+        assertThat(result.getSize()).isEqualTo(PatientService.MAX_SEARCH_PAGE_SIZE);
+        verify(query, org.mockito.Mockito.times(2)).setParameter(1, "%!%!_%");
+        verify(query).setMaxResults(PatientService.MAX_SEARCH_PAGE_SIZE);
+        verify(query).setFirstResult(PatientService.MAX_SEARCH_PAGE_SIZE);
     }
 }
