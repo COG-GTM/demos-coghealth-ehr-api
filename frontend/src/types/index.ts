@@ -68,8 +68,6 @@ export interface EncounterPatient {
   firstName: string;
   middleName?: string;
   lastName: string;
-  dateOfBirth: string;
-  gender?: Patient['gender'];
 }
 
 export interface Encounter {

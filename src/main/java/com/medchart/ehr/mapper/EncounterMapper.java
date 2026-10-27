@@ -77,8 +77,6 @@ public class EncounterMapper {
                 .firstName(patient.getFirstName())
                 .middleName(patient.getMiddleName())
                 .lastName(patient.getLastName())
-                .dateOfBirth(patient.getDateOfBirth())
-                .gender(patient.getGender())
                 .build();
     }
 

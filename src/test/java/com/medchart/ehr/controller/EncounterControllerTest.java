@@ -81,7 +81,6 @@ class EncounterControllerTest {
                 .andExpect(jsonPath("$.patient.mrn").value("MRN0000000001"))
                 .andExpect(jsonPath("$.patient.firstName").value("Jane"))
                 .andExpect(jsonPath("$.patient.lastName").value("Doe"))
-                .andExpect(jsonPath("$.patient.dateOfBirth").value("1980-04-02"))
                 .andExpect(jsonPath("$.attendingProvider.npi").value("1234567890"))
                 .andExpect(jsonPath("$.attendingProvider.email").doesNotExist())
                 .andExpect(jsonPath("$.attendingProvider.phoneMobile").doesNotExist())
@@ -158,6 +157,10 @@ class EncounterControllerTest {
         return result
                 .andExpect(content().string(not(containsString(SSN))))
                 .andExpect(jsonPath(root + ".patient.ssn").doesNotExist())
+                .andExpect(jsonPath(root + ".patient.dateOfBirth").doesNotExist())
+                .andExpect(jsonPath(root + ".patient.gender").doesNotExist())
+                .andExpect(jsonPath(root + ".patient.identifiers").doesNotExist())
+                .andExpect(jsonPath(root + ".patient.emergencyContacts").doesNotExist())
                 .andExpect(jsonPath(root + ".patient.address").doesNotExist())
                 .andExpect(jsonPath(root + ".patient.email").doesNotExist())
                 .andExpect(jsonPath(root + ".patient.phoneMobile").doesNotExist())

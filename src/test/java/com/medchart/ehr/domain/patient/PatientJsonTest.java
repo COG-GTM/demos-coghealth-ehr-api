@@ -40,4 +40,29 @@ class PatientJsonTest {
 
         assertNull(patient.getSsn());
     }
+
+    @Test
+    void childBackReferencesDoNotCycleOrLeakSsn() throws Exception {
+        Patient patient = Patient.builder()
+                .id(1L)
+                .mrn("MRN0000000001")
+                .ssn("123-45-6789")
+                .firstName("Jane")
+                .lastName("Doe")
+                .dateOfBirth(LocalDate.of(1980, 4, 2))
+                .build();
+        patient.addIdentifier(PatientIdentifier.builder()
+                .identifierType(IdentifierType.values()[0])
+                .identifierValue("X-1")
+                .build());
+        patient.addEmergencyContact(EmergencyContact.builder().firstName("John").lastName("Doe").build());
+
+        String json = objectMapper.writeValueAsString(patient);
+        String identifierJson = objectMapper.writeValueAsString(patient.getIdentifiers().get(0));
+        String contactJson = objectMapper.writeValueAsString(patient.getEmergencyContacts().get(0));
+
+        assertFalse(json.contains("123-45-6789"));
+        assertFalse(identifierJson.contains("\"patient\""));
+        assertFalse(contactJson.contains("\"patient\""));
+    }
 }

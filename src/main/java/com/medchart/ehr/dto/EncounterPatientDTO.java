@@ -1,13 +1,10 @@
 package com.medchart.ehr.dto;
 
-import com.medchart.ehr.domain.patient.Gender;
 import lombok.*;
 
-import java.time.LocalDate;
-
 /**
- * Minimal patient identity embedded in encounter responses. Must never carry SSN or other
- * demographics; the full record is only available through the patient endpoints.
+ * Minimal patient identity embedded in encounter responses. Only id, MRN and display name:
+ * never SSN, DOB or other demographics; the full record is only available through the patient endpoints.
  */
 @Data
 @NoArgsConstructor
@@ -20,6 +17,4 @@ public class EncounterPatientDTO {
     private String firstName;
     private String middleName;
     private String lastName;
-    private LocalDate dateOfBirth;
-    private Gender gender;
 }
