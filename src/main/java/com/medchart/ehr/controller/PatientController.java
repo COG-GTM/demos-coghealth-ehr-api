@@ -45,6 +45,7 @@ public class PatientController {
 
     @PostMapping
     @Operation(summary = "Create new patient")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
     public ResponseEntity<PatientDTO> createPatient(@Valid @RequestBody PatientDTO patientDTO) {
         PatientDTO created = patientService.createPatient(patientDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
@@ -52,6 +53,7 @@ public class PatientController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Update patient")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
     public ResponseEntity<PatientDTO> updatePatient(
             @PathVariable Long id,
             @Valid @RequestBody PatientDTO patientDTO) {
