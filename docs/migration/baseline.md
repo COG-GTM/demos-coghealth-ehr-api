@@ -78,7 +78,7 @@ Notes:
 
 | Source | Purpose |
 |---|---|
-| `src/main/resources/application.yml` (default profile) | Local Postgres via `DB_URL` / `DB_USERNAME` / `DB_PASSWORD` (defaults `jdbc:postgresql://localhost:5432/medchart_ehr`, `medchart` / `medchart_dev`), Redis `localhost:6379`, RabbitMQ settings, `server.servlet.context-path=/api`, actuator `health,info,metrics`, `JWT_SECRET`, `INSURANCE_API_URL`, `PHARMACY_API_URL`. `ddl-auto: none`. |
+| `src/main/resources/application.yml` (default profile) | Local Postgres via `DB_URL` / `DB_USERNAME` / `DB_PASSWORD` (defaults `jdbc:postgresql://localhost:5432/medchart_ehr`, `medchart` / `medchart_dev`), Redis `localhost:6379`, RabbitMQ settings, `server.servlet.context-path=/api`, actuator `health` only (other endpoints unexposed and `ROLE_ADMIN`-gated in `SecurityConfig`), `JWT_SECRET`, `INSURANCE_API_URL`, `PHARMACY_API_URL`. `ddl-auto: none`. |
 | `src/main/resources/application-dev.yml` (`dev` profile) | Shared Neon Postgres via `NEON_DB_URL` / `NEON_DB_USERNAME` / `NEON_DB_PASSWORD`, Hikari tuning, `ddl-auto: validate`, Redis auto-config excluded. |
 | `src/main/resources/db/migration` | Flyway `V1__initial_schema.sql`, `V2__add_user_authentication.sql`, `V3__seed_data.sql`; `baseline-on-migrate: true`. |
 | `.gitignore`d | `application-local.yml`, `application-prod.yml`, `.env` (no prod profile is committed). |
