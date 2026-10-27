@@ -1,17 +1,27 @@
 package com.medchart.ehr.audit;
 
+import com.medchart.ehr.domain.auth.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.aop.support.AopUtils;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.util.stream.Collectors;
 
 @Aspect
 @Component
@@ -19,26 +29,36 @@ import java.lang.reflect.Method;
 @RequiredArgsConstructor
 public class AuditAspect {
 
+    static final String ANONYMOUS_USER_ID = "anonymous";
+    static final String ANONYMOUS_USER_NAME = "Anonymous (unauthenticated request)";
+    static final String SYSTEM_USER_ID = "system";
+    static final String SYSTEM_USER_NAME = "System (no request context)";
+
+    private static final int USER_ID_MAX = 100;
+    private static final int USER_NAME_MAX = 100;
+    private static final int USER_AGENT_MAX = 200;
+
     private final AuditService auditService;
 
     @Around("@annotation(com.medchart.ehr.audit.AuditAccess)")
     public Object auditAccess(ProceedingJoinPoint joinPoint) throws Throwable {
-        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
-        Method method = signature.getMethod();
+        Method method = resolveMethod(joinPoint);
         AuditAccess auditAccess = method.getAnnotation(AuditAccess.class);
-
-        Long patientId = extractPatientId(joinPoint.getArgs());
-        String userId = getCurrentUserId();
+        Object[] args = joinPoint.getArgs();
+        HttpServletRequest request = currentRequest();
+        Actor actor = resolveActor(SecurityContextHolder.getContext().getAuthentication(), request != null);
 
         AuditEvent.AuditEventBuilder eventBuilder = AuditEvent.builder()
-                .userId(userId)
-                .userName(getCurrentUserName())
-                .patientId(patientId)
+                .userId(truncate(actor.userId, USER_ID_MAX))
+                .userName(truncate(actor.userName, USER_NAME_MAX))
+                .requestDetails(actor.details)
+                .patientId(annotatedArgument(method, args, PatientId.class, Long.class))
+                .patientMrn(annotatedArgument(method, args, PatientMrn.class, String.class))
                 .action(auditAccess.action())
                 .resourceType(auditAccess.resourceType())
                 .description(auditAccess.description())
-                .ipAddress(getClientIpAddress())
-                .userAgent(getUserAgent());
+                .ipAddress(request != null ? request.getRemoteAddr() : null)
+                .userAgent(request != null ? truncate(request.getHeader("User-Agent"), USER_AGENT_MAX) : null);
 
         try {
             Object result = joinPoint.proceed();
@@ -53,49 +73,80 @@ public class AuditAspect {
         }
     }
 
-    private Long extractPatientId(Object[] args) {
-        for (Object arg : args) {
-            if (arg instanceof Long) {
-                return (Long) arg;
-            }
+    private static Method resolveMethod(ProceedingJoinPoint joinPoint) {
+        Method method = ((MethodSignature) joinPoint.getSignature()).getMethod();
+        Object target = joinPoint.getTarget();
+        if (target == null) {
+            return method;
         }
-        return null;
+        Method specific = AopUtils.getMostSpecificMethod(method, AopUtils.getTargetClass(target));
+        return specific.isAnnotationPresent(AuditAccess.class) ? specific : method;
     }
 
-    private String getCurrentUserId() {
-        return "system";
-    }
-
-    private String getCurrentUserName() {
-        return "System User";
-    }
-
-    private String getClientIpAddress() {
-        try {
-            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-            if (attrs != null) {
-                HttpServletRequest request = attrs.getRequest();
-                String xForwardedFor = request.getHeader("X-Forwarded-For");
-                if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-                    return xForwardedFor.split(",")[0].trim();
+    static <T> T annotatedArgument(Method method, Object[] args, Class<? extends Annotation> marker, Class<T> type) {
+        Annotation[][] parameterAnnotations = method.getParameterAnnotations();
+        for (int i = 0; i < parameterAnnotations.length && i < args.length; i++) {
+            for (Annotation annotation : parameterAnnotations[i]) {
+                if (marker.isInstance(annotation)) {
+                    return type.isInstance(args[i]) ? type.cast(args[i]) : null;
                 }
-                return request.getRemoteAddr();
             }
-        } catch (Exception e) {
-            log.debug("Could not get client IP", e);
         }
         return null;
     }
 
-    private String getUserAgent() {
-        try {
-            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-            if (attrs != null) {
-                return attrs.getRequest().getHeader("User-Agent");
+    static Actor resolveActor(Authentication authentication, boolean inRequest) {
+        if (authentication != null && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken)) {
+            String userId = authentication.getName();
+            String userName = userId;
+            Object principal = authentication.getPrincipal();
+            if (principal instanceof User) {
+                User user = (User) principal;
+                userId = user.getUsername();
+                String fullName = (nullToEmpty(user.getFirstName()) + " " + nullToEmpty(user.getLastName())).trim();
+                userName = fullName.isEmpty() ? userId : fullName;
             }
-        } catch (Exception e) {
-            log.debug("Could not get user agent", e);
+            String authorities = authentication.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .sorted()
+                    .collect(Collectors.joining(","));
+            return new Actor(userId, userName, "authorities=" + authorities);
+        }
+        if (inRequest) {
+            return new Actor(ANONYMOUS_USER_ID, ANONYMOUS_USER_NAME, "authorities=");
+        }
+        return new Actor(SYSTEM_USER_ID, SYSTEM_USER_NAME, null);
+    }
+
+    private static HttpServletRequest currentRequest() {
+        RequestAttributes attrs = RequestContextHolder.getRequestAttributes();
+        if (attrs instanceof ServletRequestAttributes) {
+            return ((ServletRequestAttributes) attrs).getRequest();
         }
         return null;
+    }
+
+    private static String truncate(String value, int max) {
+        if (!StringUtils.hasLength(value) || value.length() <= max) {
+            return value;
+        }
+        return value.substring(0, max);
+    }
+
+    private static String nullToEmpty(String value) {
+        return value == null ? "" : value;
+    }
+
+    static final class Actor {
+        final String userId;
+        final String userName;
+        final String details;
+
+        Actor(String userId, String userName, String details) {
+            this.userId = userId;
+            this.userName = userName;
+            this.details = details;
+        }
     }
 }
