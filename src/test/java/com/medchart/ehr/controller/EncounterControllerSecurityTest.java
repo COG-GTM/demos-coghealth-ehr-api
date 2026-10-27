@@ -2,7 +2,10 @@ package com.medchart.ehr.controller;
 
 import com.medchart.ehr.config.JwtTokenProvider;
 import com.medchart.ehr.config.SecurityConfig;
+import com.medchart.ehr.domain.clinical.Diagnosis;
+import com.medchart.ehr.domain.encounter.DiagnosisRole;
 import com.medchart.ehr.domain.encounter.Encounter;
+import com.medchart.ehr.domain.encounter.EncounterDiagnosis;
 import com.medchart.ehr.domain.encounter.EncounterStatus;
 import com.medchart.ehr.domain.encounter.EncounterType;
 import com.medchart.ehr.domain.patient.Address;
@@ -132,8 +135,18 @@ class EncounterControllerSecurityTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(42))
                 .andExpect(jsonPath("$.patient.ssn").doesNotExist())
+                .andExpect(jsonPath("$.diagnoses[0].icd10Code").value("E11.9"))
+                .andExpect(jsonPath("$.diagnoses[0].primaryDiagnosis").value(true))
+                .andExpect(jsonPath("$.diagnoses[0].patient").doesNotExist())
                 .andExpect(content().string(not(containsString(SSN))))
                 .andExpect(content().string(not(containsString("1980-02-03"))));
+    }
+
+    @Test
+    @WithMockUser
+    void authenticatedUserWithoutClinicalRoleCannotReachOtherApiRoutes() throws Exception {
+        mockMvc.perform(get("/v1/legacy/export/patient/7/encounters")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/v1/patients/7")).andExpect(status().isForbidden());
     }
 
     @Test
@@ -181,7 +194,7 @@ class EncounterControllerSecurityTest {
                 .email("alice@example.com")
                 .address(Address.builder().street1("1 Main St").city("Springfield").build())
                 .build();
-        return Encounter.builder()
+        Encounter encounter = Encounter.builder()
                 .id(42L)
                 .encounterNumber("ENC-2026-0042")
                 .patient(patient)
@@ -189,5 +202,18 @@ class EncounterControllerSecurityTest {
                 .status(EncounterStatus.SCHEDULED)
                 .encounterDateTime(LocalDateTime.of(2026, 10, 28, 9, 0))
                 .build();
+        Diagnosis diagnosis = Diagnosis.builder()
+                .id(3L)
+                .patient(patient)
+                .icd10Code("E11.9")
+                .description("Type 2 diabetes mellitus without complications")
+                .build();
+        encounter.addDiagnosis(EncounterDiagnosis.builder()
+                .id(5L)
+                .diagnosis(diagnosis)
+                .role(DiagnosisRole.values()[0])
+                .primaryDiagnosis(true)
+                .build());
+        return encounter;
     }
 }

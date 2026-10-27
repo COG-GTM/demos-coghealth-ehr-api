@@ -1,6 +1,11 @@
 package com.medchart.ehr.dto;
 
+import com.medchart.ehr.domain.clinical.Diagnosis;
+import com.medchart.ehr.domain.clinical.DiagnosisSeverity;
+import com.medchart.ehr.domain.clinical.DiagnosisStatus;
+import com.medchart.ehr.domain.encounter.DiagnosisRole;
 import com.medchart.ehr.domain.encounter.Encounter;
+import com.medchart.ehr.domain.encounter.EncounterDiagnosis;
 import com.medchart.ehr.domain.encounter.EncounterPriority;
 import com.medchart.ehr.domain.encounter.EncounterStatus;
 import com.medchart.ehr.domain.encounter.EncounterType;
@@ -11,7 +16,11 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Encounter response body. The patient is only referenced (id, MRN, name); SSN, date of birth,
@@ -42,6 +51,7 @@ public class EncounterDTO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Long version;
+    private List<DiagnosisRef> diagnoses;
 
     public static EncounterDTO from(Encounter encounter) {
         if (encounter == null) {
@@ -67,6 +77,10 @@ public class EncounterDTO {
                 .createdAt(encounter.getCreatedAt())
                 .updatedAt(encounter.getUpdatedAt())
                 .version(encounter.getVersion())
+                .diagnoses(encounter.getDiagnoses() == null ? Collections.emptyList()
+                        : encounter.getDiagnoses().stream()
+                                .map(DiagnosisRef::from)
+                                .collect(Collectors.toList()))
                 .build();
     }
 
@@ -108,6 +122,41 @@ public class EncounterDTO {
             return new ProviderRef(provider.getId(), provider.getNpi(), provider.getFirstName(),
                     provider.getLastName(), provider.getCredentials(), provider.getSpecialty(),
                     provider.getDepartment());
+        }
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class DiagnosisRef {
+        private Long id;
+        private Long diagnosisId;
+        private String icd10Code;
+        private String description;
+        private DiagnosisStatus status;
+        private DiagnosisSeverity severity;
+        private LocalDate onsetDate;
+        private DiagnosisRole role;
+        private Integer rank;
+        private Boolean primaryDiagnosis;
+
+        static DiagnosisRef from(EncounterDiagnosis link) {
+            Diagnosis diagnosis = link.getDiagnosis();
+            DiagnosisRefBuilder builder = DiagnosisRef.builder()
+                    .id(link.getId())
+                    .role(link.getRole())
+                    .rank(link.getRank())
+                    .primaryDiagnosis(link.getPrimaryDiagnosis());
+            if (diagnosis != null) {
+                builder.diagnosisId(diagnosis.getId())
+                        .icd10Code(diagnosis.getIcd10Code())
+                        .description(diagnosis.getDescription())
+                        .status(diagnosis.getStatus())
+                        .severity(diagnosis.getSeverity())
+                        .onsetDate(diagnosis.getOnsetDate());
+            }
+            return builder.build();
         }
     }
 }

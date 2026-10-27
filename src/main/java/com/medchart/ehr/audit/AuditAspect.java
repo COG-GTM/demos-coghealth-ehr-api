@@ -6,6 +6,9 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -27,7 +30,7 @@ public class AuditAspect {
         Method method = signature.getMethod();
         AuditAccess auditAccess = method.getAnnotation(AuditAccess.class);
 
-        Long patientId = extractPatientId(joinPoint.getArgs());
+        Long patientId = extractPatientId(signature.getParameterNames(), joinPoint.getArgs(), auditAccess.resourceType());
         String userId = getCurrentUserId();
 
         AuditEvent.AuditEventBuilder eventBuilder = AuditEvent.builder()
@@ -53,7 +56,17 @@ public class AuditAspect {
         }
     }
 
-    private Long extractPatientId(Object[] args) {
+    private Long extractPatientId(String[] names, Object[] args, String resourceType) {
+        if (names != null) {
+            for (int i = 0; i < names.length && i < args.length; i++) {
+                if ("patientId".equals(names[i]) && args[i] instanceof Long) {
+                    return (Long) args[i];
+                }
+            }
+        }
+        if (!"Patient".equals(resourceType)) {
+            return null;
+        }
         for (Object arg : args) {
             if (arg instanceof Long) {
                 return (Long) arg;
@@ -63,11 +76,25 @@ public class AuditAspect {
     }
 
     private String getCurrentUserId() {
-        return "system";
+        Authentication auth = currentAuthentication();
+        return auth != null ? auth.getName() : "system";
     }
 
     private String getCurrentUserName() {
-        return "System User";
+        Authentication auth = currentAuthentication();
+        if (auth == null) {
+            return "System User";
+        }
+        Object principal = auth.getPrincipal();
+        return principal instanceof UserDetails ? ((UserDetails) principal).getUsername() : auth.getName();
+    }
+
+    private Authentication currentAuthentication() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            return null;
+        }
+        return auth;
     }
 
     private String getClientIpAddress() {

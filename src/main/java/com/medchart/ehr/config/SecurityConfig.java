@@ -71,7 +71,7 @@ public class SecurityConfig {
             .authorizeRequests()
                 .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .antMatchers(PUBLIC_PATHS).permitAll()
-                .anyRequest().authenticated()
+                .anyRequest().hasAnyRole("PROVIDER", "STAFF", "ADMIN")
             .and()
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
