@@ -81,6 +81,10 @@ public class ProviderDTO {
 
     private Boolean acceptingPatients;
 
+    /** Optimistic-locking precondition for updates; never copied onto the entity. */
+    @JsonProperty("version")
+    private Long expectedVersion;
+
     @JsonIgnore
     private boolean idSupplied;
 
