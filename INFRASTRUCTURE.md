@@ -194,6 +194,13 @@ ELASTICSEARCH_PORT: 9200
 HAPI_FHIR_URL: http://localhost:8090/fhir
 ```
 
+### Audit client IP (`TRUSTED_PROXIES`)
+
+`audit_events.ip_address` is `request.getRemoteAddr()`. Tomcat only rewrites it from
+`X-Forwarded-For` when the direct peer matches `TRUSTED_PROXIES`, a Java regex such as
+`10\.0\.0\.\d+`. Unset (the default) trusts no proxy, so a client-supplied header is
+ignored. Only list proxies you operate that append the peer address to `X-Forwarded-For`.
+
 ## Troubleshooting
 
 ### Services won't start
