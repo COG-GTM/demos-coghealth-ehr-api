@@ -39,16 +39,6 @@ if [ ! -f .env ]; then
     fi
 fi
 
-# Keycloak exits at startup if any credential is empty; catch an outdated .env here.
-missing=$(grep -oE '^[A-Z_]+(PASSWORD|SECRET)=' .env.example | tr -d '=' | while read -r v; do
-    grep -qE "^${v}=.+" .env || echo "$v"
-done)
-if [ -n "$missing" ]; then
-    echo "❌ .env has no value for:" $missing
-    echo "   Add them (see .env.example) or delete .env to regenerate it."
-    exit 1
-fi
-
 # Stop any existing containers
 echo ""
 echo "Stopping any existing containers..."
@@ -85,6 +75,13 @@ echo " ✅"
 # Wait for Keycloak
 echo -n "  Keycloak: "
 until curl -s http://localhost:8180/health/ready > /dev/null 2>&1; do
+    # The keycloak entrypoint exits when a credential in .env is empty or missing.
+    if [ "$(docker inspect -f '{{.State.Status}}' coghealth-keycloak 2>/dev/null)" = "exited" ]; then
+        echo " ❌"
+        docker logs --tail 20 coghealth-keycloak
+        echo "   Fix .env (see .env.example) or delete it to regenerate, then rerun this script."
+        exit 1
+    fi
     echo -n "."
     sleep 3
 done
