@@ -42,8 +42,8 @@ public class AuditService {
         try {
             auditEventRepository.saveAndFlush(event);
         } catch (RuntimeException e) {
-            log.error("Audit event persistence failed; rejecting audited operation (action={}, resourceType={})",
-                    event.getAction(), event.getResourceType(), e);
+            log.error("Audit event persistence failed; rejecting audited operation (action={}, resourceType={}, cause={})",
+                    event.getAction(), event.getResourceType(), e.getClass().getName());
             throw new AuditPersistenceException("Failed to persist audit event", e);
         }
     }
