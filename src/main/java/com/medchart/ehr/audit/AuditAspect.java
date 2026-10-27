@@ -5,8 +5,12 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.core.Ordered;
+import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.annotation.Order;
+import org.springframework.dao.DataAccessException;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionException;
@@ -57,6 +61,10 @@ public class AuditAspect {
                 .ipAddress(getClientIpAddress())
                 .userAgent(getUserAgent());
 
+        if (isAsync(joinPoint, method)) {
+            return proceedAfterAuditingDispatch(joinPoint, eventBuilder);
+        }
+
         try {
             if (TransactionSynchronizationManager.isActualTransactionActive()) {
                 return proceedWithinCallerTransaction(joinPoint, eventBuilder);
@@ -65,6 +73,29 @@ public class AuditAspect {
         } catch (InvocationFailure failure) {
             throw recordFailure(eventBuilder, failure.getCause());
         }
+    }
+
+    /**
+     * {@code @Async} methods: proceeding only hands the work to another thread, so the audit record is
+     * committed first and nothing is dispatched if it cannot be.
+     */
+    private Object proceedAfterAuditingDispatch(ProceedingJoinPoint joinPoint,
+                                                AuditEvent.AuditEventBuilder eventBuilder) throws Throwable {
+        eventBuilder.success(true);
+        recordInNewTransaction(eventBuilder.build());
+        try {
+            return joinPoint.proceed();
+        } catch (Throwable dispatchFailure) {
+            throw recordFailure(eventBuilder, dispatchFailure);
+        }
+    }
+
+    private static boolean isAsync(ProceedingJoinPoint joinPoint, Method method) {
+        Class<?> targetClass = joinPoint.getTarget() != null
+                ? AopUtils.getTargetClass(joinPoint.getTarget()) : method.getDeclaringClass();
+        Method specificMethod = AopUtils.getMostSpecificMethod(method, targetClass);
+        return AnnotatedElementUtils.hasAnnotation(specificMethod, Async.class)
+                || AnnotatedElementUtils.hasAnnotation(targetClass, Async.class);
     }
 
     /**
@@ -81,7 +112,7 @@ public class AuditAspect {
                 auditService.record(eventBuilder.build());
                 return result;
             });
-        } catch (TransactionException e) {
+        } catch (TransactionException | DataAccessException e) {
             AuditPersistenceException auditFailure =
                     new AuditPersistenceException("Audited transaction could not be committed", e);
             throw recordFailure(eventBuilder, auditFailure);
@@ -156,7 +187,7 @@ public class AuditAspect {
     private void recordInNewTransaction(AuditEvent event) {
         try {
             auditService.recordInNewTransaction(event);
-        } catch (TransactionException e) {
+        } catch (TransactionException | DataAccessException e) {
             throw new AuditPersistenceException("Audit transaction could not be committed", e);
         }
     }

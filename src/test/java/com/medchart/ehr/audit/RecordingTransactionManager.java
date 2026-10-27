@@ -18,6 +18,7 @@ public class RecordingTransactionManager extends AbstractPlatformTransactionMana
     public final List<String> outcomes = new ArrayList<>();
     public final List<Boolean> readOnlyBegins = new ArrayList<>();
     public boolean failNextCommit;
+    public RuntimeException failNextCommitWith;
     public RuntimeException failNextFlush;
     private boolean active;
 
@@ -82,6 +83,12 @@ public class RecordingTransactionManager extends AbstractPlatformTransactionMana
 
     @Override
     protected void doCommit(DefaultTransactionStatus status) {
+        if (failNextCommitWith != null) {
+            RuntimeException failure = failNextCommitWith;
+            failNextCommitWith = null;
+            outcomes.add("commit-failed");
+            throw failure;
+        }
         if (failNextCommit) {
             failNextCommit = false;
             outcomes.add("commit-failed");

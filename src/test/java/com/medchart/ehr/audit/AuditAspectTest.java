@@ -8,6 +8,7 @@ import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -48,6 +49,16 @@ class AuditAspectTest {
         @AuditAccess(action = AuditAction.READ, resourceType = "Patient", description = "View patient record")
         public String missing(Long patientId) {
             throw new IllegalArgumentException(repeat('e', 2_000));
+        }
+    }
+
+    public static class Alerts {
+        int dispatched;
+
+        @Async
+        @AuditAccess(action = AuditAction.CREATE, resourceType = "Alert", description = "Send alert")
+        public void send(Long patientId) {
+            dispatched++;
         }
     }
 
@@ -177,6 +188,53 @@ class AuditAspectTest {
         assertTrue(saved.getAllValues().get(0).getSuccess());
         assertFalse(saved.getAllValues().get(1).getSuccess());
         assertEquals(Arrays.asList("commit-failed", "commit"), transactionManager.outcomes);
+    }
+
+    @Test
+    void dataAccessFailureCommittingFailedCallAuditIsReportedAsAuditFailure() {
+        transactionManager.failNextCommitWith = new DataIntegrityViolationException("deferred constraint");
+
+        AuditPersistenceException thrown = assertThrows(AuditPersistenceException.class, () -> proxy.missing(9L));
+
+        assertSame(IllegalArgumentException.class, thrown.getSuppressed()[0].getClass());
+        assertEquals(Arrays.asList("rollback", "commit-failed", "rollback"), transactionManager.outcomes);
+    }
+
+    @Test
+    void asyncAuditedWorkIsNotDispatchedWhenItsAuditCannotBePersisted() {
+        Alerts alerts = new Alerts();
+        Alerts alertsProxy = auditedProxy(alerts);
+        when(repository.saveAndFlush(any())).thenThrow(new DataAccessResourceFailureException("audit db down"));
+
+        assertThrows(AuditPersistenceException.class, () -> alertsProxy.send(7L));
+
+        assertEquals(0, alerts.dispatched);
+    }
+
+    @Test
+    void asyncAuditedWorkIsAuditedBeforeDispatch() {
+        Alerts alerts = new Alerts();
+        Alerts alertsProxy = auditedProxy(alerts);
+        when(repository.saveAndFlush(any())).thenAnswer(invocation -> {
+            assertEquals(0, alerts.dispatched);
+            return invocation.getArgument(0);
+        });
+
+        alertsProxy.send(7L);
+
+        ArgumentCaptor<AuditEvent> saved = ArgumentCaptor.forClass(AuditEvent.class);
+        verify(repository).saveAndFlush(saved.capture());
+        assertTrue(saved.getValue().getSuccess());
+        assertEquals("Alert", saved.getValue().getResourceType());
+        assertEquals(1, alerts.dispatched);
+        assertEquals(Arrays.asList("commit"), transactionManager.outcomes);
+    }
+
+    private <T> T auditedProxy(T bean) {
+        AspectJProxyFactory factory = new AspectJProxyFactory(bean);
+        factory.setProxyTargetClass(true);
+        factory.addAspect(new AuditAspect(transactionManager.transactional(new AuditService(repository)), transactionManager));
+        return factory.getProxy();
     }
 
     @Test
