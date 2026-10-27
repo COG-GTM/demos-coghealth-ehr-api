@@ -1,6 +1,7 @@
 package com.medchart.ehr.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AccountStatusUserDetailsChecker;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -19,6 +20,8 @@ import java.io.IOException;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    private final AccountStatusUserDetailsChecker accountStatusChecker = new AccountStatusUserDetailsChecker();
+
     @Autowired
     private JwtTokenProvider tokenProvider;
 
@@ -36,6 +39,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String username = tokenProvider.getUsernameFromToken(jwt);
                 
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                accountStatusChecker.check(userDetails);
                 UsernamePasswordAuthenticationToken authentication = 
                     new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

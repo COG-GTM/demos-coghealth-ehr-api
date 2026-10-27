@@ -96,7 +96,19 @@ class LegacyExportControllerSecurityTest {
         verify(reportGenerator).generateDailyReport();
     }
 
+    @Test
+    void disabledAdminTokenIsUnauthorized() throws Exception {
+        String token = tokenFor("disabled-admin", User.Role.ADMIN, false);
+        mockMvc.perform(get("/v1/export/reports/daily").header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnauthorized());
+        verify(reportGenerator, never()).generateDailyReport();
+    }
+
     private String tokenFor(String username, User.Role role) {
+        return tokenFor(username, role, true);
+    }
+
+    private String tokenFor(String username, User.Role role, boolean enabled) {
         User user = User.builder()
                 .username(username)
                 .password("x")
@@ -104,7 +116,7 @@ class LegacyExportControllerSecurityTest {
                 .firstName("Test")
                 .lastName("User")
                 .roles(Set.of(role))
-                .enabled(true)
+                .enabled(enabled)
                 .accountNonExpired(true)
                 .accountNonLocked(true)
                 .credentialsNonExpired(true)
