@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -118,6 +119,7 @@ public class EncounterService {
      * Applies the editable scheduling/clinical fields from {@code changes} onto the stored encounter.
      * Identity, patient, provider, status, diagnoses and audit metadata are never taken from the request,
      * so a round-tripped {@link EncounterResponseDTO} cannot null them out. Null fields are left unchanged.
+     * A supplied {@code version} that no longer matches the stored one is rejected as a stale edit.
      */
     @AuditAccess(action = AuditAction.UPDATE, resourceType = "Encounter", description = "Update encounter",
             patientIdFromArgs = false)
@@ -126,6 +128,9 @@ public class EncounterService {
             throw new IllegalArgumentException("notes must not exceed " + MAX_NOTES_LENGTH + " characters");
         }
         return encounterRepository.findById(id).map(existing -> {
+            if (changes.getVersion() != null && !changes.getVersion().equals(existing.getVersion())) {
+                throw new ObjectOptimisticLockingFailureException(Encounter.class, id);
+            }
             if (changes.getEncounterType() != null) existing.setEncounterType(changes.getEncounterType());
             if (changes.getEncounterDateTime() != null) existing.setEncounterDateTime(changes.getEncounterDateTime());
             if (changes.getAdmitDateTime() != null) existing.setAdmitDateTime(changes.getAdmitDateTime());

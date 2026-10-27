@@ -5,6 +5,7 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -74,6 +75,20 @@ class AuditAspectTest {
         ArgumentCaptor<AuditEvent> captor = ArgumentCaptor.forClass(AuditEvent.class);
         verify(auditService, times(2)).saveAuditEventAsync(captor.capture());
         assertEquals(List.of(1L, 5L),
+            captor.getAllValues().stream().map(AuditEvent::getPatientId).collect(Collectors.toList()));
+    }
+
+    @Test
+    void pagedReadsRecordOneEventPerDistinctPatient() throws Throwable {
+        PatientScoped first = () -> 3L;
+        PatientScoped second = () -> 9L;
+        ProceedingJoinPoint joinPoint = joinPoint("listEncounters", new PageImpl<>(List.of(first, second)));
+
+        aspect.auditAccess(joinPoint);
+
+        ArgumentCaptor<AuditEvent> captor = ArgumentCaptor.forClass(AuditEvent.class);
+        verify(auditService, times(2)).saveAuditEventAsync(captor.capture());
+        assertEquals(List.of(3L, 9L),
             captor.getAllValues().stream().map(AuditEvent::getPatientId).collect(Collectors.toList()));
     }
 

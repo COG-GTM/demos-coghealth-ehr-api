@@ -7,6 +7,7 @@ import com.medchart.ehr.domain.patient.Patient;
 import com.medchart.ehr.dto.EncounterResponseDTO;
 import com.medchart.ehr.repository.EncounterRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -109,6 +110,19 @@ class EncounterServiceTest {
     void updateOfUnknownEncounterReportsNotFound() {
         when(repository.findById(999L)).thenReturn(Optional.empty());
         assertFalse(service.update(999L, new Encounter()).isPresent());
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void staleVersionUpdateIsRejected() {
+        Encounter existing = Encounter.builder().id(7L).room("202").version(4L)
+            .patient(Patient.builder().id(5L).build()).build();
+        when(repository.findById(7L)).thenReturn(Optional.of(existing));
+
+        Encounter stale = Encounter.builder().room("101").version(3L).build();
+
+        assertThrows(ObjectOptimisticLockingFailureException.class, () -> service.update(7L, stale));
+        assertEquals("202", existing.getRoom());
         verify(repository, never()).save(any());
     }
 }
