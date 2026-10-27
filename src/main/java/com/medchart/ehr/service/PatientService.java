@@ -11,14 +11,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityNotFoundException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -33,6 +36,12 @@ public class PatientService {
 
     @PersistenceContext
     private EntityManager entityManager;
+
+    private static final Map<String, String> SORT_COLUMNS = Map.of(
+            "lastName", "last_name", "last_name", "last_name",
+            "firstName", "first_name", "first_name", "first_name",
+            "dateOfBirth", "date_of_birth", "date_of_birth", "date_of_birth",
+            "mrn", "mrn");
 
     @AuditAccess(action = AuditAction.READ, resourceType = "Patient", description = "View patient record")
     public PatientDTO getPatientById(Long id) {
@@ -55,6 +64,7 @@ public class PatientService {
                     .map(patientMapper::toDto);
         }
 
+        String orderBy = toOrderBy(sort);
         String where = "(LOWER(last_name) LIKE LOWER(?1) OR LOWER(first_name) LIKE LOWER(?1) OR mrn LIKE ?1)";
         String term = "%" + searchTerm + "%";
 
@@ -64,7 +74,7 @@ public class PatientService {
         long total = ((Number) countQuery.getSingleResult()).longValue();
 
         Query query = entityManager.createNativeQuery(
-                "SELECT * FROM patients WHERE " + where + " ORDER BY " + sort, Patient.class);
+                "SELECT * FROM patients WHERE " + where + " ORDER BY " + orderBy, Patient.class);
         query.setParameter(1, term);
         query.setFirstResult((int) pageable.getOffset());
         query.setMaxResults(pageable.getPageSize());
@@ -75,6 +85,17 @@ public class PatientService {
                 .map(patientMapper::toDto)
                 .collect(Collectors.toList());
         return new PageImpl<>(content, pageable, total);
+    }
+
+    static String toOrderBy(String sort) {
+        String[] parts = sort.trim().split("\\s*,\\s*|\\s+", -1);
+        String column = SORT_COLUMNS.get(parts[0].trim());
+        String direction = parts.length > 1 ? parts[1].trim().toUpperCase() : "ASC";
+        if (column == null || parts.length > 2 || !(direction.equals("ASC") || direction.equals("DESC"))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "sort must be one of " + SORT_COLUMNS.keySet() + " optionally followed by asc or desc");
+        }
+        return column + " " + direction + ", id ASC";
     }
 
     @Transactional
