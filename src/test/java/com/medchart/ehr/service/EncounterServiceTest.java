@@ -18,6 +18,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.AuthorityUtils;
@@ -177,6 +179,36 @@ class EncounterServiceTest {
         assertEquals(42L, audit.getResourceId());
         assertEquals(1L, audit.getPatientId());
         assertEquals("anonymous", audit.getUserId());
+    }
+
+    @Test
+    void auditIsPublishedOnlyAfterCommit() {
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            service.create(EncounterCreateRequest.builder()
+                    .patientId(1L).encounterType(EncounterType.OUTPATIENT).encounterDateTime(WHEN).build());
+            verifyNoInteractions(auditService);
+
+            TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
+            assertEquals(AuditAction.CREATE, capturedAudit().getAction());
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+    @Test
+    void auditIsDroppedWhenTransactionRollsBack() {
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            service.create(EncounterCreateRequest.builder()
+                    .patientId(1L).encounterType(EncounterType.OUTPATIENT).encounterDateTime(WHEN).build());
+
+            TransactionSynchronizationManager.getSynchronizations()
+                    .forEach(sync -> sync.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
+            verifyNoInteractions(auditService);
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
     }
 
     private AuditEvent capturedAudit() {
