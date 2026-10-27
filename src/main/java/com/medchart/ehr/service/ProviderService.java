@@ -1,6 +1,7 @@
 package com.medchart.ehr.service;
 
 import com.medchart.ehr.domain.provider.Provider;
+import com.medchart.ehr.dto.ProviderDTO;
 import com.medchart.ehr.repository.ProviderRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,9 +63,19 @@ public class ProviderService {
         return providerRepository.findAllSpecialties();
     }
 
-    public Provider save(Provider provider) {
-        log.info("Saving provider: {} {}", provider.getFirstName(), provider.getLastName());
+    public Provider create(ProviderDTO dto) {
+        Provider provider = new Provider();
+        dto.applyTo(provider);
+        log.info("Creating provider: {} {}", provider.getFirstName(), provider.getLastName());
         return providerRepository.save(provider);
+    }
+
+    public Optional<Provider> update(Long id, ProviderDTO dto) {
+        return providerRepository.findById(id).map(provider -> {
+            dto.applyTo(provider);
+            log.info("Updating provider: {}", id);
+            return providerRepository.save(provider);
+        });
     }
 
     public void deactivate(Long id) {
