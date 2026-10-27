@@ -82,6 +82,10 @@ src/main/java/com/medchart/ehr/
 
 JWT-based authentication. Every endpoint requires a bearer token except `POST /api/auth/login` and `/actuator/health` (note the `/api` servlet context path, so login is served at `/api/api/auth/login`). Clinical endpoints under `/v1/**` require the `PROVIDER`, `STAFF`, or `ADMIN` role; `/v1/export/**`, `/interfaces/**`, provider writes, and `/api/auth/register` require `ADMIN`. Unauthenticated requests get `401`, insufficient roles get `403`.
 
+Configuration:
+- `JWT_SECRET` signs tokens with HS512 and must be at least 64 bytes; startup fails if it is shorter. If unset, a random key is generated at startup and tokens stop working after a restart.
+- `ADMIN_BOOTSTRAP_PASSWORD` (optional, at least 12 characters) sets the password of the `admin` account on startup, creating it if missing. Use it to get the first administrator on a fresh database, then unset it.
+
 ```bash
 TOKEN=$(curl -s -X POST http://localhost:8080/api/api/auth/login \
   -H 'Content-Type: application/json' -d '{"username":"<user>","password":"<password>"}' | jq -r .token)

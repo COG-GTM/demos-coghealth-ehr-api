@@ -34,7 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(controllers = {EncounterController.class, AuthController.class})
 @Import({SecurityConfig.class, JwtTokenProvider.class, JwtAuthenticationFilter.class})
 @TestPropertySource(properties = {
-        "medchart.security.jwt.secret=test-secret-key-for-security-config-test-0123456789",
+        "medchart.security.jwt.secret=test-secret-key-for-security-config-test-0123456789-0123456789-abcdef",
         "medchart.security.jwt.expiration=60000"
 })
 class SecurityConfigTest {

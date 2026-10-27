@@ -2,12 +2,16 @@ package com.medchart.ehr.config;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -16,14 +20,34 @@ import java.util.function.Function;
 @Component
 public class JwtTokenProvider {
 
-    @Value("${medchart.security.jwt.secret}")
+    private static final Logger log = LoggerFactory.getLogger(JwtTokenProvider.class);
+    private static final int MIN_SECRET_BYTES = 64;
+
+    @Value("${medchart.security.jwt.secret:}")
     private String jwtSecret;
 
     @Value("${medchart.security.jwt.expiration}")
     private int jwtExpirationInMs;
 
+    private SecretKey signingKey;
+
+    @PostConstruct
+    void initSigningKey() {
+        if (jwtSecret == null || jwtSecret.isBlank()) {
+            log.warn("JWT_SECRET is not set; using a random signing key. Tokens will not survive a restart.");
+            signingKey = Keys.secretKeyFor(SignatureAlgorithm.HS512);
+            return;
+        }
+        byte[] secretBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
+        if (secretBytes.length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException(
+                    "JWT_SECRET must be at least " + MIN_SECRET_BYTES + " bytes for HS512");
+        }
+        signingKey = Keys.hmacShaKeyFor(secretBytes);
+    }
+
     private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        return signingKey;
     }
 
     public String generateToken(Authentication authentication) {
@@ -49,7 +73,7 @@ public class JwtTokenProvider {
                 .setSubject(subject)
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
-                .signWith(getSigningKey())
+                .signWith(getSigningKey(), SignatureAlgorithm.HS512)
                 .compact();
     }
 

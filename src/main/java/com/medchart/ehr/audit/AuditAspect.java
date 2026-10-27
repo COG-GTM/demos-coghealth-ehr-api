@@ -66,6 +66,13 @@ public class AuditAspect {
         return null;
     }
 
+    private static final int AUDIT_FIELD_MAX_LENGTH = 100;
+
+    private static String truncate(String value) {
+        return value != null && value.length() > AUDIT_FIELD_MAX_LENGTH
+                ? value.substring(0, AUDIT_FIELD_MAX_LENGTH) : value;
+    }
+
     private String getCurrentUserId() {
         Authentication authentication = currentAuthentication();
         if (authentication == null) {
@@ -75,7 +82,7 @@ public class AuditAspect {
         if (principal instanceof User && ((User) principal).getId() != null) {
             return String.valueOf(((User) principal).getId());
         }
-        return authentication.getName();
+        return truncate(authentication.getName());
     }
 
     private String getCurrentUserName() {
@@ -86,9 +93,9 @@ public class AuditAspect {
         Object principal = authentication.getPrincipal();
         if (principal instanceof User) {
             User user = (User) principal;
-            return user.getFirstName() + " " + user.getLastName();
+            return truncate(user.getFirstName() + " " + user.getLastName());
         }
-        return authentication.getName();
+        return truncate(authentication.getName());
     }
 
     private Authentication currentAuthentication() {
