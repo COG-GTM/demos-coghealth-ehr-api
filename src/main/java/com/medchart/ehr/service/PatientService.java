@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import javax.persistence.EntityNotFoundException;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -30,10 +31,10 @@ import java.util.regex.Pattern;
 public class PatientService {
 
     private static final Map<String, String> SORTABLE_FIELDS = Map.of(
-            "lastName", "lastName",
-            "firstName", "firstName",
+            "lastname", "lastName",
+            "firstname", "firstName",
             "mrn", "mrn",
-            "dateOfBirth", "dateOfBirth",
+            "dateofbirth", "dateOfBirth",
             "last_name", "lastName",
             "first_name", "firstName",
             "date_of_birth", "dateOfBirth");
@@ -61,7 +62,8 @@ public class PatientService {
     @AuditAccess(action = AuditAction.SEARCH, resourceType = "Patient", description = "Search patients")
     public Page<PatientDTO> searchPatients(String searchTerm, String sort, Pageable pageable) {
         if (sort == null || sort.isBlank()) {
-            return patientRepository.searchPatients(searchTerm, pageable)
+            Pageable unsortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+            return patientRepository.searchPatients(searchTerm, unsortedPageable)
                     .map(patientMapper::toDto);
         }
 
@@ -70,7 +72,7 @@ public class PatientService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid sort parameter");
         }
 
-        String property = SORTABLE_FIELDS.get(matcher.group(1));
+        String property = SORTABLE_FIELDS.get(matcher.group(1).toLowerCase(Locale.ROOT));
         if (property == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid sort parameter");
         }

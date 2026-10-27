@@ -24,7 +24,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -93,7 +92,7 @@ class PatientServiceTest {
             "date_of_birth, dateOfBirth, ASC",
             "mrn ASC, mrn, ASC"
     })
-    void supportsAllowedAliasesAndCaseInsensitiveDirection(String sort, String property, String direction) {
+    void supportsCaseInsensitiveFieldsAndDirection(String sort, String property, String direction) {
         when(patientRepository.searchPatients(anyString(), any(Pageable.class))).thenReturn(Page.empty());
 
         patientService.searchPatients("a", sort, PageRequest.of(0, 20));
@@ -103,15 +102,44 @@ class PatientServiceTest {
         assertEquals(Sort.by(Sort.Direction.valueOf(direction), property), pageableCaptor.getValue().getSort());
     }
 
+    @Test
+    void acceptsUppercaseSnakeCaseSortField() {
+        Pageable pageable = captureSortedPageable("LAST_NAME,desc");
+
+        assertEquals(Sort.by(Sort.Direction.DESC, "lastName"), pageable.getSort());
+    }
+
+    @Test
+    void acceptsMixedCaseCamelCaseSortField() {
+        Pageable pageable = captureSortedPageable("LastName");
+
+        assertEquals(Sort.by(Sort.Direction.ASC, "lastName"), pageable.getSort());
+    }
+
     @ParameterizedTest
     @NullSource
     @ValueSource(strings = {"", " ", "\t"})
     void passesOriginalPageableWhenSortIsNullOrBlank(String sort) {
-        Pageable pageable = PageRequest.of(2, 10);
+        Pageable pageable = PageRequest.of(2, 10, Sort.by("ssn"));
         when(patientRepository.searchPatients(anyString(), any(Pageable.class))).thenReturn(Page.empty());
 
         patientService.searchPatients("a", sort, pageable);
 
-        verify(patientRepository).searchPatients(eq("a"), same(pageable));
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(patientRepository).searchPatients(eq("a"), pageableCaptor.capture());
+        Pageable capturedPageable = pageableCaptor.getValue();
+        assertEquals(2, capturedPageable.getPageNumber());
+        assertEquals(10, capturedPageable.getPageSize());
+        assertEquals(Sort.unsorted(), capturedPageable.getSort());
+    }
+
+    private Pageable captureSortedPageable(String sort) {
+        when(patientRepository.searchPatients(anyString(), any(Pageable.class))).thenReturn(Page.empty());
+
+        patientService.searchPatients("a", sort, PageRequest.of(0, 20));
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(patientRepository).searchPatients(eq("a"), pageableCaptor.capture());
+        return pageableCaptor.getValue();
     }
 }
