@@ -22,8 +22,19 @@ public class ReportGenerator {
 
     private static final String TEMP_DIR = System.getProperty("java.io.tmpdir");
 
+    private static final int ROSTER_MEMBER_ID_COLUMN = 13;
+
+    static String maskMemberId(Object memberId) {
+        if (memberId == null) {
+            return null;
+        }
+        String value = memberId.toString();
+        String lastFour = value.length() > 4 ? value.substring(value.length() - 4) : "";
+        return "****" + lastFour;
+    }
+
     public String generatePatientRoster() {
-        String sql = "SELECT p.id, p.mrn, p.ssn, p.first_name, p.last_name, p.date_of_birth, " +
+        String sql = "SELECT p.id, p.mrn, p.first_name, p.last_name, p.date_of_birth, " +
                      "p.phone_home, p.phone_mobile, p.email, " +
                      "p.street1, p.city, p.state, p.zip_code, " +
                      "ic.payer_name, ic.member_id " +
@@ -39,8 +50,9 @@ public class ReportGenerator {
         String filePath = TEMP_DIR + File.separator + filename;
         
         try (PrintWriter writer = new PrintWriter(new FileWriter(filePath))) {
-            writer.println("ID,MRN,SSN,FirstName,LastName,DOB,PhoneHome,PhoneMobile,Email,Address,City,State,Zip,Insurance,MemberID");
+            writer.println("ID,MRN,FirstName,LastName,DOB,PhoneHome,PhoneMobile,Email,Address,City,State,Zip,Insurance,MemberID");
             for (Object[] row : results) {
+                row[ROSTER_MEMBER_ID_COLUMN] = maskMemberId(row[ROSTER_MEMBER_ID_COLUMN]);
                 StringBuilder line = new StringBuilder();
                 for (int i = 0; i < row.length; i++) {
                     if (i > 0) line.append(",");
@@ -59,7 +71,7 @@ public class ReportGenerator {
 
     public String generateEncounterSummary(LocalDateTime startDate, LocalDateTime endDate) {
         String sql = "SELECT e.id, e.encounter_number, e.encounter_date_time, e.encounter_type, e.status, " +
-                     "p.mrn, p.first_name, p.last_name, p.ssn, p.date_of_birth, " +
+                     "p.mrn, p.first_name, p.last_name, p.date_of_birth, " +
                      "pr.first_name as provider_first, pr.last_name as provider_last " +
                      "FROM encounters e " +
                      "JOIN patients p ON e.patient_id = p.id " +
@@ -102,13 +114,18 @@ public class ReportGenerator {
     }
 
     public byte[] generateDailyReport() {
-        String tempFile = generatePatientRoster();
+        Path tempFile = Path.of(generatePatientRoster());
         try {
-            byte[] content = Files.readAllBytes(Path.of(tempFile));
-            return content;
+            return Files.readAllBytes(tempFile);
         } catch (IOException e) {
             log.error("Failed to read temp file", e);
             throw new RuntimeException(e);
+        } finally {
+            try {
+                Files.deleteIfExists(tempFile);
+            } catch (IOException e) {
+                log.warn("Failed to delete daily report temp file", e);
+            }
         }
     }
 }
