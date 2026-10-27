@@ -353,19 +353,18 @@ public class HrPtoSyncJob implements CommandLineRunner {
         return ledger;
     }
 
-    /** Records outbound files that are not yet in the ledger, e.g. those queued before the ledger existed. */
+    /**
+     * Records outbound files whose payload key is not yet in the ledger, e.g. those queued before the ledger existed
+     * or recorded under an earlier key format.
+     */
     private void bootstrapFromOutboundFiles(String exportDate, Map<String, String> ledger) {
         File[] files = outboundDir(exportDate).listFiles((d, n) -> n.endsWith(".hl7"));
         if (files == null) {
             return;
         }
         Arrays.sort(files);
-        Set<String> known = new HashSet<String>(ledger.values());
         for (File hl7 : files) {
             String ctl = hl7.getName().substring(0, hl7.getName().length() - 4);
-            if (known.contains(ctl)) {
-                continue;
-            }
             String key;
             try {
                 key = messageKey(new String(Files.readAllBytes(hl7.toPath()), StandardCharsets.UTF_8));

@@ -90,6 +90,23 @@ class HrPtoSyncJobIdempotencyTest {
     }
 
     @Test
+    void ledgerEntriesWithUnrecognisedKeysAreReconciledFromOutboundFiles() throws IOException {
+        job().runForDate(DATE);
+        Path ledger = outDir.resolve(HrPtoSyncJob.OUTBOUND_DIR).resolve(DATE).resolve(HrPtoSyncJob.SENT_LEDGER_FILE);
+        Files.write(ledger, ("E104422^1^2130^OR-4^2026-10-13^07:00^15:00|HRPTO" + DATE + "00001\n"
+                + "E104422^1^2130^OR-4^2026-10-20^07:00^15:00|HRPTO" + DATE + "00002\n").getBytes(StandardCharsets.UTF_8));
+
+        Map<String, Object> rerun = job().runForDate(DATE);
+        Map<String, Object> again = job().runForDate(DATE);
+
+        assertEquals(0, rerun.get("messagesSent"));
+        assertEquals(2, rerun.get("messagesAlreadySent"));
+        assertEquals(0, again.get("messagesSent"));
+        assertEquals(2, outboundFiles().size());
+        assertEquals(4, Files.readAllLines(ledger).size());
+    }
+
+    @Test
     void correctedDepartmentMappingQueuesNewMessages() throws IOException {
         job().runForDate(DATE);
 
