@@ -95,6 +95,8 @@ docker compose down
 docker compose down -v
 ```
 
+Postgres and RabbitMQ only apply the `.env` passwords when their volumes are first created. If you change `.env` after that, run `docker compose down -v` so the new values take effect.
+
 ## Service URLs
 
 Every published port is bound to `127.0.0.1`, so the services are only reachable from the machine running the
