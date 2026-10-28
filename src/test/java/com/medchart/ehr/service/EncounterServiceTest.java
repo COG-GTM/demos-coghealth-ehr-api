@@ -1,8 +1,11 @@
 package com.medchart.ehr.service;
 
+import com.medchart.ehr.audit.AuditAction;
+import com.medchart.ehr.audit.PatientAccessLogger;
 import com.medchart.ehr.domain.auth.User;
 import com.medchart.ehr.domain.encounter.Encounter;
 import com.medchart.ehr.domain.encounter.EncounterStatus;
+import com.medchart.ehr.domain.patient.Patient;
 import com.medchart.ehr.domain.provider.Provider;
 import com.medchart.ehr.repository.EncounterRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,11 +31,14 @@ class EncounterServiceTest {
     @Mock
     private EncounterRepository encounterRepository;
 
+    @Mock
+    private PatientAccessLogger patientAccessLogger;
+
     private EncounterService encounterService;
 
     @BeforeEach
     void setUp() {
-        encounterService = new EncounterService(encounterRepository);
+        encounterService = new EncounterService(encounterRepository, patientAccessLogger);
     }
 
     @Test
@@ -41,6 +47,7 @@ class EncounterServiceTest {
 
         assertThrows(AccessDeniedException.class,
                 () -> encounterService.findByIdForRequester(1L, provider(10L, 100L)));
+        verifyNoInteractions(patientAccessLogger);
     }
 
     @Test
@@ -49,6 +56,8 @@ class EncounterServiceTest {
         when(encounterRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(encounter));
 
         assertEquals(Optional.of(encounter), encounterService.findByIdForRequester(1L, provider(10L, 100L)));
+        verify(patientAccessLogger).logAccess(
+                10L, "PROVIDER", 5L, null, AuditAction.READ, "Encounter", "View encounter", null, null);
     }
 
     @Test
@@ -78,6 +87,22 @@ class EncounterServiceTest {
         verify(encounterRepository).findByPatientIdAndAttendingProviderId(5L, 100L, PageRequest.of(0, 10));
         verify(encounterRepository).findByPatientId(5L);
         verify(encounterRepository).findByPatientId(5L, PageRequest.of(0, 10));
+    }
+
+    @Test
+    void authorizedPatientListsAreAuditedOncePerList() {
+        User requester = provider(10L, 100L);
+        PageRequest pageable = PageRequest.of(0, 10);
+        when(encounterRepository.findByPatientIdAndAttendingProviderId(5L, 100L))
+                .thenReturn(java.util.Collections.emptyList());
+        when(encounterRepository.findByPatientIdAndAttendingProviderId(5L, 100L, pageable))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(java.util.Collections.emptyList(), pageable, 0));
+
+        encounterService.findByPatientId(5L, requester);
+        encounterService.findByPatientId(5L, pageable, requester);
+
+        verify(patientAccessLogger, times(2)).logAccess(
+                10L, "PROVIDER", 5L, null, AuditAction.READ, "Encounter", "List patient encounters", null, null);
     }
 
     @Test
@@ -126,6 +151,57 @@ class EncounterServiceTest {
     }
 
     @Test
+    void providerCannotReassignOwnEncounterToAnotherPatient() {
+        Encounter existing = encounter(100L);
+        when(encounterRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(existing));
+        Encounter requested = encounter(100L);
+        requested.setPatient(Patient.builder().id(6L).build());
+
+        assertThrows(AccessDeniedException.class,
+                () -> encounterService.update(1L, requested, provider(10L, 100L)));
+
+        verify(encounterRepository, never()).save(any());
+    }
+
+    @Test
+    void providerUpdateWithoutPatientKeepsExistingPatient() {
+        Encounter existing = encounter(100L);
+        when(encounterRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(existing));
+        Encounter requested = Encounter.builder()
+                .attendingProvider(Provider.builder().id(100L).build())
+                .build();
+        when(encounterRepository.save(requested)).thenReturn(requested);
+
+        Optional<Encounter> updated = encounterService.update(1L, requested, provider(10L, 100L));
+
+        assertSame(existing.getPatient(), updated.orElseThrow().getPatient());
+        verify(encounterRepository).save(requested);
+    }
+
+    @Test
+    void adminCanCancelEncounterWithoutAttendingProvider() {
+        Encounter unassigned = encounter(null);
+        when(encounterRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(unassigned));
+        when(encounterRepository.save(unassigned)).thenReturn(unassigned);
+
+        assertTrue(encounterService.cancelEncounter(1L, admin()));
+
+        assertEquals(EncounterStatus.CANCELLED, unassigned.getStatus());
+        verify(encounterRepository).save(unassigned);
+    }
+
+    @Test
+    void providerCannotCancelEncounterWithoutAttendingProvider() {
+        when(encounterRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(encounter(null)));
+
+        assertThrows(AccessDeniedException.class,
+                () -> encounterService.cancelEncounter(1L, provider(10L, 100L)));
+
+        verify(encounterRepository, never()).save(any());
+        verifyNoInteractions(patientAccessLogger);
+    }
+
+    @Test
     void providerCannotCreateEncounterAssignedToAnotherProvider() {
         Encounter encounter = encounter(200L);
 
@@ -146,7 +222,8 @@ class EncounterServiceTest {
         return Encounter.builder()
                 .id(1L)
                 .encounterNumber("ENC-2024-000001")
-                .attendingProvider(Provider.builder().id(providerId).build())
+                .patient(Patient.builder().id(5L).build())
+                .attendingProvider(providerId == null ? null : Provider.builder().id(providerId).build())
                 .build();
     }
 

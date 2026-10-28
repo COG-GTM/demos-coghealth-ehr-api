@@ -1,5 +1,7 @@
 package com.medchart.ehr.service;
 
+import com.medchart.ehr.audit.AuditAction;
+import com.medchart.ehr.audit.PatientAccessLogger;
 import com.medchart.ehr.domain.auth.User;
 import com.medchart.ehr.domain.encounter.Encounter;
 import com.medchart.ehr.domain.encounter.EncounterStatus;
@@ -12,15 +14,19 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -30,52 +36,60 @@ public class EncounterService {
     private static final DateTimeFormatter ENC_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy");
     
     private final EncounterRepository encounterRepository;
+    private final PatientAccessLogger patientAccessLogger;
     private final AtomicLong encounterSequence = new AtomicLong(100);
 
-    public EncounterService(EncounterRepository encounterRepository) {
+    public EncounterService(EncounterRepository encounterRepository, PatientAccessLogger patientAccessLogger) {
         this.encounterRepository = encounterRepository;
+        this.patientAccessLogger = patientAccessLogger;
     }
 
-    @Transactional(readOnly = true)
     public Optional<Encounter> findByIdForRequester(Long id, User requester) {
         Optional<Encounter> encounter = encounterRepository.findByIdWithDetails(id);
         encounter.ifPresent(enc -> {
             assertCanAccess(enc, requester);
-            log.info("User {} accessed encounter {}", requester.getId(), enc.getEncounterNumber());
+            log.info("User {} accessed encounter id {}", requester.getId(), enc.getId());
+            logPatientAccess(requester, enc.getPatient().getId(), AuditAction.READ, "View encounter");
         });
         return encounter;
     }
 
-    @Transactional(readOnly = true)
     public Optional<Encounter> findByEncounterNumberForRequester(String encounterNumber, User requester) {
         Optional<Encounter> encounter = encounterRepository.findByEncounterNumber(encounterNumber);
         encounter.ifPresent(enc -> {
             assertCanAccess(enc, requester);
-            log.info("User {} accessed encounter {}", requester.getId(), enc.getEncounterNumber());
+            log.info("User {} accessed encounter id {}", requester.getId(), enc.getId());
+            logPatientAccess(requester, enc.getPatient().getId(), AuditAction.READ, "View encounter");
         });
         return encounter;
     }
 
-    @Transactional(readOnly = true)
     public List<Encounter> findByPatientId(Long patientId, User requester) {
+        List<Encounter> encounters;
         if (isAdmin(requester)) {
-            return encounterRepository.findByPatientId(patientId);
+            encounters = encounterRepository.findByPatientId(patientId);
+        } else {
+            if (requester.getProviderId() == null) {
+                return Collections.emptyList();
+            }
+            encounters = encounterRepository.findByPatientIdAndAttendingProviderId(patientId, requester.getProviderId());
         }
-        if (requester.getProviderId() == null) {
-            return Collections.emptyList();
-        }
-        return encounterRepository.findByPatientIdAndAttendingProviderId(patientId, requester.getProviderId());
+        logPatientAccess(requester, patientId, AuditAction.READ, "List patient encounters");
+        return encounters;
     }
 
-    @Transactional(readOnly = true)
     public Page<Encounter> findByPatientId(Long patientId, Pageable pageable, User requester) {
+        Page<Encounter> encounters;
         if (isAdmin(requester)) {
-            return encounterRepository.findByPatientId(patientId, pageable);
+            encounters = encounterRepository.findByPatientId(patientId, pageable);
+        } else {
+            if (requester.getProviderId() == null) {
+                return new PageImpl<>(Collections.emptyList(), pageable, 0);
+            }
+            encounters = encounterRepository.findByPatientIdAndAttendingProviderId(patientId, requester.getProviderId(), pageable);
         }
-        if (requester.getProviderId() == null) {
-            return new PageImpl<>(Collections.emptyList(), pageable, 0);
-        }
-        return encounterRepository.findByPatientIdAndAttendingProviderId(patientId, requester.getProviderId(), pageable);
+        logPatientAccess(requester, patientId, AuditAction.READ, "List patient encounters");
+        return encounters;
     }
 
     @Transactional(readOnly = true)
@@ -131,11 +145,21 @@ public class EncounterService {
         if (!existing.isPresent()) {
             return Optional.empty();
         }
-        assertCanAccess(existing.get(), requester);
+        Encounter existingEncounter = existing.get();
+        assertCanAccess(existingEncounter, requester);
         assertOwnProvider(encounter, requester);
+        if (!isAdmin(requester)) {
+            if (encounter.getPatient() == null) {
+                encounter.setPatient(existingEncounter.getPatient());
+            } else if (!Objects.equals(encounter.getPatient().getId(), existingEncounter.getPatient().getId())) {
+                throw new AccessDeniedException("Not authorized to reassign encounter to another patient");
+            }
+        }
         encounter.setId(id);
         log.info("Updating encounter {}", encounter.getEncounterNumber());
-        return Optional.of(encounterRepository.save(encounter));
+        Encounter updated = encounterRepository.save(encounter);
+        logPatientAccess(requester, updated.getPatient().getId(), AuditAction.UPDATE, "Update encounter");
+        return Optional.of(updated);
     }
 
     public boolean checkIn(Long encounterId, User requester) {
@@ -190,7 +214,20 @@ public class EncounterService {
         assertCanAccess(existing, requester);
         update.accept(existing);
         encounterRepository.save(existing);
+        logPatientAccess(requester, existing.getPatient().getId(), AuditAction.UPDATE, "Update encounter status");
         return true;
+    }
+
+    private void logPatientAccess(User requester, Long patientId, AuditAction action, String reason) {
+        String roles = requester.getRoles() == null
+                ? ""
+                : requester.getRoles().stream().map(User.Role::name).sorted().collect(Collectors.joining(","));
+        ServletRequestAttributes attributes = RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes
+                ? (ServletRequestAttributes) RequestContextHolder.getRequestAttributes()
+                : null;
+        String clientIp = attributes == null ? null : attributes.getRequest().getRemoteAddr();
+        patientAccessLogger.logAccess(
+                requester.getId(), roles, patientId, null, action, "Encounter", reason, clientIp, null);
     }
 
     private void assertCanAccessProvider(Long providerId, User requester) {

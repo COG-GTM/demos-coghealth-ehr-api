@@ -2,8 +2,10 @@ package com.medchart.ehr.controller;
 
 import com.medchart.ehr.config.JwtTokenProvider;
 import com.medchart.ehr.config.SecurityConfig;
+import com.medchart.ehr.audit.PatientAccessLogger;
 import com.medchart.ehr.domain.auth.User;
 import com.medchart.ehr.domain.encounter.Encounter;
+import com.medchart.ehr.domain.patient.Patient;
 import com.medchart.ehr.domain.provider.Provider;
 import com.medchart.ehr.repository.EncounterRepository;
 import com.medchart.ehr.service.EncounterService;
@@ -39,6 +41,9 @@ class EncounterControllerSecurityTest {
 
     @MockBean
     private UserDetailsService userDetailsService;
+
+    @MockBean
+    private PatientAccessLogger patientAccessLogger;
 
     @Test
     void unauthenticatedRequestsAreUnauthorizedForEncounterRoutes() throws Exception {
@@ -95,6 +100,7 @@ class EncounterControllerSecurityTest {
         return Encounter.builder()
                 .id(1L)
                 .encounterNumber("ENC-2024-000001")
+                .patient(Patient.builder().id(5L).build())
                 .attendingProvider(Provider.builder().id(providerId).build())
                 .build();
     }

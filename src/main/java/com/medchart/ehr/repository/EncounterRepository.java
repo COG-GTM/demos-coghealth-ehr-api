@@ -23,13 +23,13 @@ public interface EncounterRepository extends JpaRepository<Encounter, Long> {
     @EntityGraph(attributePaths = {"patient", "attendingProvider", "diagnoses"})
     List<Encounter> findByPatientId(Long patientId);
 
-    @EntityGraph(attributePaths = {"patient", "attendingProvider", "diagnoses"})
+    @EntityGraph(attributePaths = {"patient", "attendingProvider"})
     Page<Encounter> findByPatientId(Long patientId, Pageable pageable);
 
     @EntityGraph(attributePaths = {"patient", "attendingProvider", "diagnoses"})
     List<Encounter> findByPatientIdAndAttendingProviderId(Long patientId, Long providerId);
 
-    @EntityGraph(attributePaths = {"patient", "attendingProvider", "diagnoses"})
+    @EntityGraph(attributePaths = {"patient", "attendingProvider"})
     Page<Encounter> findByPatientIdAndAttendingProviderId(Long patientId, Long providerId, Pageable pageable);
 
     @EntityGraph(attributePaths = {"patient", "attendingProvider", "diagnoses"})
@@ -59,6 +59,6 @@ public interface EncounterRepository extends JpaRepository<Encounter, Long> {
     @Query("SELECT COUNT(e) FROM Encounter e WHERE e.patient.id = :patientId")
     long countByPatientId(@Param("patientId") Long patientId);
 
-    @Query("SELECT e FROM Encounter e JOIN FETCH e.patient JOIN FETCH e.attendingProvider WHERE e.id = :id")
+    @Query("SELECT e FROM Encounter e JOIN FETCH e.patient LEFT JOIN FETCH e.attendingProvider WHERE e.id = :id")
     Optional<Encounter> findByIdWithDetails(@Param("id") Long id);
 }
