@@ -84,10 +84,11 @@ public class ProviderService {
     @Transactional(readOnly = true)
     @SuppressWarnings("unchecked")
     public List<Provider> search(String lastName) {
-        String sql = "SELECT * FROM providers WHERE active = true "
-                + "AND last_name ILIKE '%" + lastName + "%' "
-                + "ORDER BY last_name, first_name";
-        Query query = entityManager.createNativeQuery(sql, Provider.class);
+        Query query = entityManager.createNativeQuery(
+                "SELECT * FROM providers WHERE active = true "
+                        + "AND last_name ILIKE :pattern "
+                        + "ORDER BY last_name, first_name", Provider.class);
+        query.setParameter("pattern", "%" + lastName + "%");
         return query.getResultList();
     }
 }
