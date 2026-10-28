@@ -101,6 +101,52 @@ public class ReportGenerator {
         return filePath;
     }
 
+    public String generateDepartmentProductivityReport() {
+        @SuppressWarnings("unchecked")
+        List<String> departments = entityManager.createNativeQuery(
+                "SELECT DISTINCT department FROM providers "
+                        + "WHERE active = true AND department IS NOT NULL")
+                .getResultList();
+
+        StringBuilder report = new StringBuilder();
+        report.append("DEPARTMENT PRODUCTIVITY REPORT").append(System.lineSeparator());
+        report.append("Generated: ").append(LocalDateTime.now()).append(System.lineSeparator());
+        report.append(System.lineSeparator());
+
+        for (String department : departments) {
+            String sql = "SELECT pr.last_name, pr.id FROM providers pr "
+                    + "WHERE pr.active = true AND pr.department = '" + department + "' "
+                    + "ORDER BY pr.last_name";
+            @SuppressWarnings("unchecked")
+            List<Object[]> rows = entityManager.createNativeQuery(sql).getResultList();
+            report.append("Department: ").append(department).append(System.lineSeparator());
+            for (Object[] row : rows) {
+                String providerName = String.valueOf(row[0]);
+                Number providerId = (Number) row[1];
+                Number encounterCount = (Number) entityManager.createNativeQuery(
+                        "SELECT COUNT(*) FROM encounters WHERE attending_provider_id = :pid")
+                        .setParameter("pid", providerId == null ? -1L : providerId.longValue())
+                        .getSingleResult();
+                report.append("  ").append(providerName).append(": ")
+                        .append(encounterCount).append(" encounters").append(System.lineSeparator());
+            }
+            report.append(System.lineSeparator());
+        }
+
+        String filename = "department_productivity_"
+                + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".txt";
+        String filePath = TEMP_DIR + File.separator + filename;
+        try (PrintWriter writer = new PrintWriter(new FileWriter(filePath))) {
+            writer.print(report);
+        } catch (IOException e) {
+            log.error("Failed to generate department productivity report", e);
+            throw new RuntimeException("Report generation failed", e);
+        }
+
+        log.info("Generated department productivity report at: {}", filePath);
+        return report.toString();
+    }
+
     public byte[] generateDailyReport() {
         String tempFile = generatePatientRoster();
         try {
