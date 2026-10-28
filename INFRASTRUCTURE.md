@@ -170,6 +170,10 @@ SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/coghealth
 SPRING_DATASOURCE_USERNAME: coghealth
 SPRING_DATASOURCE_PASSWORD: coghealth_dev_2024
 
+# Java regex of reverse proxies whose X-Forwarded-For is trusted for client IPs (unset = trust none).
+# List only proxies you operate that append the peer address to X-Forwarded-For.
+TRUSTED_PROXIES: 10\.0\.1\.\d+
+
 # Redis
 SPRING_REDIS_HOST: localhost
 SPRING_REDIS_PORT: 6379
