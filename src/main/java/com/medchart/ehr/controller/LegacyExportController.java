@@ -58,6 +58,14 @@ public class LegacyExportController {
         return ResponseEntity.ok("Report generated at: " + filePath);
     }
 
+    @GetMapping("/reports/department-productivity")
+    public ResponseEntity<String> generateDepartmentProductivity() {
+        String report = reportGenerator.generateDepartmentProductivityReport();
+        return ResponseEntity.ok()
+                .contentType(MediaType.TEXT_PLAIN)
+                .body(report);
+    }
+
     @GetMapping("/reports/daily")
     public ResponseEntity<byte[]> getDailyReport() {
         byte[] data = reportGenerator.generateDailyReport();
