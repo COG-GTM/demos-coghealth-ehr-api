@@ -103,9 +103,13 @@ public class ReportGenerator {
 
     public String generateDepartmentProductivityReport() {
         @SuppressWarnings("unchecked")
-        List<String> departments = entityManager.createNativeQuery(
-                "SELECT DISTINCT department FROM providers "
-                        + "WHERE active = true AND department IS NOT NULL")
+        List<Object[]> rows = entityManager.createNativeQuery(
+                "SELECT pr.department, pr.last_name, COUNT(e.id) "
+                        + "FROM providers pr "
+                        + "LEFT JOIN encounters e ON e.attending_provider_id = pr.id "
+                        + "WHERE pr.active = true AND pr.department IS NOT NULL "
+                        + "GROUP BY pr.department, pr.id, pr.last_name "
+                        + "ORDER BY pr.department, pr.last_name")
                 .getResultList();
 
         StringBuilder report = new StringBuilder();
@@ -113,25 +117,21 @@ public class ReportGenerator {
         report.append("Generated: ").append(LocalDateTime.now()).append(System.lineSeparator());
         report.append(System.lineSeparator());
 
-        for (String department : departments) {
-            String sql = "SELECT pr.last_name, pr.id FROM providers pr "
-                    + "WHERE pr.active = true AND pr.department = '" + department + "' "
-                    + "ORDER BY pr.last_name";
-            @SuppressWarnings("unchecked")
-            List<Object[]> rows = entityManager.createNativeQuery(sql).getResultList();
-            report.append("Department: ").append(department).append(System.lineSeparator());
-            for (Object[] row : rows) {
-                String providerName = String.valueOf(row[0]);
-                Number providerId = (Number) row[1];
-                Number encounterCount = (Number) entityManager.createNativeQuery(
-                        "SELECT COUNT(*) FROM encounters WHERE attending_provider_id = :pid")
-                        .setParameter("pid", providerId == null ? -1L : providerId.longValue())
-                        .getSingleResult();
-                report.append("  ").append(providerName).append(": ")
-                        .append(encounterCount).append(" encounters").append(System.lineSeparator());
+        String currentDepartment = null;
+        for (Object[] row : rows) {
+            String department = String.valueOf(row[0]);
+            if (!department.equals(currentDepartment)) {
+                if (currentDepartment != null) {
+                    report.append(System.lineSeparator());
+                }
+                report.append("Department: ").append(department).append(System.lineSeparator());
+                currentDepartment = department;
             }
-            report.append(System.lineSeparator());
+            report.append("  ").append(String.valueOf(row[1])).append(": ")
+                    .append(((Number) row[2]).longValue()).append(" encounters")
+                    .append(System.lineSeparator());
         }
+        report.append(System.lineSeparator());
 
         String filename = "department_productivity_"
                 + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".txt";
