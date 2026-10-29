@@ -1,25 +1,41 @@
 package com.medchart.ehr.audit;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionException;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
 import java.lang.reflect.Method;
 
+/**
+ * Runs outside the audited method's own {@code @Transactional} advice so the audit write is never
+ * forced into a read-only service transaction.
+ */
 @Aspect
 @Component
+@Order(Ordered.HIGHEST_PRECEDENCE)
 @Slf4j
-@RequiredArgsConstructor
 public class AuditAspect {
 
     private final AuditService auditService;
+    private final TransactionTemplate transactionTemplate;
+
+    public AuditAspect(AuditService auditService, PlatformTransactionManager transactionManager) {
+        this.auditService = auditService;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
+    }
 
     @Around("@annotation(com.medchart.ehr.audit.AuditAccess)")
     public Object auditAccess(ProceedingJoinPoint joinPoint) throws Throwable {
@@ -41,15 +57,102 @@ public class AuditAspect {
                 .userAgent(getUserAgent());
 
         try {
-            Object result = joinPoint.proceed();
-            eventBuilder.success(true);
-            auditService.saveAuditEventAsync(eventBuilder.build());
-            return result;
-        } catch (Exception e) {
-            eventBuilder.success(false);
-            eventBuilder.errorMessage(e.getMessage());
-            auditService.saveAuditEventAsync(eventBuilder.build());
-            throw e;
+            if (TransactionSynchronizationManager.isActualTransactionActive()) {
+                return proceedWithinCallerTransaction(joinPoint, eventBuilder);
+            }
+            return proceedWithinAuditTransaction(joinPoint, eventBuilder);
+        } catch (InvocationFailure failure) {
+            Throwable cause = failure.getCause();
+            recordFailure(eventBuilder, cause);
+            throw cause;
+        }
+    }
+
+    /**
+     * No caller transaction: the protected call and its audit record share one writable transaction,
+     * so the result is only returned (and any writes only committed) once the audit event is committed.
+     */
+    private Object proceedWithinAuditTransaction(ProceedingJoinPoint joinPoint,
+                                                 AuditEvent.AuditEventBuilder eventBuilder) throws Throwable {
+        try {
+            return transactionTemplate.execute(status -> {
+                Object result = proceed(joinPoint);
+                eventBuilder.success(true);
+                auditService.record(eventBuilder.build());
+                return result;
+            });
+        } catch (TransactionException e) {
+            AuditPersistenceException auditFailure =
+                    new AuditPersistenceException("Audited transaction could not be committed", e);
+            recordFailure(eventBuilder, auditFailure);
+            throw auditFailure;
+        }
+    }
+
+    /**
+     * Inside a caller transaction (which may be read-only or later roll back): the audit record is
+     * committed independently before the result is returned, and an audit failure propagates so the
+     * caller's transaction rolls back. If the caller later rolls back, a follow-up failure event is
+     * recorded so the trail shows the outcome.
+     */
+    private Object proceedWithinCallerTransaction(ProceedingJoinPoint joinPoint,
+                                                  AuditEvent.AuditEventBuilder eventBuilder) {
+        Object result = proceed(joinPoint);
+        eventBuilder.success(true);
+        recordInNewTransaction(eventBuilder.build());
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int status) {
+                    if (status == STATUS_ROLLED_BACK) {
+                        recordCallerRollback(eventBuilder);
+                    }
+                }
+            });
+        }
+        return result;
+    }
+
+    private void recordCallerRollback(AuditEvent.AuditEventBuilder eventBuilder) {
+        eventBuilder.success(false);
+        eventBuilder.errorMessage("Caller transaction rolled back after audited call");
+        try {
+            recordInNewTransaction(eventBuilder.build());
+        } catch (RuntimeException e) {
+            log.error("Failed to record rollback of audited call (action={}, resourceType={})",
+                    eventBuilder.build().getAction(), eventBuilder.build().getResourceType(), e);
+        }
+    }
+
+    private void recordFailure(AuditEvent.AuditEventBuilder eventBuilder, Throwable cause) {
+        eventBuilder.success(false);
+        eventBuilder.errorMessage(cause.getMessage());
+        try {
+            recordInNewTransaction(eventBuilder.build());
+        } catch (AuditPersistenceException auditFailure) {
+            cause.addSuppressed(auditFailure);
+        }
+    }
+
+    private void recordInNewTransaction(AuditEvent event) {
+        try {
+            auditService.recordInNewTransaction(event);
+        } catch (TransactionException e) {
+            throw new AuditPersistenceException("Audit transaction could not be committed", e);
+        }
+    }
+
+    private static Object proceed(ProceedingJoinPoint joinPoint) {
+        try {
+            return joinPoint.proceed();
+        } catch (Throwable t) {
+            throw new InvocationFailure(t);
+        }
+    }
+
+    private static final class InvocationFailure extends RuntimeException {
+        InvocationFailure(Throwable cause) {
+            super(cause);
         }
     }
 
