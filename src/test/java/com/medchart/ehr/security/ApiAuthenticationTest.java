@@ -82,6 +82,8 @@ class ApiAuthenticationTest {
         doThrow(new UsernameNotFoundException("unknown")).when(userDetailsService).loadUserByUsername(anyString());
         stubUser("nurse", User.Role.PROVIDER);
         stubUser("admin", User.Role.ADMIN);
+        stubUser("disabled-admin", User.Role.ADMIN, false, true);
+        stubUser("locked-admin", User.Role.ADMIN, true, false);
         when(patientService.getPatientById(1L)).thenReturn(new PatientDTO());
         when(reportGenerator.generateDailyReport()).thenReturn("mrn\n".getBytes());
     }
@@ -131,6 +133,18 @@ class ApiAuthenticationTest {
     }
 
     @Test
+    void tokenForDisabledOrLockedAccountReturns401() throws Exception {
+        for (String username : new String[] {"disabled-admin", "locked-admin"}) {
+            mockMvc.perform(get("/v1/patients/1").header(HttpHeaders.AUTHORIZATION, bearer(username)))
+                    .andExpect(status().isUnauthorized());
+            mockMvc.perform(get("/v1/export/reports/daily").header(HttpHeaders.AUTHORIZATION, bearer(username)))
+                    .andExpect(status().isUnauthorized());
+        }
+        verify(patientService, never()).getPatientById(1L);
+        verify(reportGenerator, never()).generateDailyReport();
+    }
+
+    @Test
     void phiExportWithoutTokenReturns401() throws Exception {
         mockMvc.perform(get("/v1/export/reports/daily"))
                 .andExpect(status().isUnauthorized());
@@ -171,6 +185,10 @@ class ApiAuthenticationTest {
     }
 
     private void stubUser(String username, User.Role role) {
+        stubUser(username, role, true, true);
+    }
+
+    private void stubUser(String username, User.Role role, boolean enabled, boolean accountNonLocked) {
         User user = User.builder()
                 .id(1L)
                 .username(username)
@@ -179,9 +197,9 @@ class ApiAuthenticationTest {
                 .firstName(username)
                 .lastName("Test")
                 .roles(Set.of(role))
-                .enabled(true)
+                .enabled(enabled)
                 .accountNonExpired(true)
-                .accountNonLocked(true)
+                .accountNonLocked(accountNonLocked)
                 .credentialsNonExpired(true)
                 .build();
         doReturn(user).when(userDetailsService).loadUserByUsername(username);

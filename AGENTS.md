@@ -61,6 +61,12 @@ See: `service/InsuranceGateway.java`
 - Timeout handling
 - Structured responses
 
+## Authentication
+
+- Every route requires a JWT except login, health, `/error` and CORS preflight (`config/SecurityConfig.java`). Add `@PreAuthorize` role checks on new export, interface and write endpoints.
+- `JwtAuthenticationFilter` must re-check account status (enabled/locked/expired) on every request so disabled users lose access before their token expires.
+- `JWT_SECRET` (at least 64 bytes) is required; the app refuses to start without it.
+
 ## Chronic Medication Module
 
 The chronic medication module is partially implemented. Key components:
