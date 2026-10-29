@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import javax.validation.Valid;
 
@@ -43,6 +44,7 @@ public class PatientController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('PROVIDER', 'STAFF', 'ADMIN')")
     @Operation(summary = "Create new patient")
     public ResponseEntity<PatientDTO> createPatient(@Valid @RequestBody PatientDTO patientDTO) {
         PatientDTO created = patientService.createPatient(patientDTO);
@@ -50,6 +52,7 @@ public class PatientController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('PROVIDER', 'STAFF', 'ADMIN')")
     @Operation(summary = "Update patient")
     public ResponseEntity<PatientDTO> updatePatient(
             @PathVariable Long id,

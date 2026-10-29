@@ -4,6 +4,7 @@ import com.medchart.ehr.domain.provider.Provider;
 import com.medchart.ehr.service.ProviderService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 
@@ -65,11 +66,13 @@ public class ProviderController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public Provider create(@RequestBody Provider provider) {
         return providerService.save(provider);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Provider> update(@PathVariable Long id, @RequestBody Provider provider) {
         return providerService.findById(id)
                 .map(existing -> {
@@ -80,6 +83,7 @@ public class ProviderController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deactivate(@PathVariable Long id) {
         providerService.deactivate(id);
         return ResponseEntity.noContent().build();
