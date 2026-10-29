@@ -80,7 +80,7 @@ src/main/java/com/medchart/ehr/
 
 ## Security
 
-JWT-based authentication. CORS allows `localhost:5173`, `localhost:5178`, `localhost:3000`.
+JWT-based authentication. Every endpoint except `POST /api/api/auth/login` and `/api/actuator/health` requires an `Authorization: Bearer <token>` header (401 otherwise). Exports (`/v1/export/**`), interfaces (`/interfaces/**`), provider writes and user registration require `ADMIN`. Set `JWT_SECRET` to a random value of at least 64 bytes; the API refuses to start without it. CORS allows `localhost:5173`, `localhost:5178`, `localhost:3000`.
 
 ## Useful Commands
 

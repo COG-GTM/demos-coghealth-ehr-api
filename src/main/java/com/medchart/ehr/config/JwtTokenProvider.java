@@ -7,7 +7,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,8 +24,19 @@ public class JwtTokenProvider {
     @Value("${medchart.security.jwt.expiration}")
     private int jwtExpirationInMs;
 
+    private static final SignatureAlgorithm SIGNATURE_ALGORITHM = SignatureAlgorithm.HS512;
+    private static final int MIN_SECRET_BYTES = 64;
+
+    @PostConstruct
+    void validateSecret() {
+        if (jwtSecret == null || jwtSecret.getBytes(StandardCharsets.UTF_8).length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException(
+                "medchart.security.jwt.secret (JWT_SECRET) must be set to at least " + MIN_SECRET_BYTES + " bytes");
+        }
+    }
+
     private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 
     public String generateToken(Authentication authentication) {
@@ -49,7 +62,7 @@ public class JwtTokenProvider {
                 .setSubject(subject)
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
-                .signWith(getSigningKey(), SignatureAlgorithm.HS512)
+                .signWith(getSigningKey(), SIGNATURE_ALGORITHM)
                 .compact();
     }
 
@@ -67,11 +80,14 @@ public class JwtTokenProvider {
     }
 
     private Claims getAllClaimsFromToken(String token) {
-        return Jwts.parserBuilder()
+        Jws<Claims> jws = Jwts.parserBuilder()
                 .setSigningKey(getSigningKey())
                 .build()
-                .parseClaimsJws(token)
-                .getBody();
+                .parseClaimsJws(token);
+        if (!SIGNATURE_ALGORITHM.getValue().equals(jws.getHeader().getAlgorithm())) {
+            throw new UnsupportedJwtException("Unexpected JWT signature algorithm");
+        }
+        return jws.getBody();
     }
 
     public Boolean validateToken(String token, UserDetails userDetails) {
