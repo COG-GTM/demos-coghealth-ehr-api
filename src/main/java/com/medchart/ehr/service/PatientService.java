@@ -93,7 +93,7 @@ public class PatientService {
         }
 
         Patient saved = patientRepository.save(patient);
-        log.info("Created patient with MRN: {}", saved.getMrn());
+        log.info("Created patient id {}", saved.getId());
         return patientMapper.toDto(saved);
     }
 
@@ -105,7 +105,7 @@ public class PatientService {
 
         patientMapper.updateEntityFromDto(patientDTO, existing);
         Patient saved = patientRepository.save(existing);
-        log.info("Updated patient with MRN: {}", saved.getMrn());
+        log.info("Updated patient id {}", saved.getId());
         return patientMapper.toDto(saved);
     }
 

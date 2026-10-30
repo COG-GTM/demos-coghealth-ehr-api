@@ -91,7 +91,8 @@ public class EncounterService {
         encounter.setStatus(EncounterStatus.SCHEDULED);
         
         Encounter saved = encounterRepository.save(encounter);
-        log.info("Created encounter {} for patient {}", encNumber, encounter.getPatient().getMrn());
+        log.info("Created encounter {} for patient id {}", encNumber,
+                saved.getPatient() != null ? saved.getPatient().getId() : null);
         return saved;
     }
 
