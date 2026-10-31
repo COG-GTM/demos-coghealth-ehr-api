@@ -5,8 +5,10 @@ import com.medchart.ehr.repository.UserRepository;
 import com.medchart.ehr.config.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -15,8 +17,8 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -31,12 +33,18 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
-        Authentication authentication = authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(
-                loginRequest.getUsername(),
-                loginRequest.getPassword()
-            )
-        );
+        Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                    loginRequest.getUsername(),
+                    loginRequest.getPassword()
+                )
+            );
+        } catch (DisabledException ex) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body("Account is pending administrator approval");
+        }
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = tokenProvider.generateToken(authentication);
@@ -60,15 +68,16 @@ public class AuthController {
                 .body("Email is already in use!");
         }
 
-        // Create user's account
+        // Self-registered accounts get no role and stay disabled until an ADMIN approves them
+        // via UserAdminController.
         User user = User.builder()
             .username(signUpRequest.getUsername())
             .email(signUpRequest.getEmail())
             .firstName(signUpRequest.getFirstName())
             .lastName(signUpRequest.getLastName())
             .password(passwordEncoder.encode(signUpRequest.getPassword()))
-            .roles(Set.of(User.Role.PROVIDER)) // Default role
-            .enabled(true)
+            .roles(new HashSet<>())
+            .enabled(false)
             .accountNonExpired(true)
             .accountNonLocked(true)
             .credentialsNonExpired(true)
@@ -76,9 +85,10 @@ public class AuthController {
 
         userRepository.save(user);
 
-        log.info("Registered new user: {}", signUpRequest.getUsername());
-        
-        return ResponseEntity.ok("User registered successfully");
+        log.info("Registered new user pending approval: {}", signUpRequest.getUsername());
+
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+            .body("Registration received; an administrator must approve the account before sign-in");
     }
 
     public static class LoginRequest {
