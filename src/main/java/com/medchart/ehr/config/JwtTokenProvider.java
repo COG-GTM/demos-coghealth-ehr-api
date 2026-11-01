@@ -7,7 +7,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,8 +24,22 @@ public class JwtTokenProvider {
     @Value("${medchart.security.jwt.expiration}")
     private int jwtExpirationInMs;
 
+    // HS512 needs a key of at least 512 bits.
+    static final int MIN_SECRET_BYTES = 64;
+
+    private static final String LEGACY_DEFAULT_SECRET = "dev-secret-key-change-in-production";
+
+    @PostConstruct
+    void validateSecret() {
+        if (jwtSecret == null || jwtSecret.isBlank() || LEGACY_DEFAULT_SECRET.equals(jwtSecret)
+                || jwtSecret.getBytes(StandardCharsets.UTF_8).length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException("JWT_SECRET must be set to a random value of at least "
+                + MIN_SECRET_BYTES + " bytes (e.g. `openssl rand -base64 64`)");
+        }
+    }
+
     private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 
     public String generateToken(Authentication authentication) {

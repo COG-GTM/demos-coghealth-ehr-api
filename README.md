@@ -19,6 +19,7 @@ export PATH="$JAVA_HOME/bin:$PATH"
 export NEON_DB_URL="jdbc:postgresql://<neon-host>/neondb?sslmode=require"
 export NEON_DB_USERNAME="<username>"
 export NEON_DB_PASSWORD="<password>"
+export JWT_SECRET="$(openssl rand -base64 64 | tr -d '\n')"  # required; API refuses to start without a 64+ byte secret
 
 # Run with dev profile
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
