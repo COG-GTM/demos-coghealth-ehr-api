@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.7.18</version>
+        <version>3.3.13</version>
         <relativePath/>
     </parent>
 
@@ -18,15 +18,11 @@
     <description>Electronic Health Record System API for MedChart Health Systems</description>
 
     <properties>
-        <java.version>11</java.version>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
-        <lombok.version>1.18.36</lombok.version>
+        <java.version>21</java.version>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
-        <springdoc.version>1.7.0</springdoc.version>
+        <springdoc.version>2.6.0</springdoc.version>
         <hapi.version>2.3</hapi.version>
         <hapi.fhir.version>6.10.5</hapi.fhir.version>
-        <jackson-bom.version>2.15.4</jackson-bom.version>
         <surefire.excludedGroups>interface-contract</surefire.excludedGroups>
         <hr.export.date></hr.export.date>
     </properties>
@@ -86,6 +82,11 @@
         </dependency>
 
         <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
@@ -99,7 +100,7 @@
 
         <dependency>
             <groupId>org.springdoc</groupId>
-            <artifactId>springdoc-openapi-ui</artifactId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>${springdoc.version}</version>
         </dependency>
 
@@ -205,7 +206,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
                 <configuration>
                     <release>${java.version}</release>
                     <annotationProcessorPaths>
