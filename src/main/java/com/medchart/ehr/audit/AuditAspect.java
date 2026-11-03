@@ -63,11 +63,12 @@ public class AuditAspect {
     }
 
     private String getCurrentUserId() {
-        return "system";
+        return CurrentActor.username();
     }
 
     private String getCurrentUserName() {
-        return "System User";
+        String username = CurrentActor.username();
+        return CurrentActor.SYSTEM.equals(username) ? "System User" : username;
     }
 
     private String getClientIpAddress() {
