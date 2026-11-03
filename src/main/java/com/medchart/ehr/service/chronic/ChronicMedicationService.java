@@ -2,6 +2,7 @@ package com.medchart.ehr.service.chronic;
 
 import com.medchart.ehr.audit.AuditAccess;
 import com.medchart.ehr.audit.AuditAction;
+import com.medchart.ehr.audit.AuditPatientId;
 import com.medchart.ehr.domain.chronic.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,7 +39,7 @@ public class ChronicMedicationService {
      */
     @AuditAccess(action = AuditAction.CREATE, resourceType = "ChronicCondition", 
                  description = "Enroll patient in chronic disease program")
-    public ChronicCondition enrollPatient(Long patientId, ChronicConditionType conditionType,
+    public ChronicCondition enrollPatient(@AuditPatientId Long patientId, ChronicConditionType conditionType,
                                           String icd10Code, Long managingProviderId) {
         log.info("Enrolling patient {} in {} management program", patientId, conditionType);
         
@@ -57,7 +58,7 @@ public class ChronicMedicationService {
      */
     @AuditAccess(action = AuditAction.READ, resourceType = "ChronicCondition",
                  description = "View patient chronic conditions")
-    public List<ChronicCondition> getPatientConditions(Long patientId) {
+    public List<ChronicCondition> getPatientConditions(@AuditPatientId Long patientId) {
         log.info("Retrieving chronic conditions for patient {}", patientId);
         
         // TODO: Implement retrieval
@@ -75,7 +76,7 @@ public class ChronicMedicationService {
      */
     @AuditAccess(action = AuditAction.READ, resourceType = "CareGap",
                  description = "Identify care gaps")
-    public List<CareGap> identifyCareGaps(Long patientId, Long chronicConditionId) {
+    public List<CareGap> identifyCareGaps(@AuditPatientId Long patientId, Long chronicConditionId) {
         log.info("Identifying care gaps for patient {} condition {}", patientId, chronicConditionId);
         
         // TODO: Implement care gap analysis
