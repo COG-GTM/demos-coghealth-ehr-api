@@ -9,18 +9,20 @@ import com.medchart.ehr.repository.PatientRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
-import javax.persistence.EntityManager;
 import javax.persistence.EntityNotFoundException;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Query;
-import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @Slf4j
@@ -28,11 +30,20 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class PatientService {
 
+    private static final Map<String, String> SORTABLE_FIELDS = Map.of(
+            "lastname", "lastName",
+            "firstname", "firstName",
+            "mrn", "mrn",
+            "dateofbirth", "dateOfBirth",
+            "last_name", "lastName",
+            "first_name", "firstName",
+            "date_of_birth", "dateOfBirth");
+    private static final Pattern SORT_PATTERN = Pattern.compile(
+            "^\\s*([A-Za-z_]+)(?:\\s*[,\\s]\\s*(asc|desc))?\\s*$",
+            Pattern.CASE_INSENSITIVE);
+
     private final PatientRepository patientRepository;
     private final PatientMapper patientMapper;
-
-    @PersistenceContext
-    private EntityManager entityManager;
 
     @AuditAccess(action = AuditAction.READ, resourceType = "Patient", description = "View patient record")
     public PatientDTO getPatientById(Long id) {
@@ -51,30 +62,30 @@ public class PatientService {
     @AuditAccess(action = AuditAction.SEARCH, resourceType = "Patient", description = "Search patients")
     public Page<PatientDTO> searchPatients(String searchTerm, String sort, Pageable pageable) {
         if (sort == null || sort.isBlank()) {
-            return patientRepository.searchPatients(searchTerm, pageable)
+            Pageable unsortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+            return patientRepository.searchPatients(searchTerm, unsortedPageable)
                     .map(patientMapper::toDto);
         }
 
-        String where = "(LOWER(last_name) LIKE LOWER(?1) OR LOWER(first_name) LIKE LOWER(?1) OR mrn LIKE ?1)";
-        String term = "%" + searchTerm + "%";
+        Matcher matcher = SORT_PATTERN.matcher(sort);
+        if (!matcher.matches()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid sort parameter");
+        }
 
-        Query countQuery = entityManager.createNativeQuery(
-                "SELECT COUNT(*) FROM patients WHERE " + where);
-        countQuery.setParameter(1, term);
-        long total = ((Number) countQuery.getSingleResult()).longValue();
+        String property = SORTABLE_FIELDS.get(matcher.group(1).toLowerCase(Locale.ROOT));
+        if (property == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid sort parameter");
+        }
 
-        Query query = entityManager.createNativeQuery(
-                "SELECT * FROM patients WHERE " + where + " ORDER BY " + sort, Patient.class);
-        query.setParameter(1, term);
-        query.setFirstResult((int) pageable.getOffset());
-        query.setMaxResults(pageable.getPageSize());
-
-        @SuppressWarnings("unchecked")
-        List<Patient> patients = query.getResultList();
-        List<PatientDTO> content = patients.stream()
-                .map(patientMapper::toDto)
-                .collect(Collectors.toList());
-        return new PageImpl<>(content, pageable, total);
+        Sort.Direction direction = matcher.group(2) == null
+                ? Sort.Direction.ASC
+                : Sort.Direction.fromString(matcher.group(2));
+        Pageable sortedPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(direction, property));
+        return patientRepository.searchPatients(searchTerm, sortedPageable)
+                .map(patientMapper::toDto);
     }
 
     @Transactional
