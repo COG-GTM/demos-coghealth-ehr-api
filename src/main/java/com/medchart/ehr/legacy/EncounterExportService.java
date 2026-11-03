@@ -54,7 +54,7 @@ public class EncounterExportService {
 
     public byte[] exportPatientEncounterHistory(Long patientId) {
         Query patientQuery = entityManager.createNativeQuery(
-            "SELECT mrn, first_name, last_name, ssn, date_of_birth FROM patients WHERE id = ?1");
+            "SELECT mrn, first_name, last_name, date_of_birth FROM patients WHERE id = ?1");
         patientQuery.setParameter(1, patientId);
         Object[] patientData = (Object[]) patientQuery.getSingleResult();
         
@@ -68,8 +68,7 @@ public class EncounterExportService {
         export.append("Generated: ").append(LocalDateTime.now()).append("\n\n");
         export.append("Patient: ").append(patientData[1]).append(" ").append(patientData[2]).append("\n");
         export.append("MRN: ").append(patientData[0]).append("\n");
-        export.append("SSN: ").append(patientData[3]).append("\n");
-        export.append("DOB: ").append(patientData[4]).append("\n\n");
+        export.append("DOB: ").append(patientData[3]).append("\n\n");
         export.append("Encounters:\n");
         export.append("-".repeat(80)).append("\n");
         
