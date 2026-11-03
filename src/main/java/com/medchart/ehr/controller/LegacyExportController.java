@@ -7,12 +7,14 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @RestController
+@PreAuthorize("hasRole('ADMIN')")
 @RequestMapping("/v1/export")
 @RequiredArgsConstructor
 public class LegacyExportController {

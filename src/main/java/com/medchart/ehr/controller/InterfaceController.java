@@ -4,6 +4,7 @@ import com.medchart.ehr.interop.fhir.InterfaceContractCheck;
 import com.medchart.ehr.interop.fhir.InterfaceContractReport;
 import com.medchart.ehr.legacy.HrExportReader;
 import com.medchart.ehr.legacy.HrPtoSyncJob;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
+@PreAuthorize("hasRole('ADMIN')")
 @RequestMapping("/interfaces")
 public class InterfaceController {
 
