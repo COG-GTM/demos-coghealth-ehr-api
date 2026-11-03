@@ -120,6 +120,8 @@ All users have password: `demo123` (except admin: `admin123`)
 | `compliance.lee` | Compliance Officer | Audit logs, reports, read-only |
 | `admin` | System Admin | Full system access |
 
+These accounts exist only in the local Keycloak realm (`docker/keycloak/coghealth-realm.json`). The EHR API's own `users` table has no default administrator; create one with `BOOTSTRAP_ADMIN_*` (see README "Security").
+
 ## Role-Based Access Control (RBAC)
 
 ```

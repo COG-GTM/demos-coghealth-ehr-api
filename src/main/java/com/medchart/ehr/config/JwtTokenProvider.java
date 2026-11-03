@@ -1,5 +1,6 @@
 package com.medchart.ehr.config;
 
+import com.medchart.ehr.domain.auth.User;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -8,6 +9,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -76,7 +79,23 @@ public class JwtTokenProvider {
 
     public Boolean validateToken(String token, UserDetails userDetails) {
         final String username = getUsernameFromToken(token);
-        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+        return username.equals(userDetails.getUsername())
+                && userDetails.isEnabled()
+                && userDetails.isAccountNonLocked()
+                && !isTokenExpired(token)
+                && !issuedBeforeAccountCreated(token, userDetails);
+    }
+
+    // A token minted for an earlier account with the same username must not
+    // authenticate a newer account that reused it.
+    private boolean issuedBeforeAccountCreated(String token, UserDetails userDetails) {
+        if (!(userDetails instanceof User) || ((User) userDetails).getCreatedAt() == null) {
+            return false;
+        }
+        Date issuedAt = getClaimFromToken(token, Claims::getIssuedAt);
+        Date created = Date.from(((User) userDetails).getCreatedAt()
+                .truncatedTo(ChronoUnit.SECONDS).atZone(ZoneId.systemDefault()).toInstant());
+        return issuedAt == null || issuedAt.before(created);
     }
 
     private Boolean isTokenExpired(String token) {

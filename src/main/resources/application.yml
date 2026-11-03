@@ -57,6 +57,11 @@ medchart:
     jwt:
       secret: ${JWT_SECRET:dev-secret-key-change-in-production}
       expiration: 86400000
+  bootstrap:
+    admin:
+      username: ${BOOTSTRAP_ADMIN_USERNAME:}
+      password: ${BOOTSTRAP_ADMIN_PASSWORD:}
+      email: ${BOOTSTRAP_ADMIN_EMAIL:}
   audit:
     enabled: true
     async: true
