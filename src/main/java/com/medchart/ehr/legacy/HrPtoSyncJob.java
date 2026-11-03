@@ -1,5 +1,7 @@
 package com.medchart.ehr.legacy;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -41,6 +43,9 @@ public class HrPtoSyncJob implements CommandLineRunner {
     private static final String RECEIVING_FACILITY = "OPTIME";
     private static final DateTimeFormatter HL7_TS = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final DateTimeFormatter LOG_TS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final ObjectMapper JSON = new ObjectMapper();
+    private static final TypeReference<LinkedHashMap<String, Object>> RUN_TYPE =
+            new TypeReference<LinkedHashMap<String, Object>>() { };
 
     @Autowired
     private HrExportReader hrExportReader;
@@ -73,6 +78,7 @@ public class HrPtoSyncJob implements CommandLineRunner {
     }
 
     public Map<String, Object> runForDate(String exportDate) {
+        HrExportReader.validateExportDate(exportDate);
         LocalDateTime started = LocalDateTime.now();
         log.info("{} start exportDate={}", JOB_NAME, exportDate);
         List<HrPtoRecord> records = hrExportReader.read(exportDate);
@@ -265,23 +271,8 @@ public class HrPtoSyncJob implements CommandLineRunner {
         File dir = outDir();
         dir.mkdirs();
         File f = new File(dir, RUNS_FILE);
-        StringBuilder json = new StringBuilder("{");
-        boolean first = true;
-        for (Map.Entry<String, Object> e : result.entrySet()) {
-            if (!first) {
-                json.append(",");
-            }
-            first = false;
-            json.append("\"").append(e.getKey()).append("\":");
-            if (e.getValue() instanceof Number) {
-                json.append(e.getValue());
-            } else {
-                json.append("\"").append(e.getValue()).append("\"");
-            }
-        }
-        json.append("}");
         try (PrintWriter w = new PrintWriter(new FileWriter(f, true))) {
-            w.println(json);
+            w.println(JSON.writeValueAsString(result));
         } catch (IOException e) {
             log.error("Cannot append to run log " + f, e);
         }
@@ -323,25 +314,14 @@ public class HrPtoSyncJob implements CommandLineRunner {
         try (BufferedReader br = new BufferedReader(new FileReader(f))) {
             String line;
             while ((line = br.readLine()) != null) {
-                Map<String, Object> run = new LinkedHashMap<String, Object>();
-                String body = line.trim();
-                if (body.startsWith("{")) {
-                    body = body.substring(1, body.length() - 1);
+                if (line.trim().length() == 0) {
+                    continue;
                 }
-                for (String kv : body.split(",")) {
-                    String[] p = kv.split(":", 2);
-                    if (p.length < 2) {
-                        continue;
-                    }
-                    String k = p[0].replace("\"", "").trim();
-                    String v = p[1].trim();
-                    if (v.startsWith("\"")) {
-                        run.put(k, v.replace("\"", ""));
-                    } else {
-                        run.put(k, Integer.parseInt(v));
-                    }
+                try {
+                    out.add(JSON.readValue(line, RUN_TYPE));
+                } catch (IOException e) {
+                    log.warn("Skipping unreadable line in run log {}", f);
                 }
-                out.add(run);
             }
         } catch (IOException e) {
             log.error("Cannot read run log " + f, e);

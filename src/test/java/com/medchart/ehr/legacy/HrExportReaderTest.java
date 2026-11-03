@@ -1,11 +1,17 @@
 package com.medchart.ehr.legacy;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class HrExportReaderTest {
@@ -52,5 +58,40 @@ class HrExportReaderTest {
         HrPtoRecord whitfield = records.get(3);
         assertFalse(whitfield.hasPto());
         assertEquals("", whitfield.status);
+    }
+
+    @Test
+    void resolveExportDateRejectsTraversalThatCollapsesOntoRealExport() {
+        assertThrows(InvalidExportDateException.class,
+                () -> reader.resolveExportDate("2026,x/../workday_pto_export_20261008"));
+        assertThrows(InvalidExportDateException.class,
+                () -> reader.resolveExportDate("2026,x:y/../workday_pto_export_20261008"));
+    }
+
+    @Test
+    void resolveExportDateRejectsNonCalendarValues() {
+        for (String bad : Arrays.asList("2026-10-08", "202610081", "2026100", "20261332", "20260230",
+                "../20261008", "20261008/../x", "abcdefgh")) {
+            assertThrows(InvalidExportDateException.class, () -> reader.resolveExportDate(bad), bad);
+        }
+    }
+
+    @Test
+    void readRejectsInvalidExportDateBeforeOpeningFile() {
+        assertThrows(InvalidExportDateException.class,
+                () -> reader.read("2026,x:y/../workday_pto_export_20261008"));
+    }
+
+    @Test
+    void listExportDatesIgnoresFilesWithoutYyyyMmDdDate(@TempDir Path dir) throws IOException {
+        Files.write(dir.resolve("workday_pto_export_20261001.csv"), "h\n".getBytes());
+        Files.write(dir.resolve("workday_pto_export_2026,x.csv"), "h\n".getBytes());
+        Files.write(dir.resolve("workday_pto_export_backup.csv"), "h\n".getBytes());
+        System.setProperty(HrExportReader.DIR_PROPERTY, dir.toString());
+        try {
+            assertEquals(Arrays.asList("20261001"), reader.listExportDates());
+        } finally {
+            System.clearProperty(HrExportReader.DIR_PROPERTY);
+        }
     }
 }

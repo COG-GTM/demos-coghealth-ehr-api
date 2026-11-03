@@ -46,6 +46,7 @@ public class InterfaceContractCheck {
     }
 
     public InterfaceContractReport run(String exportDate) {
+        HrExportReader.validateExportDate(exportDate);
         List<HrPtoRecord> records = hrExportReader.read(exportDate);
         InterfaceContractReport report = new InterfaceContractReport();
         report.setJob("hr-pto-sync");

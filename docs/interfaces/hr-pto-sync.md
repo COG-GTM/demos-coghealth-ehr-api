@@ -53,6 +53,9 @@ Rows for an employee with no `or_block` produce no messages.
 | POST | `/api/interfaces/hr-pto-sync/run` | run result for one export date |
 | GET | `/api/interfaces/fhir/contract-report?exportDate=` | contract report (see below) as JSON |
 
+`exportDate` must be omitted, `latest`, or a real calendar date in `yyyyMMdd` form; anything else is rejected with
+400 before any file is opened or any log is written. `runs.log` is one Jackson-serialized JSON object per line.
+
 ## Interface contract check
 
 `com.medchart.ehr.interop.fhir.InterfaceContractCheck` converts one export to FHIR R4
