@@ -72,4 +72,18 @@ public class AuditEvent {
     @CreationTimestamp
     @Column(nullable = false)
     private LocalDateTime timestamp;
+
+    @PrePersist
+    @PreUpdate
+    void boundColumnLengths() {
+        userId = AuditFields.bounded(userId, 100);
+        userName = AuditFields.bounded(userName, 100);
+        patientMrn = AuditFields.bounded(patientMrn, 20);
+        resourceType = AuditFields.bounded(resourceType, 100);
+        description = AuditFields.bounded(description, 500);
+        ipAddress = AuditFields.bounded(ipAddress, 50);
+        userAgent = AuditFields.bounded(userAgent, 200);
+        sessionId = AuditFields.bounded(sessionId, 100);
+        errorMessage = AuditFields.bounded(errorMessage, 500);
+    }
 }
