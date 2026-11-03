@@ -20,6 +20,9 @@ export NEON_DB_URL="jdbc:postgresql://<neon-host>/neondb?sslmode=require"
 export NEON_DB_USERNAME="<username>"
 export NEON_DB_PASSWORD="<password>"
 
+# JWT signing key: required, at least 64 random bytes (the app refuses to start without it)
+export JWT_SECRET="$(openssl rand -base64 64 | tr -d '\n')"
+
 # Run with dev profile
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
@@ -31,6 +34,7 @@ API runs at http://localhost:8080/api
 If you prefer a local PostgreSQL instance, use the default profile with Docker infrastructure from [demos-coghealth-ehr-data](https://github.com/COG-GTM/demos-coghealth-ehr-data).
 
 ```bash
+export JWT_SECRET="$(openssl rand -base64 64 | tr -d '\n')"
 mvn spring-boot:run
 ```
 
@@ -80,7 +84,7 @@ src/main/java/com/medchart/ehr/
 
 ## Security
 
-JWT-based authentication. CORS allows `localhost:5173`, `localhost:5178`, `localhost:3000`.
+JWT-based authentication (HS512). `JWT_SECRET` has no default: startup fails if it is unset, shorter than 64 bytes, or low-entropy, and tokens signed with any other algorithm are rejected. Any environment that previously ran without `JWT_SECRET` used the old committed default and must set a fresh secret. CORS allows `localhost:5173`, `localhost:5178`, `localhost:3000`.
 
 ## Useful Commands
 

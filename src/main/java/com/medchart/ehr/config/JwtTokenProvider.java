@@ -7,7 +7,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -16,14 +18,54 @@ import java.util.function.Function;
 @Component
 public class JwtTokenProvider {
 
+    static final SignatureAlgorithm SIGNATURE_ALGORITHM = SignatureAlgorithm.HS512;
+    static final int MIN_SECRET_BYTES = 64;
+    static final int MIN_DISTINCT_BYTES = 16;
+
     @Value("${medchart.security.jwt.secret}")
     private String jwtSecret;
 
     @Value("${medchart.security.jwt.expiration}")
     private int jwtExpirationInMs;
 
-    private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(jwtSecret.getBytes());
+    private SecretKey signingKey;
+    private JwtParser parser;
+
+    @PostConstruct
+    void init() {
+        signingKey = Keys.hmacShaKeyFor(validatedSecret(jwtSecret));
+        parser = Jwts.parserBuilder().setSigningKey(signingKey).build();
+    }
+
+    static byte[] validatedSecret(String secret) {
+        if (secret == null || secret.trim().isEmpty()) {
+            throw new IllegalStateException(
+                    "medchart.security.jwt.secret is empty; set JWT_SECRET to at least "
+                            + MIN_SECRET_BYTES + " random bytes (e.g. openssl rand -base64 64)");
+        }
+        byte[] bytes = secret.getBytes(StandardCharsets.UTF_8);
+        if (bytes.length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException(
+                    "JWT_SECRET is " + bytes.length + " bytes; " + SIGNATURE_ALGORITHM.getValue()
+                            + " requires at least " + MIN_SECRET_BYTES + " random bytes (e.g. openssl rand -base64 64)");
+        }
+        if (distinctByteCount(bytes) < MIN_DISTINCT_BYTES) {
+            throw new IllegalStateException(
+                    "JWT_SECRET has too little entropy; generate it with e.g. openssl rand -base64 64");
+        }
+        return bytes;
+    }
+
+    private static int distinctByteCount(byte[] bytes) {
+        boolean[] seen = new boolean[256];
+        int distinct = 0;
+        for (byte b : bytes) {
+            if (!seen[b & 0xFF]) {
+                seen[b & 0xFF] = true;
+                distinct++;
+            }
+        }
+        return distinct;
     }
 
     public String generateToken(Authentication authentication) {
@@ -49,7 +91,7 @@ public class JwtTokenProvider {
                 .setSubject(subject)
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
-                .signWith(getSigningKey(), SignatureAlgorithm.HS512)
+                .signWith(signingKey, SIGNATURE_ALGORITHM)
                 .compact();
     }
 
@@ -67,11 +109,11 @@ public class JwtTokenProvider {
     }
 
     private Claims getAllClaimsFromToken(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
+        Jws<Claims> jws = parser.parseClaimsJws(token);
+        if (!SIGNATURE_ALGORITHM.getValue().equals(jws.getHeader().getAlgorithm())) {
+            throw new UnsupportedJwtException("Unexpected JWT signature algorithm: " + jws.getHeader().getAlgorithm());
+        }
+        return jws.getBody();
     }
 
     public Boolean validateToken(String token, UserDetails userDetails) {

@@ -1,6 +1,12 @@
 #!/bin/bash
 
 echo "=== CogHealth EHR API ==="
+if [ -z "$JWT_SECRET" ]; then
+  echo "JWT_SECRET not set; generating an ephemeral signing key for this run (tokens won't survive a restart)."
+  JWT_SECRET="$(openssl rand -base64 64 | tr -d '\n')"
+  export JWT_SECRET
+fi
+
 echo ""
 echo "Select database:"
 echo "  1) Local PostgreSQL (Docker) - default"
