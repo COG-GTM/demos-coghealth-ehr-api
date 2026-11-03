@@ -6,6 +6,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class HrExportReaderTest {
@@ -28,6 +29,20 @@ class HrExportReaderTest {
         assertEquals(reader.latestExportDate(), reader.resolveExportDate(""));
         assertEquals(reader.latestExportDate(), reader.resolveExportDate("latest"));
         assertEquals("20260930", reader.resolveExportDate(" 20260930 "));
+    }
+
+    @Test
+    void resolveExportDateRejectsNonDateValues() {
+        assertThrows(IllegalArgumentException.class, () -> reader.resolveExportDate("../../etc/20261008"));
+        assertThrows(IllegalArgumentException.class, () -> reader.resolveExportDate("2026-10-08"));
+        assertThrows(IllegalArgumentException.class, () -> reader.resolveExportDate("202610081"));
+    }
+
+    @Test
+    void requestedExportDateDoesNotTreatPlaceholdersAsLatest() {
+        assertEquals(reader.latestExportDate(), reader.resolveExportDate("${hr.pto.export.date}"));
+        assertEquals(reader.latestExportDate(), reader.resolveRequestedExportDate("latest"));
+        assertThrows(IllegalArgumentException.class, () -> reader.resolveRequestedExportDate("${missing}"));
     }
 
     @Test
