@@ -94,3 +94,5 @@ curl -w "Time: %{time_total}s\n" -s -o /dev/null "http://localhost:8080/api/v1/p
 # Connect to Neon directly
 PGPASSWORD=$NEON_DB_PASSWORD psql "postgresql://$NEON_DB_USERNAME@<neon-host>/neondb?sslmode=require"
 ```
+
+<!-- Test PR from Devin: harmless README comment, safe to close. -->
