@@ -18,11 +18,11 @@ Status: `covered` = asserted, production already correct; `defect-fixed` = test 
 | BR-SVC-06 | A patient cannot be created with an MRN that already exists. | `src/main/java/com/medchart/ehr/service/PatientService.java:91` | covered |
 | BR-SVC-07 | New patients without an MRN get a generated MRN; created patients are active. | `src/main/java/com/medchart/ehr/service/PatientService.java:91` | covered |
 | BR-SVC-08 | Updates apply DTO fields to the stored patient; updating an unknown patient is a not-found error. | `src/main/java/com/medchart/ehr/service/PatientService.java:111` | covered |
-| BR-SVC-09 | An appointment is scheduled only when insurance eligibility is verified; ineligible patients are rejected with the payer reason and copay is surfaced. | `src/main/java/com/medchart/ehr/service/AppointmentService.java:34` | covered |
-| BR-SVC-10 | Eligibility checks are cache-first; the external gateway is called only on a miss (AGENTS.md Insurance Eligibility Pattern). | `src/main/java/com/medchart/ehr/service/AppointmentService.java:74` | covered |
-| BR-SVC-11 | Cached eligibility expires after 24h (TTL); stale or undated entries are re-verified with the gateway. | `src/main/java/com/medchart/ehr/service/AppointmentService.java:28` | defect-fixed |
-| BR-SVC-12 | The patient SSN is never stored in the eligibility cache (AGENTS.md known gap #4). | `src/main/java/com/medchart/ehr/service/AppointmentService.java:91` | defect-fixed |
-| BR-SVC-13 | Only eligible gateway responses are cached; ineligible responses are not. | `src/main/java/com/medchart/ehr/service/AppointmentService.java:89` | covered |
+| BR-SVC-09 | An appointment is scheduled only when insurance eligibility is verified; ineligible patients are rejected with the payer reason and copay is surfaced. | `src/main/java/com/medchart/ehr/service/AppointmentService.java:35` | covered |
+| BR-SVC-10 | Eligibility checks are cache-first; the external gateway is called only on a miss (AGENTS.md Insurance Eligibility Pattern). | `src/main/java/com/medchart/ehr/service/AppointmentService.java:75` | covered |
+| BR-SVC-11 | Cached eligibility expires after 24h of elapsed time (Instant-based, DST-safe TTL); stale or undated entries are re-verified with the gateway. | `src/main/java/com/medchart/ehr/service/AppointmentService.java:29` | defect-fixed |
+| BR-SVC-12 | The patient SSN is never stored in the eligibility cache (AGENTS.md known gap #4). | `src/main/java/com/medchart/ehr/service/AppointmentService.java:92` | defect-fixed |
+| BR-SVC-13 | Only eligible gateway responses are cached; ineligible responses are not. | `src/main/java/com/medchart/ehr/service/AppointmentService.java:90` | covered |
 | BR-SVC-14 | The insurance gateway returns structured eligibility results, masks the SSN in logs, and degrades to a structured failure on timeout/interruption. | `src/main/java/com/medchart/ehr/service/InsuranceGateway.java:29` | covered |
 | BR-SVC-15 | Claims get a CLM- reference and start PENDING. | `src/main/java/com/medchart/ehr/service/InsuranceGateway.java:56` | covered |
 | BR-SVC-16 | Provider notifications are @Async, support EMAIL/SMS/IN_APP/ALL and report channel failures gracefully in the result instead of throwing. | `src/main/java/com/medchart/ehr/service/ProviderNotificationService.java:36` | covered |
@@ -110,16 +110,16 @@ Status: `covered` = asserted, production already correct; `defect-fixed` = test 
 
 | ID | Rule | Source | Status |
 |---|---|---|---|
-| BR-LEG-01 | Eligibility is cached per patient+payer with its cache time; re-caching replaces. | `src/main/java/com/medchart/ehr/legacy/InsuranceCache.java:16` | covered |
+| BR-LEG-01 | Eligibility is cached per patient+payer with its cache instant; re-caching replaces. | `src/main/java/com/medchart/ehr/legacy/InsuranceCache.java:16` | covered |
 | BR-LEG-02 | Clearing a patient's cache removes only that patient's entries (no MRN prefix collisions). | `src/main/java/com/medchart/ehr/legacy/InsuranceCache.java:44` | covered |
 | BR-LEG-03 | Legacy MRN/SSN lookups bind parameters and return null when not found (bypasses the audit layer - AGENTS.md gap #3). | `src/main/java/com/medchart/ehr/legacy/LegacyPatientLookup.java:21` | open-question |
 | BR-LEG-04 | Legacy name/free-text searches are case-insensitive contains matches with bound parameters and exclude SSN. | `src/main/java/com/medchart/ehr/legacy/LegacyPatientLookup.java:77` | covered |
 | BR-LEG-05 | Legacy demographics are returned keyed by field name for the requested id. | `src/main/java/com/medchart/ehr/legacy/LegacyPatientLookup.java:51` | covered |
-| BR-LEG-06 | The encounter summary report prints DOB and provider name in the labelled fields and never the SSN. | `src/main/java/com/medchart/ehr/legacy/ReportGenerator.java:91` | defect-fixed |
+| BR-LEG-06 | The encounter summary report prints DOB and provider name in the labelled fields and never the SSN. | `src/main/java/com/medchart/ehr/legacy/ReportGenerator.java:92` | defect-fixed |
 | BR-LEG-07 | Date-range encounter CSV covers the whole end day (exclusive next-day bound) and excludes SSN. | `src/main/java/com/medchart/ehr/legacy/EncounterExportService.java:24` | covered |
 | BR-LEG-08 | Encounter history exports show only the SSN's last four digits (XXX-XX-nnnn). | `src/main/java/com/medchart/ehr/legacy/EncounterExportService.java:87` | defect-fixed |
-| BR-LEG-09 | The daily report returns the active-patient roster and deletes the PHI temp file (AGENTS.md gap #5). | `src/main/java/com/medchart/ehr/legacy/ReportGenerator.java:152` | defect-fixed |
-| BR-LEG-10 | Department productivity binds department/provider ids as parameters (no SQL concatenation). | `src/main/java/com/medchart/ehr/legacy/ReportGenerator.java:118` | defect-fixed |
+| BR-LEG-09 | The daily report returns the active-patient roster and deletes only its own PHI temp file; every roster file name is unique (AGENTS.md gap #5). | `src/main/java/com/medchart/ehr/legacy/ReportGenerator.java:153` | defect-fixed |
+| BR-LEG-10 | Department productivity binds department/provider ids as parameters (no SQL concatenation). | `src/main/java/com/medchart/ehr/legacy/ReportGenerator.java:119` | defect-fixed |
 | BR-LEG-11 | HR PTO rows with an unknown cost center are rejected with an AE error and the run is PARTIAL. | `docs/interfaces/hr-pto-sync.md:41` | covered |
 | BR-LEG-12 | HR PTO rows without PTO or not Approved are skipped. | `src/main/java/com/medchart/ehr/legacy/HrPtoSyncJob.java:95` | covered |
 | BR-LEG-13 | One SIU^S15 is sent per PTO day that falls on one of the surgeon's OR block weekdays, with control id HRPTO<date><seq5>. | `src/main/java/com/medchart/ehr/legacy/HrPtoSyncJob.java:103` | covered |

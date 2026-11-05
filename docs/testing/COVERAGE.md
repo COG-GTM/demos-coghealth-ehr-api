@@ -1,6 +1,6 @@
 # Business-rule coverage
 
-Final numbers are from `mvn verify` on commit `b2aa6a6` (207 tests: 207 passed, 0 failed, 0 skipped). Commits after it only touch `docs/testing/`; `mvn verify` was re-run on the final PR head with identical results. Baseline was measured on `main` (`d123d9c`) with `mvn org.jacoco:jacoco-maven-plugin:0.8.11:prepare-agent test org.jacoco:jacoco-maven-plugin:0.8.11:report`.
+Final numbers are from `mvn verify` on commit `8bed7cf` (209 tests: 209 passed, 0 failed, 0 skipped). Commits after it only touch `docs/testing/`; `mvn verify` was re-run on the final PR head with identical results. Baseline was measured on `main` (`d123d9c`) with `mvn org.jacoco:jacoco-maven-plugin:0.8.11:prepare-agent test org.jacoco:jacoco-maven-plugin:0.8.11:report`.
 
 | Package | Baseline line | Baseline branch | Final line | Final branch |
 |---|---|---|---|---|
@@ -99,7 +99,7 @@ The `business-rule-coverage-gate` JaCoCo `check` execution in `pom.xml` fails `m
 | BR-AUD-13 | covered | `MedicationAuditLoggerTest#brAud13_eprescribe`<br>`MedicationAuditLoggerTest#brAud13_nullStatus` |
 | BR-AUD-14 | covered | `MedicationAuditLoggerTest#brAud14_pdmp`<br>`MedicationAuditLoggerTest#brAud14_medicationHistory` |
 | BR-AUD-15 | covered | `AuditServiceTest#brAud15_defaultsAndVocabulary` |
-| BR-LEG-01 | covered | `InsuranceCacheTest#brLeg01_cachePerPatientAndPayer`<br>`InsuranceCacheTest#brLeg01_recacheReplaces` |
+| BR-LEG-01 | covered | `InsuranceCacheTest#brLeg01_cachePerPatientAndPayer`<br>`InsuranceCacheTest#brLeg01_cacheTimeIsInstant`<br>`InsuranceCacheTest#brLeg01_recacheReplaces` |
 | BR-LEG-02 | covered | `InsuranceCacheTest#brLeg02_clearPatientOnly` |
 | BR-LEG-03 | open-question | `LegacyPatientLookupTest#brLeg03_mrnLookupBound`<br>`LegacyPatientLookupTest#brLeg03_notFoundReturnsNull`<br>`LegacyPatientLookupTest#brLeg03_ssnLookupBound` |
 | BR-LEG-04 | covered | `LegacyPatientLookupTest#brLeg04_containsSearchBound`<br>`LegacyPatientLookupTest#brLeg04_rawSearch` |
@@ -107,7 +107,7 @@ The `business-rule-coverage-gate` JaCoCo `check` execution in `pom.xml` fails `m
 | BR-LEG-06 | defect-fixed | `ReportGeneratorTest#brLeg06_encounterSummaryColumns` |
 | BR-LEG-07 | covered | `EncounterExportServiceTest#brLeg07_dateRangeCsv`<br>`EncounterExportServiceTest#brLeg07_emptyRange` |
 | BR-LEG-08 | defect-fixed | `EncounterExportServiceTest#brLeg08_historyMasksSsn`<br>`EncounterExportServiceTest#brLeg08_maskEdgeCases` |
-| BR-LEG-09 | defect-fixed | `ReportGeneratorTest#brLeg09_dailyReportCleansTempFile` |
+| BR-LEG-09 | defect-fixed | `ReportGeneratorTest#brLeg09_dailyReportCleansTempFile`<br>`ReportGeneratorTest#brLeg09_rosterFilesAreUnique` |
 | BR-LEG-10 | defect-fixed | `ReportGeneratorTest#brLeg10_departmentProductivity` |
 | BR-LEG-11 | covered | `HrPtoSyncJobRulesTest#brLeg11_unknownCostCenterRejected` |
 | BR-LEG-12 | covered | `HrPtoSyncJobRulesTest#brLeg12_skipNoPtoOrUnapproved` |
@@ -127,11 +127,11 @@ The `business-rule-coverage-gate` JaCoCo `check` execution in `pom.xml` fails `m
 | Rule | Symptom | Fix |
 |---|---|---|
 | BR-SVC-05 | searchPatients concatenated the caller's sort into native SQL (SQL injection; ORDER BY ssn possible); invalid sort also only failed after the count query ran. | Allow-list sort columns/directions in PatientService.toOrderBy and validate before any query. |
-| BR-SVC-11 | Cached eligibility never expired (AGENTS.md: 'cache result with TTL'). | AppointmentService.ELIGIBILITY_TTL = 24h; stale/undated entries are re-verified. |
+| BR-SVC-11 | Cached eligibility never expired (AGENTS.md: 'cache result with TTL'). | AppointmentService.ELIGIBILITY_TTL = 24h measured on Instant (InsuranceCache.cachedAt is now an Instant, so DST changes do not stretch the TTL); stale/undated entries are re-verified. |
 | BR-SVC-12 | AppointmentService cached the patient SSN in InsuranceCache (AGENTS.md gap #4). | Pass null for SSN when caching eligibility. |
 | BR-LEG-08 | Encounter history export printed the full SSN. | EncounterExportService.maskSsn -> XXX-XX-<last4>. |
 | BR-LEG-10 | Department productivity report concatenated department names into SQL. | Bind :department as a parameter. |
-| BR-LEG-09 | generateDailyReport left the PHI roster temp file on disk (AGENTS.md gap #5). | Delete the temp file in a finally block. |
+| BR-LEG-09 | generateDailyReport left the PHI roster temp file on disk (AGENTS.md gap #5). | Delete the temp file in a finally block; roster file names get a UUID suffix so same-second requests never share (or delete) a file. |
 | BR-LEG-06 | Encounter summary printed SSN under 'DOB:' and DOB/first-name under 'Provider:' (column index off by one). | Use row[9] for DOB and row[10]/row[11] for provider. |
 | BR-FHIR-13 | Duplicate practitioner check ignored the same NPI under different names/HR ids. | Also group records by trimmed NPI in InterfaceContractCheck. |
 | BR-FHIR-03 | Slot instants used a hard-coded -04:00 offset, wrong for EST dates (Nov-Mar). | Convert with ZoneId America/New_York per date. |

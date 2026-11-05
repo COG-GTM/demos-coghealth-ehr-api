@@ -1,7 +1,7 @@
 {
   "repo": "COG-GTM/demos-coghealth-ehr-api",
   "pr_url": "https://github.com/COG-GTM/demos-coghealth-ehr-api/pull/210",
-  "head_sha": "b2aa6a6",
+  "head_sha": "8bed7cf",
   "coverage_command": "JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 mvn -B verify",
   "modules": [
     {
@@ -270,7 +270,7 @@
       "id": "BR-SVC-09",
       "module": "service",
       "description": "An appointment is scheduled only when insurance eligibility is verified; ineligible patients are rejected with the payer reason and copay is surfaced.",
-      "source": "src/main/java/com/medchart/ehr/service/AppointmentService.java:34",
+      "source": "src/main/java/com/medchart/ehr/service/AppointmentService.java:35",
       "tests": [
         "AppointmentServiceTest#brSvc09_schedulingIsAudited",
         "AppointmentServiceTest#brSvc09_eligiblePatientScheduled",
@@ -283,7 +283,7 @@
       "id": "BR-SVC-10",
       "module": "service",
       "description": "Eligibility checks are cache-first; the external gateway is called only on a miss (AGENTS.md Insurance Eligibility Pattern).",
-      "source": "src/main/java/com/medchart/ehr/service/AppointmentService.java:74",
+      "source": "src/main/java/com/medchart/ehr/service/AppointmentService.java:75",
       "tests": [
         "AppointmentServiceTest#brSvc10_freshCacheHitSkipsGateway",
         "AppointmentServiceTest#brSvc10_cacheMissCallsGatewayAndCaches",
@@ -294,8 +294,8 @@
     {
       "id": "BR-SVC-11",
       "module": "service",
-      "description": "Cached eligibility expires after 24h (TTL); stale or undated entries are re-verified with the gateway.",
-      "source": "src/main/java/com/medchart/ehr/service/AppointmentService.java:28",
+      "description": "Cached eligibility expires after 24h of elapsed time (Instant-based, DST-safe TTL); stale or undated entries are re-verified with the gateway.",
+      "source": "src/main/java/com/medchart/ehr/service/AppointmentService.java:29",
       "tests": [
         "AppointmentServiceTest#brSvc11_staleCacheReverified",
         "AppointmentServiceTest#brSvc11_cacheJustInsideTtlServed",
@@ -307,7 +307,7 @@
       "id": "BR-SVC-12",
       "module": "service",
       "description": "The patient SSN is never stored in the eligibility cache (AGENTS.md known gap #4).",
-      "source": "src/main/java/com/medchart/ehr/service/AppointmentService.java:91",
+      "source": "src/main/java/com/medchart/ehr/service/AppointmentService.java:92",
       "tests": [
         "AppointmentServiceTest#brSvc12_ssnNeverCached"
       ],
@@ -317,7 +317,7 @@
       "id": "BR-SVC-13",
       "module": "service",
       "description": "Only eligible gateway responses are cached; ineligible responses are not.",
-      "source": "src/main/java/com/medchart/ehr/service/AppointmentService.java:89",
+      "source": "src/main/java/com/medchart/ehr/service/AppointmentService.java:90",
       "tests": [
         "AppointmentServiceTest#brSvc13_ineligibleNotCached",
         "AppointmentServiceTest#brSvc13_eligibleWithoutAmounts"
@@ -1000,10 +1000,11 @@
     {
       "id": "BR-LEG-01",
       "module": "legacy",
-      "description": "Eligibility is cached per patient+payer with its cache time; re-caching replaces.",
+      "description": "Eligibility is cached per patient+payer with its cache instant; re-caching replaces.",
       "source": "src/main/java/com/medchart/ehr/legacy/InsuranceCache.java:16",
       "tests": [
         "InsuranceCacheTest#brLeg01_cachePerPatientAndPayer",
+        "InsuranceCacheTest#brLeg01_cacheTimeIsInstant",
         "InsuranceCacheTest#brLeg01_recacheReplaces"
       ],
       "status": "covered"
@@ -1055,7 +1056,7 @@
       "id": "BR-LEG-06",
       "module": "legacy",
       "description": "The encounter summary report prints DOB and provider name in the labelled fields and never the SSN.",
-      "source": "src/main/java/com/medchart/ehr/legacy/ReportGenerator.java:91",
+      "source": "src/main/java/com/medchart/ehr/legacy/ReportGenerator.java:92",
       "tests": [
         "ReportGeneratorTest#brLeg06_encounterSummaryColumns"
       ],
@@ -1086,10 +1087,11 @@
     {
       "id": "BR-LEG-09",
       "module": "legacy",
-      "description": "The daily report returns the active-patient roster and deletes the PHI temp file (AGENTS.md gap #5).",
-      "source": "src/main/java/com/medchart/ehr/legacy/ReportGenerator.java:152",
+      "description": "The daily report returns the active-patient roster and deletes only its own PHI temp file; every roster file name is unique (AGENTS.md gap #5).",
+      "source": "src/main/java/com/medchart/ehr/legacy/ReportGenerator.java:153",
       "tests": [
-        "ReportGeneratorTest#brLeg09_dailyReportCleansTempFile"
+        "ReportGeneratorTest#brLeg09_dailyReportCleansTempFile",
+        "ReportGeneratorTest#brLeg09_rosterFilesAreUnique"
       ],
       "status": "defect-fixed"
     },
@@ -1097,7 +1099,7 @@
       "id": "BR-LEG-10",
       "module": "legacy",
       "description": "Department productivity binds department/provider ids as parameters (no SQL concatenation).",
-      "source": "src/main/java/com/medchart/ehr/legacy/ReportGenerator.java:118",
+      "source": "src/main/java/com/medchart/ehr/legacy/ReportGenerator.java:119",
       "tests": [
         "ReportGeneratorTest#brLeg10_departmentProductivity"
       ],
@@ -1241,7 +1243,7 @@
     {
       "rule": "BR-SVC-11",
       "symptom": "Cached eligibility never expired (AGENTS.md: 'cache result with TTL').",
-      "fix": "AppointmentService.ELIGIBILITY_TTL = 24h; stale/undated entries are re-verified."
+      "fix": "AppointmentService.ELIGIBILITY_TTL = 24h measured on Instant (InsuranceCache.cachedAt is now an Instant, so DST changes do not stretch the TTL); stale/undated entries are re-verified."
     },
     {
       "rule": "BR-SVC-12",
@@ -1261,7 +1263,7 @@
     {
       "rule": "BR-LEG-09",
       "symptom": "generateDailyReport left the PHI roster temp file on disk (AGENTS.md gap #5).",
-      "fix": "Delete the temp file in a finally block."
+      "fix": "Delete the temp file in a finally block; roster file names get a UUID suffix so same-second requests never share (or delete) a file."
     },
     {
       "rule": "BR-LEG-06",
@@ -1284,9 +1286,9 @@
       "fix": "Map default to Gender.UNKNOWN."
     }
   ],
-  "tests_added": 198,
+  "tests_added": 200,
   "full_suite": {
-    "passed": 207,
+    "passed": 209,
     "failed": 0,
     "skipped": 0
   }
