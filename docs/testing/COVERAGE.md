@@ -1,6 +1,6 @@
 # Business-rule coverage
 
-Final numbers are from `mvn verify` on commit `b2aa6a6` (207 tests: 207 passed, 0 failed, 0 skipped). Baseline was measured on `main` (`d123d9c`) with `mvn org.jacoco:jacoco-maven-plugin:0.8.11:prepare-agent test org.jacoco:jacoco-maven-plugin:0.8.11:report`.
+Final numbers are from `mvn verify` on commit `b2aa6a6` (207 tests: 207 passed, 0 failed, 0 skipped). Commits after it only touch `docs/testing/`; `mvn verify` was re-run on the final PR head with identical results. Baseline was measured on `main` (`d123d9c`) with `mvn org.jacoco:jacoco-maven-plugin:0.8.11:prepare-agent test org.jacoco:jacoco-maven-plugin:0.8.11:report`.
 
 | Package | Baseline line | Baseline branch | Final line | Final branch |
 |---|---|---|---|---|

@@ -1,6 +1,6 @@
 {
   "repo": "COG-GTM/demos-coghealth-ehr-api",
-  "pr_url": "TBD",
+  "pr_url": "https://github.com/COG-GTM/demos-coghealth-ehr-api/pull/210",
   "head_sha": "b2aa6a6",
   "coverage_command": "JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 mvn -B verify",
   "modules": [
