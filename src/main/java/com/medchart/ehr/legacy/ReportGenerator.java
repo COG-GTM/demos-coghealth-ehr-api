@@ -88,8 +88,8 @@ public class ReportGenerator {
                 writer.println("  Date: " + row[2]);
                 writer.println("  Type: " + row[3] + " | Status: " + row[4]);
                 writer.println("  Patient: " + row[6] + " " + row[7] + " (MRN: " + row[5] + ")");
-                writer.println("  DOB: " + row[8]);
-                writer.println("  Provider: " + row[9] + " " + row[10]);
+                writer.println("  DOB: " + row[9]);
+                writer.println("  Provider: " + row[10] + " " + row[11]);
                 writer.println();
             }
         } catch (IOException e) {
