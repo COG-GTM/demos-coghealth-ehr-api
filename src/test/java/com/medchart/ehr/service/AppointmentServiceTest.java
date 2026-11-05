@@ -12,7 +12,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -52,7 +53,7 @@ class AppointmentServiceTest {
                 .build();
     }
 
-    private static InsuranceCache.CachedEligibility cached(LocalDateTime at) {
+    private static InsuranceCache.CachedEligibility cached(Instant at) {
         InsuranceCache.CachedEligibility c = new InsuranceCache.CachedEligibility();
         c.patientMrn = MRN;
         c.payerId = PAYER;
@@ -116,7 +117,7 @@ class AppointmentServiceTest {
     @Test
     @DisplayName("BR-SVC-10: a fresh cache entry is used and the payer gateway is not called")
     void brSvc10_freshCacheHitSkipsGateway() {
-        when(insuranceCache.getEligibility(MRN, PAYER)).thenReturn(cached(LocalDateTime.now().minusHours(1)));
+        when(insuranceCache.getEligibility(MRN, PAYER)).thenReturn(cached(Instant.now().minus(Duration.ofHours(1))));
 
         AppointmentService.EligibilityResult r = service.checkInsuranceEligibility(MRN, PAYER);
 
@@ -142,7 +143,7 @@ class AppointmentServiceTest {
     @Test
     @DisplayName("BR-SVC-10: cached copay/deductible may be absent and map to null amounts")
     void brSvc10_cachedNullAmounts() {
-        InsuranceCache.CachedEligibility c = cached(LocalDateTime.now());
+        InsuranceCache.CachedEligibility c = cached(Instant.now());
         c.copay = null;
         c.deductible = null;
         AppointmentService.EligibilityResult r = AppointmentService.EligibilityResult.fromCache(c);
@@ -154,7 +155,7 @@ class AppointmentServiceTest {
     @DisplayName("BR-SVC-11: cached eligibility older than the 24h TTL is re-verified with the payer")
     void brSvc11_staleCacheReverified() {
         when(insuranceCache.getEligibility(MRN, PAYER))
-                .thenReturn(cached(LocalDateTime.now().minus(AppointmentService.ELIGIBILITY_TTL).minusMinutes(1)));
+                .thenReturn(cached(Instant.now().minus(AppointmentService.ELIGIBILITY_TTL).minus(Duration.ofMinutes(1))));
         AppointmentService.EligibilityResult fresh = eligible("25.00");
         when(insuranceGateway.verifyEligibility(MRN, PAYER)).thenReturn(fresh);
 
@@ -167,7 +168,7 @@ class AppointmentServiceTest {
     void brSvc11_cacheJustInsideTtlServed() {
         assertEquals(24, AppointmentService.ELIGIBILITY_TTL.toHours());
         when(insuranceCache.getEligibility(MRN, PAYER))
-                .thenReturn(cached(LocalDateTime.now().minusHours(23).minusMinutes(59)));
+                .thenReturn(cached(Instant.now().minus(Duration.ofHours(23).plusMinutes(59))));
         service.checkInsuranceEligibility(MRN, PAYER);
         verifyNoInteractions(insuranceGateway);
     }

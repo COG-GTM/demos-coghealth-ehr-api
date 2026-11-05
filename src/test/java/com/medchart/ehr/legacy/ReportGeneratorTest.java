@@ -115,4 +115,22 @@ class ReportGeneratorTest {
             // best-effort cleanup of the report copy
         }
     }
+
+    @Test
+    @DisplayName("BR-LEG-09: each roster gets its own file, so a daily report never deletes a roster handed to another caller")
+    void brLeg09_rosterFilesAreUnique() throws Exception {
+        when(entityManager.createNativeQuery(argThat((String s) -> s != null && s.contains("WHERE p.active = true")))).thenReturn(query);
+        when(query.getResultList()).thenReturn(rows());
+
+        Path first = Path.of(generator.generatePatientRoster());
+        try {
+            Path second = Path.of(generator.generatePatientRoster());
+            Files.deleteIfExists(second);
+            assertFalse(first.equals(second));
+            generator.generateDailyReport();
+            assertTrue(Files.exists(first));
+        } finally {
+            Files.deleteIfExists(first);
+        }
+    }
 }

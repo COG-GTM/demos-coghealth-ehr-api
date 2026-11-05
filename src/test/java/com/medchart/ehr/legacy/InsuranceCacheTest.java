@@ -3,7 +3,7 @@ package com.medchart.ehr.legacy;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -18,7 +18,7 @@ class InsuranceCacheTest {
     @Test
     @DisplayName("BR-LEG-01: eligibility is cached per patient+payer with the time it was cached")
     void brLeg01_cachePerPatientAndPayer() {
-        LocalDateTime before = LocalDateTime.now();
+        Instant before = Instant.now();
         cache.cacheEligibility("MRN-1", null, "PAYER-A", "MEM-1", true, "Gold", "25.00", "500.00");
         cache.cacheEligibility("MRN-1", null, "PAYER-B", "MEM-2", false, "Silver", null, null);
 
@@ -36,6 +36,12 @@ class InsuranceCacheTest {
         assertFalse(cache.getEligibility("MRN-1", "PAYER-B").eligible);
         assertNull(cache.getEligibility("MRN-1", "PAYER-C"));
         assertEquals(2, cache.getCacheSize());
+    }
+
+    @Test
+    @DisplayName("BR-LEG-01: the cache time is an absolute instant, so TTL age is unaffected by DST transitions")
+    void brLeg01_cacheTimeIsInstant() throws Exception {
+        assertEquals(Instant.class, InsuranceCache.CachedEligibility.class.getField("cachedAt").getType());
     }
 
     @Test
