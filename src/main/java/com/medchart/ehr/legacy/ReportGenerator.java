@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @Slf4j
@@ -34,8 +35,8 @@ public class ReportGenerator {
         Query query = entityManager.createNativeQuery(sql);
         List<Object[]> results = query.getResultList();
         
-        String filename = "patient_roster_" + 
-            LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".csv";
+        String filename = "patient_roster_" +
+            LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + "_" + UUID.randomUUID() + ".csv";
         String filePath = TEMP_DIR + File.separator + filename;
         
         try (PrintWriter writer = new PrintWriter(new FileWriter(filePath))) {
@@ -88,8 +89,8 @@ public class ReportGenerator {
                 writer.println("  Date: " + row[2]);
                 writer.println("  Type: " + row[3] + " | Status: " + row[4]);
                 writer.println("  Patient: " + row[6] + " " + row[7] + " (MRN: " + row[5] + ")");
-                writer.println("  DOB: " + row[8]);
-                writer.println("  Provider: " + row[9] + " " + row[10]);
+                writer.println("  DOB: " + row[9]);
+                writer.println("  Provider: " + row[10] + " " + row[11]);
                 writer.println();
             }
         } catch (IOException e) {
@@ -115,10 +116,12 @@ public class ReportGenerator {
 
         for (String department : departments) {
             String sql = "SELECT pr.last_name, pr.id FROM providers pr "
-                    + "WHERE pr.active = true AND pr.department = '" + department + "' "
+                    + "WHERE pr.active = true AND pr.department = :department "
                     + "ORDER BY pr.last_name";
             @SuppressWarnings("unchecked")
-            List<Object[]> rows = entityManager.createNativeQuery(sql).getResultList();
+            List<Object[]> rows = entityManager.createNativeQuery(sql)
+                    .setParameter("department", department)
+                    .getResultList();
             report.append("Department: ").append(department).append(System.lineSeparator());
             for (Object[] row : rows) {
                 String providerName = String.valueOf(row[0]);
@@ -150,11 +153,16 @@ public class ReportGenerator {
     public byte[] generateDailyReport() {
         String tempFile = generatePatientRoster();
         try {
-            byte[] content = Files.readAllBytes(Path.of(tempFile));
-            return content;
+            return Files.readAllBytes(Path.of(tempFile));
         } catch (IOException e) {
             log.error("Failed to read temp file", e);
             throw new RuntimeException(e);
+        } finally {
+            try {
+                Files.deleteIfExists(Path.of(tempFile));
+            } catch (IOException e) {
+                log.error("Failed to delete PHI temp file {}", tempFile, e);
+            }
         }
     }
 }

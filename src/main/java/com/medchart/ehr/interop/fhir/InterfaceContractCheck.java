@@ -64,6 +64,11 @@ public class InterfaceContractCheck {
         for (HrPtoRecord r : records) {
             byKey.computeIfAbsent(practitionerKey(r), k -> new ArrayList<>()).add(r.employeeId);
         }
+        for (HrPtoRecord r : records) {
+            if (r.npi != null && !r.npi.trim().isEmpty()) {
+                byKey.computeIfAbsent("NPI " + r.npi.trim(), k -> new ArrayList<>()).add(r.employeeId);
+            }
+        }
         for (Map.Entry<String, List<String>> e : byKey.entrySet()) {
             if (e.getValue().size() > 1) {
                 report.getDuplicatePractitioners().put(e.getKey(), e.getValue());
@@ -82,8 +87,8 @@ public class InterfaceContractCheck {
     }
 
     /**
-     * Practitioners are matched by NPI when present, otherwise by normalized name, so that an HR record
-     * without NPI still collides with the NPI-bearing record for the same person.
+     * Normalized-name key. Records are additionally grouped by NPI in {@link #run(String)}, so a practitioner
+     * is a duplicate when the same NPI or the same normalized name appears under several HR employee ids.
      */
     static String practitionerKey(HrPtoRecord r) {
         return (r.lastName + " " + r.firstName).toUpperCase().replaceAll("[^A-Z ]", "").trim();

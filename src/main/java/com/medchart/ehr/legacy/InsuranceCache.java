@@ -3,7 +3,7 @@ package com.medchart.ehr.legacy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -26,7 +26,7 @@ public class InsuranceCache {
         cached.planName = planName;
         cached.copay = copay;
         cached.deductible = deductible;
-        cached.cachedAt = LocalDateTime.now();
+        cached.cachedAt = Instant.now();
         
         eligibilityCache.put(cacheKey, cached);
         log.debug("Cached eligibility for patient {} with payer {}", patientMrn, payerId);
@@ -63,6 +63,6 @@ public class InsuranceCache {
         public String planName;
         public String copay;
         public String deductible;
-        public LocalDateTime cachedAt;
+        public Instant cachedAt;
     }
 }

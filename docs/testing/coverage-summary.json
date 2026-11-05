@@ -1,0 +1,1295 @@
+{
+  "repo": "COG-GTM/demos-coghealth-ehr-api",
+  "pr_url": "https://github.com/COG-GTM/demos-coghealth-ehr-api/pull/210",
+  "head_sha": "8bed7cf",
+  "coverage_command": "JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 mvn -B verify",
+  "modules": [
+    {
+      "name": "com.medchart.ehr.service",
+      "baseline": {
+        "line": 0.0,
+        "branch": 0.0
+      },
+      "final": {
+        "line": 100.0,
+        "branch": 98.0
+      },
+      "rules": [
+        "BR-SVC-01",
+        "BR-SVC-02",
+        "BR-SVC-03",
+        "BR-SVC-04",
+        "BR-SVC-05",
+        "BR-SVC-06",
+        "BR-SVC-07",
+        "BR-SVC-08",
+        "BR-SVC-09",
+        "BR-SVC-10",
+        "BR-SVC-11",
+        "BR-SVC-12",
+        "BR-SVC-13",
+        "BR-SVC-14",
+        "BR-SVC-15",
+        "BR-SVC-16",
+        "BR-SVC-17",
+        "BR-SVC-18",
+        "BR-SVC-19",
+        "BR-SVC-20",
+        "BR-SVC-21",
+        "BR-SVC-22",
+        "BR-SVC-23"
+      ]
+    },
+    {
+      "name": "com.medchart.ehr.service.chronic",
+      "baseline": {
+        "line": 0.0,
+        "branch": 0.0
+      },
+      "final": {
+        "line": 100.0,
+        "branch": 100.0
+      },
+      "rules": [
+        "BR-CHR-01",
+        "BR-CHR-02",
+        "BR-CHR-03",
+        "BR-CHR-04",
+        "BR-CHR-05",
+        "BR-CHR-06",
+        "BR-CHR-07",
+        "BR-CHR-08",
+        "BR-CHR-09",
+        "BR-CHR-10"
+      ]
+    },
+    {
+      "name": "com.medchart.ehr.mapper",
+      "baseline": {
+        "line": 0.0,
+        "branch": 0.0
+      },
+      "final": {
+        "line": 99.7,
+        "branch": 97.4
+      },
+      "rules": [
+        "BR-MAP-01",
+        "BR-MAP-02",
+        "BR-MAP-03",
+        "BR-MAP-04",
+        "BR-MAP-05",
+        "BR-MAP-06",
+        "BR-MAP-07",
+        "BR-MAP-08",
+        "BR-MAP-09",
+        "BR-MAP-10",
+        "BR-MAP-11",
+        "BR-MAP-12",
+        "BR-MAP-13",
+        "BR-MAP-14"
+      ]
+    },
+    {
+      "name": "com.medchart.ehr.interop.fhir",
+      "baseline": {
+        "line": 0.0,
+        "branch": 0.0
+      },
+      "final": {
+        "line": 99.3,
+        "branch": 95.9
+      },
+      "rules": [
+        "BR-FHIR-01",
+        "BR-FHIR-02",
+        "BR-FHIR-03",
+        "BR-FHIR-04",
+        "BR-FHIR-05",
+        "BR-FHIR-06",
+        "BR-FHIR-07",
+        "BR-FHIR-08",
+        "BR-FHIR-09",
+        "BR-FHIR-10",
+        "BR-FHIR-11",
+        "BR-FHIR-12",
+        "BR-FHIR-13"
+      ]
+    },
+    {
+      "name": "com.medchart.ehr.audit",
+      "baseline": {
+        "line": 0.0,
+        "branch": 0.0
+      },
+      "final": {
+        "line": 100.0,
+        "branch": 95.8
+      },
+      "rules": [
+        "BR-AUD-01",
+        "BR-AUD-02",
+        "BR-AUD-03",
+        "BR-AUD-04",
+        "BR-AUD-05",
+        "BR-AUD-06",
+        "BR-AUD-07",
+        "BR-AUD-08",
+        "BR-AUD-09",
+        "BR-AUD-10",
+        "BR-AUD-11",
+        "BR-AUD-12",
+        "BR-AUD-13",
+        "BR-AUD-14",
+        "BR-AUD-15"
+      ]
+    },
+    {
+      "name": "com.medchart.ehr.legacy",
+      "baseline": {
+        "line": 27.1,
+        "branch": 32.6
+      },
+      "final": {
+        "line": 95.9,
+        "branch": 94.5
+      },
+      "rules": [
+        "BR-LEG-01",
+        "BR-LEG-02",
+        "BR-LEG-03",
+        "BR-LEG-04",
+        "BR-LEG-05",
+        "BR-LEG-06",
+        "BR-LEG-07",
+        "BR-LEG-08",
+        "BR-LEG-09",
+        "BR-LEG-10",
+        "BR-LEG-11",
+        "BR-LEG-12",
+        "BR-LEG-13",
+        "BR-LEG-14",
+        "BR-LEG-15",
+        "BR-LEG-16",
+        "BR-LEG-17",
+        "BR-LEG-18",
+        "BR-LEG-19",
+        "BR-LEG-20",
+        "BR-LEG-21",
+        "BR-LEG-22"
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "id": "BR-SVC-01",
+      "module": "service",
+      "description": "Every patient read/search/create/update is audited via @AuditAccess with the matching AuditAction (READ/SEARCH/CREATE/UPDATE).",
+      "source": "src/main/java/com/medchart/ehr/service/PatientService.java:45",
+      "tests": [
+        "PatientServiceTest#brSvc01_patientAccessMethodsAreAudited",
+        "PatientServiceTest#brSvc01_lookupReturnsMappedDto"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-SVC-02",
+      "module": "service",
+      "description": "Unknown patient ids/MRNs raise a not-found error that names only the id/MRN, never SSN or other PHI.",
+      "source": "src/main/java/com/medchart/ehr/service/PatientService.java:46",
+      "tests": [
+        "PatientServiceTest#brSvc02_notFoundMessagesDoNotContainSsn"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-SVC-03",
+      "module": "service",
+      "description": "SSN-based patient lookup is disabled for HIPAA and always throws UnsupportedOperationException.",
+      "source": "src/main/java/com/medchart/ehr/service/PatientService.java:126",
+      "tests": [
+        "PatientServiceTest#brSvc03_ssnLookupDisabled"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-SVC-04",
+      "module": "service",
+      "description": "Patient search without a sort delegates to the repository's case-insensitive name/MRN search with the caller's paging.",
+      "source": "src/main/java/com/medchart/ehr/service/PatientService.java:60",
+      "tests": [
+        "PatientServiceTest#brSvc04_searchWithoutSortDelegatesToRepository"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-SVC-05",
+      "module": "service",
+      "description": "Patient search sort accepts only allow-listed columns (lastName, firstName, mrn, dateOfBirth) and ASC/DESC; anything else is rejected before any SQL runs (no SQL injection).",
+      "source": "src/main/java/com/medchart/ehr/service/PatientService.java:132",
+      "tests": [
+        "PatientServiceTest#brSvc05_sortedSearchUsesWhitelistedColumn",
+        "PatientServiceTest#brSvc05_sortWhitelistAcceptsKnownForms",
+        "PatientServiceTest#brSvc05_sortInjectionRejected"
+      ],
+      "status": "defect-fixed"
+    },
+    {
+      "id": "BR-SVC-06",
+      "module": "service",
+      "description": "A patient cannot be created with an MRN that already exists.",
+      "source": "src/main/java/com/medchart/ehr/service/PatientService.java:91",
+      "tests": [
+        "PatientServiceTest#brSvc06_duplicateMrnRejected",
+        "PatientServiceTest#brSvc06_newMrnKept"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-SVC-07",
+      "module": "service",
+      "description": "New patients without an MRN get a generated MRN; created patients are active.",
+      "source": "src/main/java/com/medchart/ehr/service/PatientService.java:91",
+      "tests": [
+        "PatientServiceTest#brSvc07_mrnGeneratedWhenMissing"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-SVC-08",
+      "module": "service",
+      "description": "Updates apply DTO fields to the stored patient; updating an unknown patient is a not-found error.",
+      "source": "src/main/java/com/medchart/ehr/service/PatientService.java:111",
+      "tests": [
+        "PatientServiceTest#brSvc08_updateAppliesDto",
+        "PatientServiceTest#brSvc08_updateMissingPatientFails"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-SVC-09",
+      "module": "service",
+      "description": "An appointment is scheduled only when insurance eligibility is verified; ineligible patients are rejected with the payer reason and copay is surfaced.",
+      "source": "src/main/java/com/medchart/ehr/service/AppointmentService.java:35",
+      "tests": [
+        "AppointmentServiceTest#brSvc09_schedulingIsAudited",
+        "AppointmentServiceTest#brSvc09_eligiblePatientScheduled",
+        "AppointmentServiceTest#brSvc09_zeroAndMissingCopay",
+        "AppointmentServiceTest#brSvc09_ineligiblePatientRejected"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-SVC-10",
+      "module": "service",
+      "description": "Eligibility checks are cache-first; the external gateway is called only on a miss (AGENTS.md Insurance Eligibility Pattern).",
+      "source": "src/main/java/com/medchart/ehr/service/AppointmentService.java:75",
+      "tests": [
+        "AppointmentServiceTest#brSvc10_freshCacheHitSkipsGateway",
+        "AppointmentServiceTest#brSvc10_cacheMissCallsGatewayAndCaches",
+        "AppointmentServiceTest#brSvc10_cachedNullAmounts"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-SVC-11",
+      "module": "service",
+      "description": "Cached eligibility expires after 24h of elapsed time (Instant-based, DST-safe TTL); stale or undated entries are re-verified with the gateway.",
+      "source": "src/main/java/com/medchart/ehr/service/AppointmentService.java:29",
+      "tests": [
+        "AppointmentServiceTest#brSvc11_staleCacheReverified",
+        "AppointmentServiceTest#brSvc11_cacheJustInsideTtlServed",
+        "AppointmentServiceTest#brSvc11_missingTimestampIsStale"
+      ],
+      "status": "defect-fixed"
+    },
+    {
+      "id": "BR-SVC-12",
+      "module": "service",
+      "description": "The patient SSN is never stored in the eligibility cache (AGENTS.md known gap #4).",
+      "source": "src/main/java/com/medchart/ehr/service/AppointmentService.java:92",
+      "tests": [
+        "AppointmentServiceTest#brSvc12_ssnNeverCached"
+      ],
+      "status": "defect-fixed"
+    },
+    {
+      "id": "BR-SVC-13",
+      "module": "service",
+      "description": "Only eligible gateway responses are cached; ineligible responses are not.",
+      "source": "src/main/java/com/medchart/ehr/service/AppointmentService.java:90",
+      "tests": [
+        "AppointmentServiceTest#brSvc13_ineligibleNotCached",
+        "AppointmentServiceTest#brSvc13_eligibleWithoutAmounts"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-SVC-14",
+      "module": "service",
+      "description": "The insurance gateway returns structured eligibility results, masks the SSN in logs, and degrades to a structured failure on timeout/interruption.",
+      "source": "src/main/java/com/medchart/ehr/service/InsuranceGateway.java:29",
+      "tests": [
+        "InsuranceGatewayTest#brSvc14_structuredEligibilityWithMaskedSsn",
+        "InsuranceGatewayTest#brSvc14_shortIdentifierMasked",
+        "InsuranceGatewayTest#brSvc14_interruptHandled"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-SVC-15",
+      "module": "service",
+      "description": "Claims get a CLM- reference and start PENDING.",
+      "source": "src/main/java/com/medchart/ehr/service/InsuranceGateway.java:56",
+      "tests": [
+        "InsuranceGatewayTest#brSvc15_claimLifecycle"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-SVC-16",
+      "module": "service",
+      "description": "Provider notifications are @Async, support EMAIL/SMS/IN_APP/ALL and report channel failures gracefully in the result instead of throwing.",
+      "source": "src/main/java/com/medchart/ehr/service/ProviderNotificationService.java:36",
+      "tests": [
+        "ProviderNotificationServiceTest#brSvc16_allChannelsSucceed",
+        "ProviderNotificationServiceTest#brSvc16_failureReported",
+        "ProviderNotificationServiceTest#brSvc16_async"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-SVC-17",
+      "module": "service",
+      "description": "Critical alerts are audited (@AuditAccess); critical-alert escalation and care-team fan-out are documented stubs.",
+      "source": "src/main/java/com/medchart/ehr/service/ProviderNotificationService.java:87",
+      "tests": [
+        "ProviderNotificationServiceTest#brSvc17_criticalAlertAuditedStub",
+        "ProviderNotificationServiceTest#brSvc17_careTeamStub"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-SVC-18",
+      "module": "service",
+      "description": "New encounters get number ENC-<yyyy>-<seq> and status SCHEDULED.",
+      "source": "src/main/java/com/medchart/ehr/service/EncounterService.java:88",
+      "tests": [
+        "EncounterServiceTest#brSvc18_createAssignsNumberAndStatus"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-SVC-19",
+      "module": "service",
+      "description": "Encounter lifecycle: check-in -> IN_PROGRESS start -> COMPLETED (with notes), cancel, no-show; unknown ids are no-ops.",
+      "source": "src/main/java/com/medchart/ehr/service/EncounterService.java:103",
+      "tests": [
+        "EncounterServiceTest#brSvc19_checkIn",
+        "EncounterServiceTest#brSvc19_start",
+        "EncounterServiceTest#brSvc19_cancel",
+        "EncounterServiceTest#brSvc19_noShow",
+        "EncounterServiceTest#brSvc19_completeNotes",
+        "EncounterServiceTest#brSvc19_unknownEncounterNoOp"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-SVC-20",
+      "module": "service",
+      "description": "Provider schedules cover the whole day and date ranges include the end date (exclusive next-day bound).",
+      "source": "src/main/java/com/medchart/ehr/service/EncounterService.java:72",
+      "tests": [
+        "EncounterServiceTest#brSvc20_scheduleDayWindow",
+        "EncounterServiceTest#brSvc20_dateRangeInclusiveEnd"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-SVC-21",
+      "module": "service",
+      "description": "Provider deactivation is a soft delete (active=false); provider search binds the term as a parameter.",
+      "source": "src/main/java/com/medchart/ehr/service/ProviderService.java:76",
+      "tests": [
+        "ProviderServiceTest#brSvc21_deactivateSoftDeletes",
+        "ProviderServiceTest#brSvc21_deactivateUnknown",
+        "ProviderServiceTest#brSvc21_searchBindsParameter"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-SVC-22",
+      "module": "service",
+      "description": "Login loads the user by username; unknown users raise UsernameNotFoundException.",
+      "source": "src/main/java/com/medchart/ehr/service/CustomUserDetailsService.java:22",
+      "tests": [
+        "CustomUserDetailsServiceTest#brSvc22_knownUserLoaded",
+        "CustomUserDetailsServiceTest#brSvc22_unknownUserRejected"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-SVC-23",
+      "module": "service",
+      "description": "Read-only encounter/provider lookups delegate to the repositories; providers see only their own encounters.",
+      "source": "src/main/java/com/medchart/ehr/service/EncounterService.java:45",
+      "tests": [
+        "EncounterServiceTest#brSvc23_encounterDelegation",
+        "EncounterServiceTest#brSvc23_providerAccessMissing",
+        "ProviderServiceTest#brSvc23_providerDelegation"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-CHR-01",
+      "module": "service.chronic",
+      "description": "PDC for an empty or reversed measurement period is 0.",
+      "source": "src/main/java/com/medchart/ehr/service/chronic/MedicationAdherenceTracker.java:41",
+      "tests": [
+        "MedicationAdherenceTrackerTest#brChr01_pdcZeroForEmptyPeriod",
+        "MedicationAdherenceTrackerTest#brChr01_pdcZeroForReversedPeriod"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-CHR-02",
+      "module": "service.chronic",
+      "description": "PDC for a real period is not implemented (stub throws); thresholds >=80% adherent, 50-79% partial, <50% non-adherent are documented only.",
+      "source": "src/main/java/com/medchart/ehr/service/chronic/MedicationAdherenceTracker.java:19",
+      "tests": [
+        "MedicationAdherenceTrackerTest#brChr02_pdcPositivePeriodIsStub"
+      ],
+      "status": "open-question"
+    },
+    {
+      "id": "BR-CHR-03",
+      "module": "service.chronic",
+      "description": "Chronic medication/adherence PHI access methods are annotated @AuditAccess.",
+      "source": "src/main/java/com/medchart/ehr/service/chronic/ChronicMedicationService.java:22",
+      "tests": [
+        "ChronicMedicationServiceTest#brChr03_chronicAccessAudited",
+        "MedicationAdherenceTrackerTest#brChr03_adherenceAccessAudited"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-CHR-04",
+      "module": "service.chronic",
+      "description": "Unimplemented chronic-care and pharmacy (NCPDP) operations throw UnsupportedOperationException instead of fabricating clinical data.",
+      "source": "src/main/java/com/medchart/ehr/service/chronic/PharmacyIntegrationService.java:46",
+      "tests": [
+        "ChronicMedicationServiceTest#brChr04_chronicStubsThrow",
+        "MedicationAdherenceTrackerTest#brChr04_adherenceStubsThrow",
+        "PharmacyIntegrationServiceTest#brChr04_pharmacyStubsThrow"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-CHR-05",
+      "module": "service.chronic",
+      "description": "Non-adherence alerts go IN_APP to the provider with PDC to one decimal and patient/medication metadata.",
+      "source": "src/main/java/com/medchart/ehr/service/chronic/MedicationNotificationService.java:43",
+      "tests": [
+        "MedicationNotificationServiceTest#brChr05_nonAdherenceAlert",
+        "MedicationNotificationServiceTest#brChr05_alertsAudited"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-CHR-06",
+      "module": "service.chronic",
+      "description": "Care-gap alerts notify the provider with the gap description.",
+      "source": "src/main/java/com/medchart/ehr/service/chronic/MedicationNotificationService.java:78",
+      "tests": [
+        "MedicationNotificationServiceTest#brChr06_careGapAlert"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-CHR-07",
+      "module": "service.chronic",
+      "description": "Critical lab values escalate as HIGH priority critical alerts.",
+      "source": "src/main/java/com/medchart/ehr/service/chronic/MedicationNotificationService.java:112",
+      "tests": [
+        "MedicationNotificationServiceTest#brChr07_criticalLabEscalates"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-CHR-08",
+      "module": "service.chronic",
+      "description": "The daily digest is skipped when there is nothing to report and otherwise emailed with category totals.",
+      "source": "src/main/java/com/medchart/ehr/service/chronic/MedicationNotificationService.java:149",
+      "tests": [
+        "MedicationNotificationServiceTest#brChr08_emptyDigestSkipped",
+        "MedicationNotificationServiceTest#brChr08_digestEmailedWithTotal",
+        "MedicationNotificationServiceTest#brChr08_eachCategoryTriggers"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-CHR-09",
+      "module": "service.chronic",
+      "description": "Refill reminders are a documented stub.",
+      "source": "src/main/java/com/medchart/ehr/service/chronic/MedicationNotificationService.java:131",
+      "tests": [
+        "MedicationNotificationServiceTest#brChr09_refillReminderStub"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-CHR-10",
+      "module": "service.chronic",
+      "description": "Chronic data carriers (AtRiskPatient, CareGap, PharmacyFillData) preserve the values they are built with.",
+      "source": "src/main/java/com/medchart/ehr/service/chronic/MedicationAdherenceTracker.java:123",
+      "tests": [
+        "ChronicMedicationServiceTest#brChr10_careGapCarrier",
+        "MedicationAdherenceTrackerTest#brChr10_atRiskPatientCarrier"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-MAP-01",
+      "module": "mapper",
+      "description": "Outbound FHIR resources are R4 Patient resources with the patient id as a string.",
+      "source": "src/main/java/com/medchart/ehr/mapper/FhirPatientMapper.java:43",
+      "tests": [
+        "FhirPatientMapperTest#brMap01_resourceTypeAndId"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-MAP-02",
+      "module": "mapper",
+      "description": "MRN uses system http://hospital.example.org/mrn (use=official); SSN uses http://hl7.org/fhir/sid/us-ssn (use=secondary), empty when unknown.",
+      "source": "src/main/java/com/medchart/ehr/mapper/FhirPatientMapper.java:30",
+      "tests": [
+        "FhirPatientMapperTest#brMap02_identifierSystems",
+        "FhirPatientMapperTest#brMap02_missingSsnIsEmpty"
+      ],
+      "status": "open-question"
+    },
+    {
+      "id": "BR-MAP-03",
+      "module": "mapper",
+      "description": "The FHIR name is official with family and given [first, middle?].",
+      "source": "src/main/java/com/medchart/ehr/mapper/FhirPatientMapper.java:158",
+      "tests": [
+        "FhirPatientMapperTest#brMap03_name"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-MAP-04",
+      "module": "mapper",
+      "description": "Gender maps to FHIR AdministrativeGender codes both ways (case-insensitive); unknown/unrecognised codes map to UNKNOWN and round-trip unchanged.",
+      "source": "src/main/java/com/medchart/ehr/mapper/FhirPatientMapper.java:182",
+      "tests": [
+        "FhirPatientMapperTest#brMap04_genderOutbound",
+        "FhirPatientMapperTest#brMap04_nullGender",
+        "FhirPatientMapperTest#brMap04_genderInbound",
+        "FhirPatientMapperTest#brMap04_genderRoundTrip"
+      ],
+      "status": "defect-fixed"
+    },
+    {
+      "id": "BR-MAP-05",
+      "module": "mapper",
+      "description": "birthDate is ISO yyyy-MM-dd and omitted when unknown.",
+      "source": "src/main/java/com/medchart/ehr/mapper/FhirPatientMapper.java:29",
+      "tests": [
+        "FhirPatientMapperTest#brMap05_birthDate"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-MAP-06",
+      "module": "mapper",
+      "description": "Telecom contains home phone, mobile phone and email, only when present.",
+      "source": "src/main/java/com/medchart/ehr/mapper/FhirPatientMapper.java:191",
+      "tests": [
+        "FhirPatientMapperTest#brMap06_telecom"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-MAP-07",
+      "module": "mapper",
+      "description": "Home address maps street lines, city, state, postalCode and country US.",
+      "source": "src/main/java/com/medchart/ehr/mapper/FhirPatientMapper.java:207",
+      "tests": [
+        "FhirPatientMapperTest#brMap07_address"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-MAP-08",
+      "module": "mapper",
+      "description": "active is exported true only when explicitly active; inbound patients default to active.",
+      "source": "src/main/java/com/medchart/ehr/mapper/FhirPatientMapper.java:137",
+      "tests": [
+        "FhirPatientMapperTest#brMap08_activeOutbound",
+        "FhirPatientMapperTest#brMap08_activeInbound"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-MAP-09",
+      "module": "mapper",
+      "description": "Deceased patients export deceasedBoolean and deceasedDateTime when known.",
+      "source": "src/main/java/com/medchart/ehr/mapper/FhirPatientMapper.java:73",
+      "tests": [
+        "FhirPatientMapperTest#brMap09_deceased"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-MAP-10",
+      "module": "mapper",
+      "description": "Marital status uses HL7 v3 MaritalStatus codes S/M/D/W, otherwise UNK; omitted when null.",
+      "source": "src/main/java/com/medchart/ehr/mapper/FhirPatientMapper.java:236",
+      "tests": [
+        "FhirPatientMapperTest#brMap10_maritalStatus",
+        "FhirPatientMapperTest#brMap10_noMaritalStatus"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-MAP-11",
+      "module": "mapper",
+      "description": "Inbound identifiers are matched by system (others ignored); sparse names map to nulls.",
+      "source": "src/main/java/com/medchart/ehr/mapper/FhirPatientMapper.java:91",
+      "tests": [
+        "FhirPatientMapperTest#brMap11_inboundIdentifiers",
+        "FhirPatientMapperTest#brMap11_inboundSparse"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-MAP-12",
+      "module": "mapper",
+      "description": "PatientDTO never exposes SSN; DTO->entity never trusts client id/createdAt/updatedAt/version.",
+      "source": "src/main/java/com/medchart/ehr/mapper/PatientMapper.java:18",
+      "tests": [
+        "PatientMapperTest#brMap12_dtoHasNoSsn",
+        "PatientMapperTest#brMap12_toDto",
+        "PatientMapperTest#brMap12_toEntityIgnoresServerFields"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-MAP-13",
+      "module": "mapper",
+      "description": "Patient updates are partial: null DTO properties never overwrite stored values (NullValuePropertyMappingStrategy.IGNORE).",
+      "source": "src/main/java/com/medchart/ehr/mapper/PatientMapper.java:9",
+      "tests": [
+        "PatientMapperTest#brMap13_partialUpdate",
+        "PatientMapperTest#brMap13_fullUpdate"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-MAP-14",
+      "module": "mapper",
+      "description": "Null inputs map to null; sparse patients map to null nested values.",
+      "source": "src/main/java/com/medchart/ehr/mapper/PatientMapper.java:39",
+      "tests": [
+        "PatientMapperTest#brMap14_nullsMapToNull",
+        "PatientMapperTest#brMap14_sparsePatient"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-FHIR-01",
+      "module": "interop.fhir",
+      "description": "A mapped HR row exports Practitioner (NPI system), PractitionerRole (Organization/dept-<id>), Schedule (actor) and a busy-unavailable Slot.",
+      "source": "src/main/java/com/medchart/ehr/interop/fhir/FhirR4ExportService.java:38",
+      "tests": [
+        "FhirR4ExportServiceTest#brFhir01_matchedRowExportsFullBundle"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-FHIR-02",
+      "module": "interop.fhir",
+      "description": "Unmapped cost centers export no NPI system, organization or actor and pass PTO through unparsed.",
+      "source": "src/main/java/com/medchart/ehr/interop/fhir/FhirR4ExportService.java:117",
+      "tests": [
+        "FhirR4ExportServiceTest#brFhir02_unmatchedRowPassthrough"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-FHIR-03",
+      "module": "interop.fhir",
+      "description": "Slot instants carry the America/New_York offset valid on that date (DST aware: -04:00 / -05:00).",
+      "source": "src/main/java/com/medchart/ehr/interop/fhir/FhirR4ExportService.java:34",
+      "tests": [
+        "FhirR4ExportServiceTest#brFhir03_newYorkOffsetPerDate"
+      ],
+      "status": "defect-fixed"
+    },
+    {
+      "id": "BR-FHIR-04",
+      "module": "interop.fhir",
+      "description": "Unparseable PTO text on a mapped row is exported verbatim so the contract validator flags it.",
+      "source": "src/main/java/com/medchart/ehr/interop/fhir/FhirR4ExportService.java:107",
+      "tests": [
+        "FhirR4ExportServiceTest#brFhir04_unparseablePtoKeptVerbatim"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-FHIR-05",
+      "module": "interop.fhir",
+      "description": "Rows without PTO export no Slot; rows without NPI export only the HR identifier.",
+      "source": "src/main/java/com/medchart/ehr/interop/fhir/FhirR4ExportService.java:47",
+      "tests": [
+        "FhirR4ExportServiceTest#brFhir05_noPtoNoSlot"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-FHIR-06",
+      "module": "interop.fhir",
+      "description": "Practitioner must have an identifier with the NPI system (ERROR otherwise).",
+      "source": "src/main/java/com/medchart/ehr/interop/fhir/FhirR4ContractValidator.java:74",
+      "tests": [
+        "FhirR4ContractValidatorTest#brFhir06_practitionerRequiresNpi",
+        "FhirR4ContractValidatorTest#brFhir06_endToEndValidation"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-FHIR-07",
+      "module": "interop.fhir",
+      "description": "PractitionerRole must reference a department Organization (ERROR otherwise).",
+      "source": "src/main/java/com/medchart/ehr/interop/fhir/FhirR4ContractValidator.java:85",
+      "tests": [
+        "FhirR4ContractValidatorTest#brFhir07_roleRequiresOrganization",
+        "FhirR4ContractValidatorTest#brFhir06_endToEndValidation"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-FHIR-08",
+      "module": "interop.fhir",
+      "description": "Slot start/end must carry a timezone offset (ERROR otherwise).",
+      "source": "src/main/java/com/medchart/ehr/interop/fhir/FhirR4ContractValidator.java:90",
+      "tests": [
+        "FhirR4ContractValidatorTest#brFhir08_slotRequiresOffset",
+        "FhirR4ContractValidatorTest#brFhir06_endToEndValidation"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-FHIR-09",
+      "module": "interop.fhir",
+      "description": "A resource that is not valid JSON is a FATAL finding.",
+      "source": "src/main/java/com/medchart/ehr/interop/fhir/FhirR4ContractValidator.java:70",
+      "tests": [
+        "FhirR4ContractValidatorTest#brFhir09_invalidJsonFatal"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-FHIR-10",
+      "module": "interop.fhir",
+      "description": "Only ERROR and FATAL findings count as errors; resource references are Type/id.",
+      "source": "src/main/java/com/medchart/ehr/interop/fhir/ContractFinding.java:33",
+      "tests": [
+        "FhirR4ContractValidatorTest#brFhir10_findingSeverity"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-FHIR-11",
+      "module": "interop.fhir",
+      "description": "The contract PASSes only with no unknown cost centers, no duplicate practitioners and no FHIR errors; report.json/report.md/resources are written to the report dir (default target/interface-contract).",
+      "source": "src/main/java/com/medchart/ehr/interop/fhir/InterfaceContractReport.java:104",
+      "tests": [
+        "InterfaceContractCheckTest#brFhir11_cleanExportPasses",
+        "InterfaceContractCheckTest#brFhir11_errorsFail",
+        "InterfaceContractCheckTest#brFhir11_unwritableReportDir",
+        "InterfaceContractCheckTest#brFhir11_defaultReportDir"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-FHIR-12",
+      "module": "interop.fhir",
+      "description": "Unknown cost centers are grouped by cost center and reported as AE errors.",
+      "source": "src/main/java/com/medchart/ehr/interop/fhir/InterfaceContractCheck.java:59",
+      "tests": [
+        "InterfaceContractCheckTest#brFhir12_unknownCostCenterFails"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-FHIR-13",
+      "module": "interop.fhir",
+      "description": "The same practitioner under multiple HR ids (same normalized name OR same NPI) is a duplicate.",
+      "source": "src/main/java/com/medchart/ehr/interop/fhir/InterfaceContractCheck.java:69",
+      "tests": [
+        "InterfaceContractCheckTest#brFhir13_duplicateByName",
+        "InterfaceContractCheckTest#brFhir13_duplicateByNpi"
+      ],
+      "status": "defect-fixed"
+    },
+    {
+      "id": "BR-AUD-01",
+      "module": "audit",
+      "description": "Audited calls record the annotation's action, resource type, description and acting user (system default).",
+      "source": "src/main/java/com/medchart/ehr/audit/AuditAspect.java:25",
+      "tests": [
+        "AuditAspectTest#brAud01_eventFromAnnotation"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-AUD-02",
+      "module": "audit",
+      "description": "The first Long argument of an audited call is recorded as the patient id.",
+      "source": "src/main/java/com/medchart/ehr/audit/AuditAspect.java:58",
+      "tests": [
+        "AuditAspectTest#brAud02_firstLongIsPatientId",
+        "AuditAspectTest#brAud02_noLongArgument"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-AUD-03",
+      "module": "audit",
+      "description": "Successful access is recorded success=true and the result is returned unchanged.",
+      "source": "src/main/java/com/medchart/ehr/audit/AuditAspect.java:44",
+      "tests": [
+        "AuditAspectTest#brAud03_successRecorded"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-AUD-04",
+      "module": "audit",
+      "description": "Failed access is still audited (success=false, error message) and the exception propagates.",
+      "source": "src/main/java/com/medchart/ehr/audit/AuditAspect.java:50",
+      "tests": [
+        "AuditAspectTest#brAud04_failureRecordedAndRethrown"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-AUD-05",
+      "module": "audit",
+      "description": "Client IP is the first X-Forwarded-For hop, else remote address; user agent captured; outside requests or on errors both are null and never block the call.",
+      "source": "src/main/java/com/medchart/ehr/audit/AuditAspect.java:78",
+      "tests": [
+        "AuditAspectTest#brAud05_forwardedForAndUserAgent",
+        "AuditAspectTest#brAud05_remoteAddrFallback",
+        "AuditAspectTest#brAud05_noRequestContext",
+        "AuditAspectTest#brAud05_requestErrorsTolerated"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-AUD-06",
+      "module": "audit",
+      "description": "Audit events are persisted asynchronously in their own transaction (REQUIRES_NEW) and persistence failures never break the clinical workflow.",
+      "source": "src/main/java/com/medchart/ehr/audit/AuditService.java:18",
+      "tests": [
+        "AuditServiceTest#brAud06_eventPersisted",
+        "AuditServiceTest#brAud06_persistenceFailureSwallowed",
+        "AuditServiceTest#brAud06_asyncRequiresNew"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-AUD-07",
+      "module": "audit",
+      "description": "PHI access logs who, role, patient, MRN, action, reason, IP, session and time.",
+      "source": "src/main/java/com/medchart/ehr/audit/PatientAccessLogger.java:38",
+      "tests": [
+        "PatientAccessLoggerTest#brAud07_accessRecorded"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-AUD-08",
+      "module": "audit",
+      "description": "Denied access is logged as a failed event with the reason.",
+      "source": "src/main/java/com/medchart/ehr/audit/PatientAccessLogger.java:71",
+      "tests": [
+        "PatientAccessLoggerTest#brAud08_failedAccessRecorded"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-AUD-09",
+      "module": "audit",
+      "description": "Bulk access is logged once with '[BULK: n records]'.",
+      "source": "src/main/java/com/medchart/ehr/audit/PatientAccessLogger.java:110",
+      "tests": [
+        "PatientAccessLoggerTest#brAud09_bulkAccessRecorded",
+        "PatientAccessLoggerTest#brAud09_zeroRecordBulk"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-AUD-10",
+      "module": "audit",
+      "description": "Patient access reports echo patient and period; aggregate counts are placeholder zeros (stub).",
+      "source": "src/main/java/com/medchart/ehr/audit/PatientAccessLogger.java:130",
+      "tests": [
+        "PatientAccessLoggerTest#brAud10_accessReportStub"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-AUD-11",
+      "module": "audit",
+      "description": "Prescriptions are audited as MedicationOrder CREATE; controlled substances include the DEA schedule.",
+      "source": "src/main/java/com/medchart/ehr/audit/MedicationAuditLogger.java:31",
+      "tests": [
+        "MedicationAuditLoggerTest#brAud11_controlledPrescription",
+        "MedicationAuditLoggerTest#brAud11_nonControlledPrescription"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-AUD-12",
+      "module": "audit",
+      "description": "Prescription changes are UPDATE (old->new) and cancellations DELETE (with reason).",
+      "source": "src/main/java/com/medchart/ehr/audit/MedicationAuditLogger.java:69",
+      "tests": [
+        "MedicationAuditLoggerTest#brAud12_modification",
+        "MedicationAuditLoggerTest#brAud12_cancellation"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-AUD-13",
+      "module": "audit",
+      "description": "E-prescribe transmissions are EXPORT events, successful only for SUCCESS/ACCEPTED.",
+      "source": "src/main/java/com/medchart/ehr/audit/MedicationAuditLogger.java:127",
+      "tests": [
+        "MedicationAuditLoggerTest#brAud13_eprescribe",
+        "MedicationAuditLoggerTest#brAud13_nullStatus"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-AUD-14",
+      "module": "audit",
+      "description": "PDMP checks are Patient READ events; medication history access is MedicationHistory READ with source and count.",
+      "source": "src/main/java/com/medchart/ehr/audit/MedicationAuditLogger.java:156",
+      "tests": [
+        "MedicationAuditLoggerTest#brAud14_pdmp",
+        "MedicationAuditLoggerTest#brAud14_medicationHistory"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-AUD-15",
+      "module": "audit",
+      "description": "Audit events default to success=true; the action vocabulary includes ACCESS_DENIED, EMERGENCY_ACCESS, BREAK_THE_GLASS, EXPORT, PRINT.",
+      "source": "src/main/java/com/medchart/ehr/audit/AuditAction.java:15",
+      "tests": [
+        "AuditServiceTest#brAud15_defaultsAndVocabulary"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-LEG-01",
+      "module": "legacy",
+      "description": "Eligibility is cached per patient+payer with its cache instant; re-caching replaces.",
+      "source": "src/main/java/com/medchart/ehr/legacy/InsuranceCache.java:16",
+      "tests": [
+        "InsuranceCacheTest#brLeg01_cachePerPatientAndPayer",
+        "InsuranceCacheTest#brLeg01_cacheTimeIsInstant",
+        "InsuranceCacheTest#brLeg01_recacheReplaces"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-LEG-02",
+      "module": "legacy",
+      "description": "Clearing a patient's cache removes only that patient's entries (no MRN prefix collisions).",
+      "source": "src/main/java/com/medchart/ehr/legacy/InsuranceCache.java:44",
+      "tests": [
+        "InsuranceCacheTest#brLeg02_clearPatientOnly"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-LEG-03",
+      "module": "legacy",
+      "description": "Legacy MRN/SSN lookups bind parameters and return null when not found (bypasses the audit layer - AGENTS.md gap #3).",
+      "source": "src/main/java/com/medchart/ehr/legacy/LegacyPatientLookup.java:21",
+      "tests": [
+        "LegacyPatientLookupTest#brLeg03_mrnLookupBound",
+        "LegacyPatientLookupTest#brLeg03_notFoundReturnsNull",
+        "LegacyPatientLookupTest#brLeg03_ssnLookupBound"
+      ],
+      "status": "open-question"
+    },
+    {
+      "id": "BR-LEG-04",
+      "module": "legacy",
+      "description": "Legacy name/free-text searches are case-insensitive contains matches with bound parameters and exclude SSN.",
+      "source": "src/main/java/com/medchart/ehr/legacy/LegacyPatientLookup.java:77",
+      "tests": [
+        "LegacyPatientLookupTest#brLeg04_containsSearchBound",
+        "LegacyPatientLookupTest#brLeg04_rawSearch"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-LEG-05",
+      "module": "legacy",
+      "description": "Legacy demographics are returned keyed by field name for the requested id.",
+      "source": "src/main/java/com/medchart/ehr/legacy/LegacyPatientLookup.java:51",
+      "tests": [
+        "LegacyPatientLookupTest#brLeg05_demographics"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-LEG-06",
+      "module": "legacy",
+      "description": "The encounter summary report prints DOB and provider name in the labelled fields and never the SSN.",
+      "source": "src/main/java/com/medchart/ehr/legacy/ReportGenerator.java:92",
+      "tests": [
+        "ReportGeneratorTest#brLeg06_encounterSummaryColumns"
+      ],
+      "status": "defect-fixed"
+    },
+    {
+      "id": "BR-LEG-07",
+      "module": "legacy",
+      "description": "Date-range encounter CSV covers the whole end day (exclusive next-day bound) and excludes SSN.",
+      "source": "src/main/java/com/medchart/ehr/legacy/EncounterExportService.java:24",
+      "tests": [
+        "EncounterExportServiceTest#brLeg07_dateRangeCsv",
+        "EncounterExportServiceTest#brLeg07_emptyRange"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-LEG-08",
+      "module": "legacy",
+      "description": "Encounter history exports show only the SSN's last four digits (XXX-XX-nnnn).",
+      "source": "src/main/java/com/medchart/ehr/legacy/EncounterExportService.java:87",
+      "tests": [
+        "EncounterExportServiceTest#brLeg08_historyMasksSsn",
+        "EncounterExportServiceTest#brLeg08_maskEdgeCases"
+      ],
+      "status": "defect-fixed"
+    },
+    {
+      "id": "BR-LEG-09",
+      "module": "legacy",
+      "description": "The daily report returns the active-patient roster and deletes only its own PHI temp file; every roster file name is unique (AGENTS.md gap #5).",
+      "source": "src/main/java/com/medchart/ehr/legacy/ReportGenerator.java:153",
+      "tests": [
+        "ReportGeneratorTest#brLeg09_dailyReportCleansTempFile",
+        "ReportGeneratorTest#brLeg09_rosterFilesAreUnique"
+      ],
+      "status": "defect-fixed"
+    },
+    {
+      "id": "BR-LEG-10",
+      "module": "legacy",
+      "description": "Department productivity binds department/provider ids as parameters (no SQL concatenation).",
+      "source": "src/main/java/com/medchart/ehr/legacy/ReportGenerator.java:119",
+      "tests": [
+        "ReportGeneratorTest#brLeg10_departmentProductivity"
+      ],
+      "status": "defect-fixed"
+    },
+    {
+      "id": "BR-LEG-11",
+      "module": "legacy",
+      "description": "HR PTO rows with an unknown cost center are rejected with an AE error and the run is PARTIAL.",
+      "source": "docs/interfaces/hr-pto-sync.md:41",
+      "tests": [
+        "HrPtoSyncJobRulesTest#brLeg11_unknownCostCenterRejected"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-LEG-12",
+      "module": "legacy",
+      "description": "HR PTO rows without PTO or not Approved are skipped.",
+      "source": "src/main/java/com/medchart/ehr/legacy/HrPtoSyncJob.java:95",
+      "tests": [
+        "HrPtoSyncJobRulesTest#brLeg12_skipNoPtoOrUnapproved"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-LEG-13",
+      "module": "legacy",
+      "description": "One SIU^S15 is sent per PTO day that falls on one of the surgeon's OR block weekdays, with control id HRPTO<date><seq5>.",
+      "source": "src/main/java/com/medchart/ehr/legacy/HrPtoSyncJob.java:103",
+      "tests": [
+        "HrPtoSyncJobRulesTest#brLeg13_messagePerBlockDay"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-LEG-14",
+      "module": "legacy",
+      "description": "OR blocks load from or_block by HR employee id; without a datasource none are loaded.",
+      "source": "src/main/java/com/medchart/ehr/legacy/HrPtoSyncJob.java:208",
+      "tests": [
+        "HrPtoSyncJobRulesTest#brLeg14_noDatasource",
+        "HrPtoSyncJobRulesTest#brLeg14_blockRowMapping"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-LEG-15",
+      "module": "legacy",
+      "description": "Each run is appended to runs.log and errors to error-queue.log (AE/AR codes); malformed lines are ignored; write failures are logged, not fatal.",
+      "source": "src/main/java/com/medchart/ehr/legacy/HrPtoSyncJob.java:290",
+      "tests": [
+        "HrPtoSyncJobRulesTest#brLeg15_runLog",
+        "HrPtoSyncJobRulesTest#brLeg15_malformedLogLines",
+        "HrPtoSyncJobRulesTest#brLeg15_unwritableOutputTolerated"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-LEG-16",
+      "module": "legacy",
+      "description": "'--hr-pto-sync[=date]' runs once for that date (or latest); the nightly 02:00 job runs the latest export.",
+      "source": "src/main/java/com/medchart/ehr/legacy/HrPtoSyncJob.java:62",
+      "tests": [
+        "HrPtoSyncJobRulesTest#brLeg16_runOnceAndNightly"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-LEG-17",
+      "module": "legacy",
+      "description": "PTO periods: ISO ranges inclusive, invalid ISO end = single day, free-text m/d[-m/d] uses the first date token, blank = none.",
+      "source": "src/main/java/com/medchart/ehr/legacy/HrPtoSyncJob.java:128",
+      "tests": [
+        "HrPtoSyncJobRulesTest#brLeg17_parsePtoDays"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-LEG-18",
+      "module": "legacy",
+      "description": "SIU NTE omits a blank PTO end; AIP carries the NPI marker only when an NPI exists.",
+      "source": "src/main/java/com/medchart/ehr/legacy/HrPtoSyncJob.java:175",
+      "tests": [
+        "HrPtoSyncJobRulesTest#brLeg18_siuOptionalSegments"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-LEG-19",
+      "module": "legacy",
+      "description": "HR export reader: header/blank/malformed (<9 fields) lines skipped, quoted fields unwrapped, notes optional, dir override, latest resolution.",
+      "source": "src/main/java/com/medchart/ehr/legacy/HrExportReader.java:77",
+      "tests": [
+        "HrExportReaderRulesTest#brLeg19_directoryOverride",
+        "HrExportReaderRulesTest#brLeg19_noExports",
+        "HrExportReaderRulesTest#brLeg19_parsingRules",
+        "HrExportReaderRulesTest#brLeg19_missingClasspathExport"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-LEG-20",
+      "module": "legacy",
+      "description": "Cost-center mapping is trimmed and exact; unknown departments have blank names.",
+      "source": "src/main/java/com/medchart/ehr/legacy/DepartmentMapping.java:58",
+      "tests": [
+        "DepartmentMappingRulesTest#brLeg20_lookupRules",
+        "DepartmentMappingRulesTest#brLeg20_namesAndKnownSet"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-LEG-21",
+      "module": "legacy",
+      "description": "HR approval is case-insensitive; blank PTO start means no PTO.",
+      "source": "src/main/java/com/medchart/ehr/legacy/HrPtoRecord.java:21",
+      "tests": [
+        "HrPtoSyncJobRulesTest#brLeg21_recordRules"
+      ],
+      "status": "covered"
+    },
+    {
+      "id": "BR-LEG-22",
+      "module": "legacy",
+      "description": "The all-patients file export contains active patients' demographics without SSN and fails loudly when unwritable.",
+      "source": "src/main/java/com/medchart/ehr/legacy/EncounterExportService.java:96",
+      "tests": [
+        "EncounterExportServiceTest#brLeg22_allPatientsFileExport",
+        "EncounterExportServiceTest#brLeg22_unwritableExportFails"
+      ],
+      "status": "covered"
+    }
+  ],
+  "defects_found": [
+    {
+      "rule": "BR-SVC-05",
+      "symptom": "searchPatients concatenated the caller's sort into native SQL (SQL injection; ORDER BY ssn possible); invalid sort also only failed after the count query ran.",
+      "fix": "Allow-list sort columns/directions in PatientService.toOrderBy and validate before any query."
+    },
+    {
+      "rule": "BR-SVC-11",
+      "symptom": "Cached eligibility never expired (AGENTS.md: 'cache result with TTL').",
+      "fix": "AppointmentService.ELIGIBILITY_TTL = 24h measured on Instant (InsuranceCache.cachedAt is now an Instant, so DST changes do not stretch the TTL); stale/undated entries are re-verified."
+    },
+    {
+      "rule": "BR-SVC-12",
+      "symptom": "AppointmentService cached the patient SSN in InsuranceCache (AGENTS.md gap #4).",
+      "fix": "Pass null for SSN when caching eligibility."
+    },
+    {
+      "rule": "BR-LEG-08",
+      "symptom": "Encounter history export printed the full SSN.",
+      "fix": "EncounterExportService.maskSsn -> XXX-XX-<last4>."
+    },
+    {
+      "rule": "BR-LEG-10",
+      "symptom": "Department productivity report concatenated department names into SQL.",
+      "fix": "Bind :department as a parameter."
+    },
+    {
+      "rule": "BR-LEG-09",
+      "symptom": "generateDailyReport left the PHI roster temp file on disk (AGENTS.md gap #5).",
+      "fix": "Delete the temp file in a finally block; roster file names get a UUID suffix so same-second requests never share (or delete) a file."
+    },
+    {
+      "rule": "BR-LEG-06",
+      "symptom": "Encounter summary printed SSN under 'DOB:' and DOB/first-name under 'Provider:' (column index off by one).",
+      "fix": "Use row[9] for DOB and row[10]/row[11] for provider."
+    },
+    {
+      "rule": "BR-FHIR-13",
+      "symptom": "Duplicate practitioner check ignored the same NPI under different names/HR ids.",
+      "fix": "Also group records by trimmed NPI in InterfaceContractCheck."
+    },
+    {
+      "rule": "BR-FHIR-03",
+      "symptom": "Slot instants used a hard-coded -04:00 offset, wrong for EST dates (Nov-Mar).",
+      "fix": "Convert with ZoneId America/New_York per date."
+    },
+    {
+      "rule": "BR-MAP-04",
+      "symptom": "Unrecognised/'unknown' FHIR gender mapped to Gender.OTHER, so 'unknown' did not round-trip.",
+      "fix": "Map default to Gender.UNKNOWN."
+    }
+  ],
+  "tests_added": 200,
+  "full_suite": {
+    "passed": 209,
+    "failed": 0,
+    "skipped": 0
+  }
+}

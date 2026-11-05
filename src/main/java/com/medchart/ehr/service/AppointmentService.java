@@ -7,7 +7,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,6 +25,8 @@ import java.util.Map;
 @Slf4j
 @RequiredArgsConstructor
 public class AppointmentService {
+
+    static final Duration ELIGIBILITY_TTL = Duration.ofHours(24);
 
     private final InsuranceCache insuranceCache;
     private final InsuranceGateway insuranceGateway;
@@ -84,7 +89,7 @@ public class AppointmentService {
         if (result.isEligible()) {
             insuranceCache.cacheEligibility(
                 patientMrn, 
-                result.getPatientSsn(), // HIPAA ISSUE: SSN should not be cached
+                null, // SSN is never cached (HIPAA)
                 payerId,
                 result.getMemberId(),
                 result.isEligible(),
@@ -98,9 +103,8 @@ public class AppointmentService {
     }
 
     private boolean isStale(InsuranceCache.CachedEligibility cached) {
-        // HIPAA ISSUE: No TTL check - cached data lives forever
-        // Should expire after 24 hours per payer requirements
-        return false;
+        return cached.cachedAt == null
+                || cached.cachedAt.isBefore(Instant.now().minus(ELIGIBILITY_TTL));
     }
 
     @lombok.Data
