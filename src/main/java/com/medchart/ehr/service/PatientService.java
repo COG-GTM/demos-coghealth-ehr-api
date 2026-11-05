@@ -63,6 +63,7 @@ public class PatientService {
                     .map(patientMapper::toDto);
         }
 
+        String orderBy = toOrderBy(sort);
         String where = "(LOWER(last_name) LIKE LOWER(?1) OR LOWER(first_name) LIKE LOWER(?1) OR mrn LIKE ?1)";
         String term = "%" + searchTerm + "%";
 
@@ -72,7 +73,7 @@ public class PatientService {
         long total = ((Number) countQuery.getSingleResult()).longValue();
 
         Query query = entityManager.createNativeQuery(
-                "SELECT * FROM patients WHERE " + where + " ORDER BY " + toOrderBy(sort), Patient.class);
+                "SELECT * FROM patients WHERE " + where + " ORDER BY " + orderBy, Patient.class);
         query.setParameter(1, term);
         query.setFirstResult((int) pageable.getOffset());
         query.setMaxResults(pageable.getPageSize());
