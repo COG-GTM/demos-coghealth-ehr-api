@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -103,7 +104,7 @@ public class AppointmentService {
 
     private boolean isStale(InsuranceCache.CachedEligibility cached) {
         return cached.cachedAt == null
-                || cached.cachedAt.isBefore(LocalDateTime.now().minus(ELIGIBILITY_TTL));
+                || cached.cachedAt.isBefore(Instant.now().minus(ELIGIBILITY_TTL));
     }
 
     @lombok.Data
