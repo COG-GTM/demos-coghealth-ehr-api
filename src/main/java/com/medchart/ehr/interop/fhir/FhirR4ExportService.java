@@ -10,6 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,7 +31,7 @@ public class FhirR4ExportService {
     public static final String NPI_SYSTEM = "http://hl7.org/fhir/sid/us-npi";
     public static final String ORGANIZATION_PREFIX = "Organization/dept-";
 
-    private static final String OFFSET = "-04:00";
+    static final ZoneId SCHEDULING_ZONE = ZoneId.of("America/New_York");
 
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -105,8 +108,8 @@ public class FhirR4ExportService {
             s.put("start", r.ptoStart);
             s.put("end", r.ptoStart);
         } else {
-            s.put("start", days.get(0) + "T00:00:00" + OFFSET);
-            s.put("end", days.get(days.size() - 1) + "T23:59:59" + OFFSET);
+            s.put("start", zoned(days.get(0), LocalTime.MIDNIGHT));
+            s.put("end", zoned(days.get(days.size() - 1), LocalTime.of(23, 59, 59)));
         }
         return new ExportedResource("Slot", r.employeeId + "-pto", r.employeeId, write(s));
     }
@@ -126,6 +129,11 @@ public class FhirR4ExportService {
         s.put("status", "busy-unavailable");
         s.put("comment", (r.ptoType + " " + r.notes).trim());
         return s;
+    }
+
+    static String zoned(LocalDate day, LocalTime time) {
+        return day.atTime(time).atZone(SCHEDULING_ZONE).toOffsetDateTime()
+                .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
     }
 
     private static String instant(String value, String timeSuffix) {

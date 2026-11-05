@@ -115,10 +115,12 @@ public class ReportGenerator {
 
         for (String department : departments) {
             String sql = "SELECT pr.last_name, pr.id FROM providers pr "
-                    + "WHERE pr.active = true AND pr.department = '" + department + "' "
+                    + "WHERE pr.active = true AND pr.department = :department "
                     + "ORDER BY pr.last_name";
             @SuppressWarnings("unchecked")
-            List<Object[]> rows = entityManager.createNativeQuery(sql).getResultList();
+            List<Object[]> rows = entityManager.createNativeQuery(sql)
+                    .setParameter("department", department)
+                    .getResultList();
             report.append("Department: ").append(department).append(System.lineSeparator());
             for (Object[] row : rows) {
                 String providerName = String.valueOf(row[0]);
@@ -150,11 +152,16 @@ public class ReportGenerator {
     public byte[] generateDailyReport() {
         String tempFile = generatePatientRoster();
         try {
-            byte[] content = Files.readAllBytes(Path.of(tempFile));
-            return content;
+            return Files.readAllBytes(Path.of(tempFile));
         } catch (IOException e) {
             log.error("Failed to read temp file", e);
             throw new RuntimeException(e);
+        } finally {
+            try {
+                Files.deleteIfExists(Path.of(tempFile));
+            } catch (IOException e) {
+                log.error("Failed to delete PHI temp file {}", tempFile, e);
+            }
         }
     }
 }

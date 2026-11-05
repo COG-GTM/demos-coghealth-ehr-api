@@ -184,7 +184,7 @@ public class FhirPatientMapper {
             case "male": return Gender.MALE;
             case "female": return Gender.FEMALE;
             case "other": return Gender.OTHER;
-            default: return Gender.OTHER;
+            default: return Gender.UNKNOWN;
         }
     }
 

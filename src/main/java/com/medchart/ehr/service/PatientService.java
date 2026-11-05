@@ -19,6 +19,8 @@ import javax.persistence.EntityNotFoundException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -27,6 +29,12 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PatientService {
+
+    static final Map<String, String> SORT_COLUMNS = Map.of(
+            "lastName", "last_name",
+            "firstName", "first_name",
+            "mrn", "mrn",
+            "dateOfBirth", "date_of_birth");
 
     private final PatientRepository patientRepository;
     private final PatientMapper patientMapper;
@@ -64,7 +72,7 @@ public class PatientService {
         long total = ((Number) countQuery.getSingleResult()).longValue();
 
         Query query = entityManager.createNativeQuery(
-                "SELECT * FROM patients WHERE " + where + " ORDER BY " + sort, Patient.class);
+                "SELECT * FROM patients WHERE " + where + " ORDER BY " + toOrderBy(sort), Patient.class);
         query.setParameter(1, term);
         query.setFirstResult((int) pageable.getOffset());
         query.setMaxResults(pageable.getPageSize());
@@ -118,6 +126,29 @@ public class PatientService {
         throw new UnsupportedOperationException(
             "SSN-based patient lookup is disabled for HIPAA compliance. " +
             "Use MRN or name-based search instead.");
+    }
+
+    static String toOrderBy(String sort) {
+        String[] parts = sort.trim().split("\\s*,\\s*|\\s+");
+        String column = SORT_COLUMNS.get(parts[0]);
+        if (column == null) {
+            column = SORT_COLUMNS.entrySet().stream()
+                    .filter(e -> e.getValue().equalsIgnoreCase(parts[0]))
+                    .map(Map.Entry::getValue)
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Unsupported sort field: " + parts[0]));
+        }
+        String direction = "ASC";
+        if (parts.length > 1) {
+            direction = parts[1].toUpperCase(Locale.ROOT);
+            if (!direction.equals("ASC") && !direction.equals("DESC")) {
+                throw new IllegalArgumentException("Unsupported sort direction: " + parts[1]);
+            }
+        }
+        if (parts.length > 2) {
+            throw new IllegalArgumentException("Unsupported sort expression: " + sort);
+        }
+        return column + " " + direction;
     }
 
     private String generateMrn() {
