@@ -1,25 +1,43 @@
 package com.medchart.ehr.legacy;
 
-import com.medchart.ehr.domain.encounter.Encounter;
-import com.medchart.ehr.domain.patient.Patient;
+import com.medchart.ehr.audit.AuditAction;
+import com.medchart.ehr.audit.AuditEvent;
+import com.medchart.ehr.audit.AuditService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Service
 @Slf4j
 public class EncounterExportService {
 
-    @Autowired
-    private EntityManager entityManager;
+    private static final Pattern EXPORT_FILE_NAME = Pattern.compile("[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)*");
+
+    private final EntityManager entityManager;
+    private final AuditService auditService;
+    private final String exportDirectory;
+
+    public EncounterExportService(EntityManager entityManager,
+                                  AuditService auditService,
+                                  @Value("${ehr.export.directory:${java.io.tmpdir}}") String exportDirectory) {
+        this.entityManager = entityManager;
+        this.auditService = auditService;
+        this.exportDirectory = exportDirectory;
+    }
 
     public byte[] exportEncountersForDateRange(LocalDate startDate, LocalDate endDate) {
         String sql = "SELECT e.id, e.encounter_number, e.encounter_type, e.status, e.encounter_date_time, " +
@@ -84,7 +102,16 @@ public class EncounterExportService {
         return export.toString().getBytes();
     }
 
-    public void exportAllPatientsToFile(String filePath) {
+    /**
+     * Writes a CSV of all active patients into the configured export directory.
+     *
+     * @param fileName a bare file name; it is resolved inside {@code ehr.export.directory} and may not
+     *                 traverse outside of it
+     * @return the path that was written
+     */
+    public Path exportAllPatientsToFile(String fileName) {
+        Path target = resolveExportPath(fileName);
+
         Query query = entityManager.createNativeQuery(
             "SELECT id, mrn, first_name, last_name, date_of_birth, " +
             "email, phone_home, phone_mobile, street1, city, state, zip_code " +
@@ -92,7 +119,14 @@ public class EncounterExportService {
         
         List<Object[]> patients = query.getResultList();
         
-        try (PrintWriter writer = new PrintWriter(new FileWriter(filePath))) {
+        try {
+            Files.createDirectories(target.getParent());
+        } catch (IOException e) {
+            log.error("Failed to create export directory", e);
+            throw new RuntimeException("Export failed", e);
+        }
+
+        try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(target))) {
             writer.println("ID,MRN,FirstName,LastName,DOB,Email,PhoneHome,PhoneMobile,Street,City,State,Zip");
             for (Object[] p : patients) {
                 writer.println(String.join(",", 
@@ -101,10 +135,46 @@ public class EncounterExportService {
                     String.valueOf(p[6]), String.valueOf(p[7]), String.valueOf(p[8]),
                     String.valueOf(p[9]), String.valueOf(p[10]), String.valueOf(p[11])));
             }
-            log.info("Exported {} patients to file: {}", patients.size(), filePath);
+            log.info("Exported {} patients to file: {}", patients.size(), target.getFileName());
         } catch (IOException e) {
             log.error("Failed to export patients to file", e);
             throw new RuntimeException("Export failed", e);
         }
+
+        auditBulkExport(target, patients.size());
+        return target;
+    }
+
+    Path resolveExportPath(String fileName) {
+        if (fileName == null || !EXPORT_FILE_NAME.matcher(fileName).matches()) {
+            throw new IllegalArgumentException("Invalid export file name");
+        }
+
+        Path baseDir = Paths.get(exportDirectory).toAbsolutePath().normalize();
+        Path resolved;
+        try {
+            resolved = baseDir.resolve(fileName).normalize();
+        } catch (InvalidPathException e) {
+            throw new IllegalArgumentException("Invalid export file name", e);
+        }
+
+        if (!baseDir.equals(resolved.getParent())) {
+            throw new IllegalArgumentException("Invalid export file name");
+        }
+        return resolved;
+    }
+
+    private void auditBulkExport(Path target, int patientCount) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userId = authentication != null ? authentication.getName() : "system";
+
+        AuditEvent event = new AuditEvent();
+        event.setUserId(userId);
+        event.setAction(AuditAction.EXPORT);
+        event.setResourceType("PatientBulkExport");
+        event.setDescription("Bulk patient export of " + patientCount + " records to " + target.getFileName());
+        event.setTimestamp(LocalDateTime.now());
+        event.setSuccess(true);
+        auditService.saveAuditEventAsync(event);
     }
 }
