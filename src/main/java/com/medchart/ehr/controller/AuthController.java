@@ -2,9 +2,12 @@ package com.medchart.ehr.controller;
 
 import com.medchart.ehr.domain.auth.User;
 import com.medchart.ehr.repository.UserRepository;
+import com.medchart.ehr.config.JwtCookieService;
 import com.medchart.ehr.config.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -28,6 +31,7 @@ public class AuthController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
+    private final JwtCookieService cookieService;
 
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
@@ -40,12 +44,23 @@ public class AuthController {
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = tokenProvider.generateToken(authentication);
+        ResponseCookie sessionCookie = cookieService.createSessionCookie(jwt);
 
         Map<String, String> response = new HashMap<>();
-        response.put("token", jwt);
-        response.put("type", "Bearer");
-        
-        return ResponseEntity.ok(response);
+        response.put("username", loginRequest.getUsername());
+        response.put("type", "Cookie");
+
+        return ResponseEntity.ok()
+            .header(HttpHeaders.SET_COOKIE, sessionCookie.toString())
+            .body(response);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout() {
+        SecurityContextHolder.clearContext();
+        return ResponseEntity.ok()
+            .header(HttpHeaders.SET_COOKIE, cookieService.clearSessionCookie().toString())
+            .body(Map.of("status", "logged_out"));
     }
 
     @PostMapping("/register")

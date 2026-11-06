@@ -57,6 +57,9 @@ medchart:
     jwt:
       secret: ${JWT_SECRET:dev-secret-key-change-in-production}
       expiration: 86400000
+      cookie-name: auth_token
+      cookie-secure: ${JWT_COOKIE_SECURE:false}
+      cookie-same-site: ${JWT_COOKIE_SAME_SITE:Lax}
   audit:
     enabled: true
     async: true
