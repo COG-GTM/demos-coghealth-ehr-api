@@ -1,11 +1,13 @@
 package com.medchart.ehr.legacy;
 
 import com.medchart.ehr.domain.patient.Patient;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.persistence.EntityManager;
+import javax.persistence.NoResultException;
 import javax.persistence.Query;
 import java.util.HashMap;
 import java.util.List;
@@ -15,19 +17,19 @@ import java.util.Map;
 @Slf4j
 public class LegacyPatientLookup {
 
+    private static final String LOOKUP_METRIC = "legacy.patient.lookup";
+
+    private final EntityManager entityManager;
+    private final MeterRegistry meterRegistry;
+
     @Autowired
-    private EntityManager entityManager;
+    public LegacyPatientLookup(EntityManager entityManager, MeterRegistry meterRegistry) {
+        this.entityManager = entityManager;
+        this.meterRegistry = meterRegistry;
+    }
 
     public Patient findPatientByMrn(String mrn) {
-        try {
-            Query query = entityManager.createNativeQuery(
-                "SELECT * FROM patients WHERE mrn = ?1", Patient.class);
-            query.setParameter(1, mrn);
-            return (Patient) query.getSingleResult();
-        } catch (Exception e) {
-            log.warn("Patient not found for MRN: " + mrn);
-            return null;
-        }
+        return findSingle("mrn", "SELECT * FROM patients WHERE mrn = ?1", mrn);
     }
 
     public List<Patient> findPatientsByLastName(String lastName) {
@@ -38,14 +40,29 @@ public class LegacyPatientLookup {
     }
 
     public Patient findPatientBySsn(String ssn) {
-        Query query = entityManager.createNativeQuery(
-            "SELECT * FROM patients WHERE ssn = ?1", Patient.class);
-        query.setParameter(1, ssn);
+        return findSingle("ssn", "SELECT * FROM patients WHERE ssn = ?1", ssn);
+    }
+
+    private Patient findSingle(String lookupType, String sql, String value) {
         try {
-            return (Patient) query.getSingleResult();
-        } catch (Exception e) {
+            Query query = entityManager.createNativeQuery(sql, Patient.class);
+            query.setParameter(1, value);
+            Patient patient = (Patient) query.getSingleResult();
+            count(lookupType, "found");
+            return patient;
+        } catch (NoResultException e) {
+            count(lookupType, "not_found");
+            log.debug("No patient matched legacy lookup by {}", lookupType);
             return null;
+        } catch (RuntimeException e) {
+            count(lookupType, "error");
+            log.error("Legacy patient lookup by {} failed", lookupType, e);
+            throw new LegacyLookupException(lookupType, e);
         }
+    }
+
+    private void count(String lookupType, String outcome) {
+        meterRegistry.counter(LOOKUP_METRIC, "lookup", lookupType, "outcome", outcome).increment();
     }
 
     public Map<String, Object> getPatientDemographics(Long patientId) {
