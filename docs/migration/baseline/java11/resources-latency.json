@@ -1,0 +1,25 @@
+{
+  "memory": {
+    "rss": {
+      "median_mib": 769,
+      "max_mib": 776.3,
+      "samples": 58
+    },
+    "heap_used": {
+      "median_mib": 190.3,
+      "max_mib": 325.7,
+      "samples": 58
+    },
+    "heap_committed": {
+      "median_mib": 504,
+      "max_mib": 504,
+      "samples": 58
+    }
+  },
+  "gc_pause": {
+    "count": 7,
+    "total_s": 0.04500000000000001,
+    "max_s": 0.02
+  },
+  "app_log_mib_written": 59.580403327941895
+}

@@ -1,0 +1,10 @@
+{
+  "idle_seconds_after_start": 30,
+  "rss_mib": 650.02734375,
+  "rss_peak_mib": 666.421875,
+  "heap_used_mib": 290.45751953125,
+  "heap_committed_mib": 504,
+  "nonheap_used_mib": 126.72117614746094,
+  "live_threads": 26,
+  "classes_loaded": 17680
+}

@@ -1,0 +1,9 @@
+profile=latency rate=200 vus=- duration=60s
+ALL                                reqs=  12001  p50=1.40ms p95=2.30ms p99=3.58ms max=13.10ms
+GET /v1/encounters/{id}            reqs=   3563  p50=1.53ms p95=2.43ms p99=3.82ms max=8.11ms
+GET /v1/patients/{id}              reqs=   2458  p50=1.24ms p95=1.94ms p99=2.92ms max=7.69ms
+GET /v1/patients/mrn/{mrn}         reqs=   1172  p50=1.29ms p95=2.07ms p99=3.36ms max=4.58ms
+GET /v1/patients/search            reqs=   2423  p50=1.45ms p95=2.38ms p99=3.58ms max=7.06ms
+GET /v1/providers                  reqs=   1171  p50=1.54ms p95=2.58ms p99=4.05ms max=8.81ms
+GET /v1/providers/{id}             reqs=   1214  p50=1.09ms p95=1.82ms p99=3.18ms max=13.10ms
+throughput=200.02 req/s  failed=0.00%

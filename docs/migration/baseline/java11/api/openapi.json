@@ -1,0 +1,2234 @@
+{
+  "components": {
+    "schemas": {
+      "Address": {
+        "properties": {
+          "city": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "formattedAddress": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "street1": {
+            "type": "string"
+          },
+          "street2": {
+            "type": "string"
+          },
+          "zipCode": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "AddressDTO": {
+        "properties": {
+          "city": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "street1": {
+            "type": "string"
+          },
+          "street2": {
+            "type": "string"
+          },
+          "zipCode": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Diagnosis": {
+        "properties": {
+          "abatementDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "chronic": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "diagnosedBy": {
+            "$ref": "#/components/schemas/Provider"
+          },
+          "icd10Code": {
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "onsetDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "patient": {
+            "$ref": "#/components/schemas/Patient"
+          },
+          "principal": {
+            "type": "boolean"
+          },
+          "severity": {
+            "enum": [
+              "MILD",
+              "MODERATE",
+              "SEVERE",
+              "LIFE_THREATENING"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ACTIVE",
+              "RECURRENCE",
+              "RELAPSE",
+              "INACTIVE",
+              "REMISSION",
+              "RESOLVED"
+            ],
+            "type": "string"
+          },
+          "version": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "EmergencyContact": {
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "address": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "email": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "patient": {
+            "$ref": "#/components/schemas/Patient"
+          },
+          "phoneHome": {
+            "type": "string"
+          },
+          "phoneMobile": {
+            "type": "string"
+          },
+          "phoneWork": {
+            "type": "string"
+          },
+          "priority": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "relationship": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "EmergencyContactDTO": {
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "address": {
+            "$ref": "#/components/schemas/AddressDTO"
+          },
+          "email": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "phoneHome": {
+            "type": "string"
+          },
+          "phoneMobile": {
+            "type": "string"
+          },
+          "phoneWork": {
+            "type": "string"
+          },
+          "priority": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "relationship": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Encounter": {
+        "properties": {
+          "admitDateTime": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "attendingProvider": {
+            "$ref": "#/components/schemas/Provider"
+          },
+          "bed": {
+            "type": "string"
+          },
+          "chiefComplaint": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "department": {
+            "type": "string"
+          },
+          "diagnoses": {
+            "items": {
+              "$ref": "#/components/schemas/EncounterDiagnosis"
+            },
+            "type": "array"
+          },
+          "dischargeDateTime": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "encounterDateTime": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "encounterNumber": {
+            "type": "string"
+          },
+          "encounterType": {
+            "enum": [
+              "OFFICE_VISIT",
+              "OUTPATIENT",
+              "INPATIENT",
+              "EMERGENCY",
+              "OBSERVATION",
+              "TELEHEALTH",
+              "HOME_HEALTH",
+              "AMBULATORY",
+              "DAY_SURGERY",
+              "LAB_ONLY",
+              "RADIOLOGY_ONLY"
+            ],
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "patient": {
+            "$ref": "#/components/schemas/Patient"
+          },
+          "priority": {
+            "enum": [
+              "STAT",
+              "URGENT",
+              "ROUTINE",
+              "ELECTIVE"
+            ],
+            "type": "string"
+          },
+          "room": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "SCHEDULED",
+              "CHECKED_IN",
+              "IN_PROGRESS",
+              "COMPLETED",
+              "CANCELLED",
+              "NO_SHOW"
+            ],
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "version": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "visitType": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "EncounterDiagnosis": {
+        "properties": {
+          "diagnosis": {
+            "$ref": "#/components/schemas/Diagnosis"
+          },
+          "encounter": {
+            "$ref": "#/components/schemas/Encounter"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "primaryDiagnosis": {
+            "type": "boolean"
+          },
+          "rank": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "role": {
+            "enum": [
+              "ADMISSION",
+              "DISCHARGE",
+              "BILLING",
+              "CHIEF_COMPLAINT",
+              "COMORBIDITY",
+              "COMPLICATION",
+              "REASON_FOR_VISIT"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "License": {
+        "properties": {
+          "expirationDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "issueDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "licenseNumber": {
+            "type": "string"
+          },
+          "licenseType": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "LoginRequest": {
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "PageEncounter": {
+        "properties": {
+          "content": {
+            "items": {
+              "$ref": "#/components/schemas/Encounter"
+            },
+            "type": "array"
+          },
+          "empty": {
+            "type": "boolean"
+          },
+          "first": {
+            "type": "boolean"
+          },
+          "last": {
+            "type": "boolean"
+          },
+          "number": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "numberOfElements": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
+          },
+          "size": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
+          },
+          "totalElements": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "totalPages": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "PagePatientDTO": {
+        "properties": {
+          "content": {
+            "items": {
+              "$ref": "#/components/schemas/PatientDTO"
+            },
+            "type": "array"
+          },
+          "empty": {
+            "type": "boolean"
+          },
+          "first": {
+            "type": "boolean"
+          },
+          "last": {
+            "type": "boolean"
+          },
+          "number": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "numberOfElements": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
+          },
+          "size": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
+          },
+          "totalElements": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "totalPages": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "Pageable": {
+        "properties": {
+          "page": {
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "size": {
+            "format": "int32",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "sort": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "PageableObject": {
+        "properties": {
+          "offset": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "pageNumber": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "pageSize": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "paged": {
+            "type": "boolean"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
+          },
+          "unpaged": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "Patient": {
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "address": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "dateOfBirth": {
+            "format": "date",
+            "type": "string"
+          },
+          "deceased": {
+            "type": "boolean"
+          },
+          "deceasedDate": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "emergencyContacts": {
+            "items": {
+              "$ref": "#/components/schemas/EmergencyContact"
+            },
+            "type": "array"
+          },
+          "ethnicity": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "gender": {
+            "enum": [
+              "MALE",
+              "FEMALE",
+              "OTHER",
+              "UNKNOWN"
+            ],
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "identifiers": {
+            "items": {
+              "$ref": "#/components/schemas/PatientIdentifier"
+            },
+            "type": "array"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "mailingAddress": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "maritalStatus": {
+            "enum": [
+              "SINGLE",
+              "MARRIED",
+              "DIVORCED",
+              "WIDOWED",
+              "SEPARATED",
+              "DOMESTIC_PARTNER",
+              "UNKNOWN"
+            ],
+            "type": "string"
+          },
+          "middleName": {
+            "type": "string"
+          },
+          "mrn": {
+            "type": "string"
+          },
+          "phoneHome": {
+            "type": "string"
+          },
+          "phoneMobile": {
+            "type": "string"
+          },
+          "phoneWork": {
+            "type": "string"
+          },
+          "preferredLanguage": {
+            "type": "string"
+          },
+          "race": {
+            "type": "string"
+          },
+          "religion": {
+            "type": "string"
+          },
+          "ssn": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "version": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "firstName",
+          "lastName"
+        ],
+        "type": "object"
+      },
+      "PatientDTO": {
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "address": {
+            "$ref": "#/components/schemas/AddressDTO"
+          },
+          "age": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "dateOfBirth": {
+            "format": "date",
+            "type": "string"
+          },
+          "deceased": {
+            "type": "boolean"
+          },
+          "deceasedDate": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "emergencyContacts": {
+            "items": {
+              "$ref": "#/components/schemas/EmergencyContactDTO"
+            },
+            "type": "array"
+          },
+          "ethnicity": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "gender": {
+            "enum": [
+              "MALE",
+              "FEMALE",
+              "OTHER",
+              "UNKNOWN"
+            ],
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "identifiers": {
+            "items": {
+              "$ref": "#/components/schemas/PatientIdentifierDTO"
+            },
+            "type": "array"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "mailingAddress": {
+            "$ref": "#/components/schemas/AddressDTO"
+          },
+          "maritalStatus": {
+            "enum": [
+              "SINGLE",
+              "MARRIED",
+              "DIVORCED",
+              "WIDOWED",
+              "SEPARATED",
+              "DOMESTIC_PARTNER",
+              "UNKNOWN"
+            ],
+            "type": "string"
+          },
+          "middleName": {
+            "type": "string"
+          },
+          "mrn": {
+            "type": "string"
+          },
+          "phoneHome": {
+            "type": "string"
+          },
+          "phoneMobile": {
+            "type": "string"
+          },
+          "phoneWork": {
+            "type": "string"
+          },
+          "preferredLanguage": {
+            "type": "string"
+          },
+          "race": {
+            "type": "string"
+          },
+          "religion": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "firstName",
+          "lastName"
+        ],
+        "type": "object"
+      },
+      "PatientIdentifier": {
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "effectiveDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "expirationDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "identifierType": {
+            "enum": [
+              "MRN",
+              "SSN",
+              "DRIVERS_LICENSE",
+              "PASSPORT",
+              "INSURANCE_MEMBER_ID",
+              "INSURANCE_GROUP_ID",
+              "MEDICARE_ID",
+              "MEDICAID_ID",
+              "MILITARY_ID",
+              "OTHER"
+            ],
+            "type": "string"
+          },
+          "identifierValue": {
+            "type": "string"
+          },
+          "issuingAuthority": {
+            "type": "string"
+          },
+          "patient": {
+            "$ref": "#/components/schemas/Patient"
+          }
+        },
+        "type": "object"
+      },
+      "PatientIdentifierDTO": {
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "effectiveDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "expirationDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "identifierType": {
+            "enum": [
+              "MRN",
+              "SSN",
+              "DRIVERS_LICENSE",
+              "PASSPORT",
+              "INSURANCE_MEMBER_ID",
+              "INSURANCE_GROUP_ID",
+              "MEDICARE_ID",
+              "MEDICAID_ID",
+              "MILITARY_ID",
+              "OTHER"
+            ],
+            "type": "string"
+          },
+          "identifierValue": {
+            "type": "string"
+          },
+          "issuingAuthority": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Provider": {
+        "properties": {
+          "acceptingPatients": {
+            "type": "boolean"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "credentials": {
+            "type": "string"
+          },
+          "department": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "fax": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "hireDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "licenses": {
+            "items": {
+              "$ref": "#/components/schemas/License"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "middleName": {
+            "type": "string"
+          },
+          "npi": {
+            "type": "string"
+          },
+          "pager": {
+            "type": "string"
+          },
+          "phoneMobile": {
+            "type": "string"
+          },
+          "phoneOffice": {
+            "type": "string"
+          },
+          "providerType": {
+            "enum": [
+              "PHYSICIAN",
+              "NURSE_PRACTITIONER",
+              "PHYSICIAN_ASSISTANT",
+              "REGISTERED_NURSE",
+              "LICENSED_PRACTICAL_NURSE",
+              "CERTIFIED_NURSING_ASSISTANT",
+              "PHARMACIST",
+              "PHYSICAL_THERAPIST",
+              "OCCUPATIONAL_THERAPIST",
+              "RESPIRATORY_THERAPIST",
+              "SOCIAL_WORKER",
+              "CASE_MANAGER",
+              "DIETITIAN",
+              "PSYCHOLOGIST",
+              "PSYCHIATRIST",
+              "MEDICAL_ASSISTANT",
+              "OTHER"
+            ],
+            "type": "string"
+          },
+          "specialty": {
+            "type": "string"
+          },
+          "subspecialty": {
+            "type": "string"
+          },
+          "suffix": {
+            "type": "string"
+          },
+          "terminationDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "version": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "SignUpRequest": {
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "SortObject": {
+        "properties": {
+          "empty": {
+            "type": "boolean"
+          },
+          "sorted": {
+            "type": "boolean"
+          },
+          "unsorted": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "OpenAPI definition",
+    "version": "v0"
+  },
+  "openapi": "3.0.1",
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "operationId": "authenticateUser",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "auth-controller"
+        ]
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "operationId": "registerUser",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignUpRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "auth-controller"
+        ]
+      }
+    },
+    "/v1/encounters": {
+      "post": {
+        "operationId": "create_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Encounter"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Encounter"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "encounter-controller"
+        ]
+      }
+    },
+    "/v1/encounters/date-range": {
+      "get": {
+        "operationId": "getByDateRange",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "startDate",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "endDate",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Encounter"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "encounter-controller"
+        ]
+      }
+    },
+    "/v1/encounters/number/{encounterNumber}": {
+      "get": {
+        "operationId": "getByNumber",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "encounterNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Encounter"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "encounter-controller"
+        ]
+      }
+    },
+    "/v1/encounters/patient/{patientId}": {
+      "get": {
+        "operationId": "getByPatient",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "patientId",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Encounter"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "encounter-controller"
+        ]
+      }
+    },
+    "/v1/encounters/patient/{patientId}/paged": {
+      "get": {
+        "operationId": "getByPatientPaged",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "patientId",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pageable",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Pageable"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageEncounter"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "encounter-controller"
+        ]
+      }
+    },
+    "/v1/encounters/provider/{providerId}": {
+      "get": {
+        "operationId": "getByProvider",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "providerId",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Encounter"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "encounter-controller"
+        ]
+      }
+    },
+    "/v1/encounters/provider/{providerId}/schedule": {
+      "get": {
+        "operationId": "getProviderSchedule",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "providerId",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Encounter"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "encounter-controller"
+        ]
+      }
+    },
+    "/v1/encounters/status/{status}": {
+      "get": {
+        "operationId": "getByStatus",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "status",
+            "required": true,
+            "schema": {
+              "enum": [
+                "SCHEDULED",
+                "CHECKED_IN",
+                "IN_PROGRESS",
+                "COMPLETED",
+                "CANCELLED",
+                "NO_SHOW"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Encounter"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "encounter-controller"
+        ]
+      }
+    },
+    "/v1/encounters/{id}": {
+      "get": {
+        "operationId": "getById_1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Encounter"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "encounter-controller"
+        ]
+      },
+      "put": {
+        "operationId": "update_1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Encounter"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Encounter"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "encounter-controller"
+        ]
+      }
+    },
+    "/v1/encounters/{id}/cancel": {
+      "post": {
+        "operationId": "cancel",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "encounter-controller"
+        ]
+      }
+    },
+    "/v1/encounters/{id}/check-in": {
+      "post": {
+        "operationId": "checkIn",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "encounter-controller"
+        ]
+      }
+    },
+    "/v1/encounters/{id}/complete": {
+      "post": {
+        "operationId": "complete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "encounter-controller"
+        ]
+      }
+    },
+    "/v1/encounters/{id}/no-show": {
+      "post": {
+        "operationId": "noShow",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "encounter-controller"
+        ]
+      }
+    },
+    "/v1/encounters/{id}/start": {
+      "post": {
+        "operationId": "start",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "encounter-controller"
+        ]
+      }
+    },
+    "/v1/export/encounters": {
+      "get": {
+        "operationId": "exportEncounters",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "startDate",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "endDate",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "items": {
+                    "format": "byte",
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "legacy-export-controller"
+        ]
+      }
+    },
+    "/v1/export/patient/{patientId}/encounters": {
+      "get": {
+        "operationId": "exportPatientEncounters",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "patientId",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "items": {
+                    "format": "byte",
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "legacy-export-controller"
+        ]
+      }
+    },
+    "/v1/export/reports/daily": {
+      "get": {
+        "operationId": "getDailyReport",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "items": {
+                    "format": "byte",
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "legacy-export-controller"
+        ]
+      }
+    },
+    "/v1/export/reports/encounter-summary": {
+      "get": {
+        "operationId": "generateEncounterSummary",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "startDate",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "endDate",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "legacy-export-controller"
+        ]
+      }
+    },
+    "/v1/export/reports/patient-roster": {
+      "get": {
+        "operationId": "generatePatientRoster",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "legacy-export-controller"
+        ]
+      }
+    },
+    "/v1/patients": {
+      "post": {
+        "operationId": "createPatient",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatientDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientDTO"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Create new patient",
+        "tags": [
+          "Patient"
+        ]
+      }
+    },
+    "/v1/patients/mrn/{mrn}": {
+      "get": {
+        "operationId": "getPatientByMrn",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mrn",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientDTO"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Get patient by MRN",
+        "tags": [
+          "Patient"
+        ]
+      }
+    },
+    "/v1/patients/search": {
+      "get": {
+        "operationId": "searchPatients",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pageable",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Pageable"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagePatientDTO"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Search patients",
+        "tags": [
+          "Patient"
+        ]
+      }
+    },
+    "/v1/patients/{id}": {
+      "get": {
+        "operationId": "getPatient",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientDTO"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Get patient by ID",
+        "tags": [
+          "Patient"
+        ]
+      },
+      "put": {
+        "operationId": "updatePatient",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatientDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientDTO"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Update patient",
+        "tags": [
+          "Patient"
+        ]
+      }
+    },
+    "/v1/providers": {
+      "get": {
+        "operationId": "getAll",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "active",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Provider"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "provider-controller"
+        ]
+      },
+      "post": {
+        "operationId": "create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Provider"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Provider"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "provider-controller"
+        ]
+      }
+    },
+    "/v1/providers/department/{department}": {
+      "get": {
+        "operationId": "getByDepartment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "department",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Provider"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "provider-controller"
+        ]
+      }
+    },
+    "/v1/providers/departments": {
+      "get": {
+        "operationId": "getDepartments",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "provider-controller"
+        ]
+      }
+    },
+    "/v1/providers/npi/{npi}": {
+      "get": {
+        "operationId": "getByNpi",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "npi",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Provider"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "provider-controller"
+        ]
+      }
+    },
+    "/v1/providers/search": {
+      "get": {
+        "operationId": "search",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "lastName",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Provider"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "provider-controller"
+        ]
+      }
+    },
+    "/v1/providers/specialties": {
+      "get": {
+        "operationId": "getSpecialties",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "provider-controller"
+        ]
+      }
+    },
+    "/v1/providers/specialty/{specialty}": {
+      "get": {
+        "operationId": "getBySpecialty",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "specialty",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Provider"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "provider-controller"
+        ]
+      }
+    },
+    "/v1/providers/{id}": {
+      "delete": {
+        "operationId": "deactivate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "provider-controller"
+        ]
+      },
+      "get": {
+        "operationId": "getById",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Provider"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "provider-controller"
+        ]
+      },
+      "put": {
+        "operationId": "update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Provider"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Provider"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "provider-controller"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Generated server url",
+      "url": "http://localhost:8080/api"
+    }
+  ],
+  "tags": [
+    {
+      "description": "Patient management endpoints",
+      "name": "Patient"
+    }
+  ]
+}

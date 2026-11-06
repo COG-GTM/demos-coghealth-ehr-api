@@ -1,0 +1,9 @@
+profile=throughput rate=- vus=32 duration=60s
+ALL                                reqs= 276835  p50=5.95ms p95=14.43ms p99=19.72ms max=58.29ms
+GET /v1/encounters/{id}            reqs=  82948  p50=6.23ms p95=14.81ms p99=20.13ms max=58.29ms
+GET /v1/patients/{id}              reqs=  55489  p50=5.51ms p95=13.94ms p99=19.29ms max=40.73ms
+GET /v1/patients/mrn/{mrn}         reqs=  27682  p50=5.57ms p95=13.86ms p99=18.98ms max=46.75ms
+GET /v1/patients/search            reqs=  55200  p50=5.94ms p95=14.49ms p99=19.76ms max=40.69ms
+GET /v1/providers                  reqs=  27631  p50=6.71ms p95=15.16ms p99=20.41ms max=43.10ms
+GET /v1/providers/{id}             reqs=  27885  p50=5.28ms p95=13.61ms p99=18.98ms max=40.69ms
+throughput=4613.92 req/s  failed=0.00%
