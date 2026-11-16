@@ -1,0 +1,72 @@
+flowchart LR
+  user["Browser / API client"]
+
+  subgraph api["medchart-ehr-api (/api)"]
+    filt["SecurityConfig<br/>/** permitAll<br/>(no auth enforced)"]
+
+    subgraph p1["① Patient record — audited"]
+      pc["PatientController<br/>GET /v1/patients/{id}, /mrn/{mrn}, /search<br/>POST, PUT /v1/patients"]
+      ps["PatientService<br/>@AuditAccess READ/SEARCH/CREATE/UPDATE<br/>search with sort=: native SQL, ORDER BY concatenated"]
+      pm["PatientMapper → PatientDTO<br/>(no ssn field; identifiers[] passed through)"]
+    end
+
+    subgraph p2["② Encounters — not audited"]
+      ec["EncounterController<br/>/v1/encounters/**"]
+      es["EncounterService"]
+      ee["JPA Encounter entity returned as JSON<br/>(no DTO; Patient incl. ssn reachable,<br/>no @JsonIgnore)"]
+    end
+
+    subgraph p3["③ Exports & reports — not audited"]
+      xc["LegacyExportController<br/>/v1/export/**"]
+      xs["EncounterExportService<br/>CSV: MRN, name, DOB<br/>patient history: + SSN"]
+      rg["ReportGenerator<br/>roster: SSN, DOB, phone, address,<br/>insurer, member id<br/>encounter summary: SSN under DOB label"]
+    end
+
+    aa["AuditAspect<br/>userId hard-coded 'system'<br/>+ IP, User-Agent, patientId"]
+    as["AuditService.saveAuditEventAsync<br/>(@Async, REQUIRES_NEW)"]
+    logs["Application log (SLF4J, DEBUG)<br/>MRNs, encounter numbers"]
+  end
+
+  subgraph store["Storage"]
+    pt[("patients<br/>ssn, DOB, name, contact, address")]
+    oth[("encounters · insurance_coverages<br/>providers · patient_identifiers")]
+    ae[("audit_events")]
+    tmp[("java.io.tmpdir<br/>patient_roster_*.csv<br/>encounter_summary_*.txt<br/>never deleted")]
+  end
+
+  subgraph dormant["Not wired to any endpoint (in code, unreachable today)"]
+    lpl["LegacyPatientLookup<br/>native SQL, SSN lookup"]
+    apt["AppointmentService → InsuranceCache<br/>in-memory map, SSN, no TTL"]
+    fpm["FhirPatientMapper<br/>SSN → FHIR identifier"]
+    chr["chronic/* services<br/>(stubs; @AuditAccess / PatientAccessLogger)"]
+  end
+
+  user -->|"HTTPS JSON"| filt
+  filt --> pc --> ps
+  ps -.->|"around advice"| aa --> as --> ae
+  ps -->|"JPA / native SQL"| pt
+  ps --> pm -->|"PatientDTO JSON"| user
+
+  filt --> ec --> es -->|"JPA"| oth
+  es -->|"JOIN FETCH"| pt
+  es --> ee -->|"JSON"| user
+  es --> logs
+
+  filt --> xc
+  xc --> xs -->|"native SQL"| pt
+  xs -->|"CSV / text download"| user
+  xc --> rg -->|"native SQL"| pt
+  rg --> oth
+  rg -->|"writes PHI"| tmp
+  tmp -->|"/reports/daily reads roster back"| user
+  rg -->|"file path in response"| user
+  ps --> logs
+
+  lpl -.-> pt
+  apt -.-> pt
+  classDef gap fill:#fde2e1,stroke:#c0392b,color:#000
+  classDef ok fill:#e3f4e1,stroke:#2e7d32,color:#000
+  classDef dim fill:#eee,stroke:#999,stroke-dasharray:4 3,color:#555
+  class ps,aa,as ok
+  class ec,es,ee,xc,xs,rg,tmp,filt gap
+  class lpl,apt,fpm,chr dim
