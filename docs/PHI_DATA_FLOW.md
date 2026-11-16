@@ -30,7 +30,7 @@ All routes sit behind `SecurityConfig`, which permits `/**`. A bearer JWT is par
 |----------|----------------|-------|
 | `GET /{id}` | `getPatientById` | `@AuditAccess(READ)` |
 | `GET /mrn/{mrn}` | `getPatientByMrn` | `@AuditAccess(READ)` |
-| `GET /search?q=` | `searchPatients` (JPQL `LIKE` on name / MRN) | `@AuditAccess(SEARCH)` |
+| `GET /search?q=&sort=` | `searchPatients`: JPQL `LIKE` on name / MRN; with a non-blank `sort`, native SQL via `EntityManager` with `sort` concatenated into `ORDER BY` | `@AuditAccess(SEARCH)` (both branches) |
 | `POST /` | `createPatient` | `@AuditAccess(CREATE)` |
 | `PUT /{id}` | `updatePatient` | `@AuditAccess(UPDATE)` |
 
@@ -55,7 +55,7 @@ The React frontend reaches this path through `frontend/src/api/patients.ts`.
 | `GET /encounters?startDate&endDate` | `EncounterExportService.exportEncountersForDateRange` | CSV download: MRN, patient name, DOB, encounter data |
 | `GET /patient/{id}/encounters` | `EncounterExportService.exportPatientEncounterHistory` | Text download: name, MRN, **SSN**, DOB, encounter history |
 | `GET /reports/patient-roster` | `ReportGenerator.generatePatientRoster` | Writes all active patients (SSN, DOB, phones, email, address, payer, member ID) to `java.io.tmpdir`; returns the file path |
-| `GET /reports/encounter-summary` | `ReportGenerator.generateEncounterSummary` | Writes encounters with patient MRN, name, **SSN**, DOB to `java.io.tmpdir`; returns the file path |
+| `GET /reports/encounter-summary` | `ReportGenerator.generateEncounterSummary` | Writes encounters with patient MRN and name to `java.io.tmpdir`; returns the file path. Column indexes are off by one: the line labelled `DOB:` prints the **SSN** and the `Provider:` line starts with the patient DOB |
 | `GET /reports/daily` | `ReportGenerator.generateDailyReport` | Regenerates the roster file and returns it as a CSV download |
 | `GET /reports/department-productivity` | `ReportGenerator.generateDepartmentProductivityReport` | Provider names and encounter counts (no patient fields) |
 
@@ -88,4 +88,4 @@ These classes handle PHI but no controller, scheduler or other bean calls them o
 | `ReportGenerator` writes PHI to temp files without cleanup | Still true (path 3) |
 | 15+ endpoints missing access logging | All `/v1/encounters/**` and `/v1/export/**` routes are unaudited (path 2, 3) |
 
-Not listed in `AGENTS.md`: all routes are `permitAll`, audit events record user `system`, encounter endpoints return entities rather than DTOs, and `PatientDTO.identifiers` can carry SSN values.
+Not listed in `AGENTS.md`: all routes are `permitAll`, the sorted patient search concatenates the `sort` parameter into native SQL, audit events record user `system`, encounter endpoints return entities rather than DTOs, and `PatientDTO.identifiers` can carry SSN values.

@@ -6,7 +6,7 @@ flowchart LR
 
     subgraph p1["① Patient record — audited"]
       pc["PatientController<br/>GET /v1/patients/{id}, /mrn/{mrn}, /search<br/>POST, PUT /v1/patients"]
-      ps["PatientService<br/>@AuditAccess READ/SEARCH/CREATE/UPDATE"]
+      ps["PatientService<br/>@AuditAccess READ/SEARCH/CREATE/UPDATE<br/>search with sort=: native SQL, ORDER BY concatenated"]
       pm["PatientMapper → PatientDTO<br/>(no ssn field; identifiers[] passed through)"]
     end
 
@@ -19,7 +19,7 @@ flowchart LR
     subgraph p3["③ Exports & reports — not audited"]
       xc["LegacyExportController<br/>/v1/export/**"]
       xs["EncounterExportService<br/>CSV: MRN, name, DOB<br/>patient history: + SSN"]
-      rg["ReportGenerator<br/>roster: SSN, DOB, phone, address,<br/>insurer, member id"]
+      rg["ReportGenerator<br/>roster: SSN, DOB, phone, address,<br/>insurer, member id<br/>encounter summary: SSN under DOB label"]
     end
 
     aa["AuditAspect<br/>userId hard-coded 'system'<br/>+ IP, User-Agent, patientId"]
@@ -44,7 +44,7 @@ flowchart LR
   user -->|"HTTPS JSON"| filt
   filt --> pc --> ps
   ps -.->|"around advice"| aa --> as --> ae
-  ps -->|"JPA"| pt
+  ps -->|"JPA / native SQL"| pt
   ps --> pm -->|"PatientDTO JSON"| user
 
   filt --> ec --> es -->|"JPA"| oth
