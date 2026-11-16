@@ -1,0 +1,68 @@
+flowchart TB
+  subgraph clients["Clients"]
+    web["React SPA (frontend/, Vite :5173)<br/>axios → VITE_API_URL<br/>default http://localhost:8080/api"]
+    ops["Operators / scripts<br/>curl, Swagger UI"]
+    cron["GitHub Actions<br/>nightly-interface-contract.yml<br/>every 30 min + PRs"]
+  end
+
+  subgraph app["medchart-ehr-api — one Spring Boot 2.7 app, Java 11, :8080, context path /api"]
+    sec["SecurityConfig<br/>CORS: localhost:5173 / 5178 / 3000<br/>stateless, CSRF off, /** permitAll<br/>JwtAuthenticationFilter (Bearer, optional)"]
+    subgraph ctrl["REST controllers"]
+      authc["AuthController<br/>/api/auth/login · /register"]
+      patc["PatientController<br/>/v1/patients"]
+      encc["EncounterController<br/>/v1/encounters"]
+      provc["ProviderController<br/>/v1/providers"]
+      expc["LegacyExportController<br/>/v1/export"]
+      ifc["InterfaceController<br/>/interfaces"]
+    end
+    subgraph svc["Services"]
+      patsvc["PatientService<br/>@AuditAccess"]
+      encsvc["EncounterService"]
+      provsvc["ProviderService"]
+      legacy["legacy/*<br/>EncounterExportService · ReportGenerator<br/>(native SQL via EntityManager)"]
+      hr["HrPtoSyncJob · HrExportReader<br/>DepartmentMapping<br/>@Scheduled 02:00 + on demand"]
+      fhir["interop/fhir<br/>FhirR4ExportService · FhirR4ContractValidator<br/>(HAPI FHIR libraries, in-process)"]
+    end
+    audit["AuditAspect → AuditService (@Async)"]
+    repo["Spring Data JPA repositories<br/>Hibernate · HikariCP · Flyway V1–V4"]
+  end
+
+  subgraph data["Data stores"]
+    pg[("PostgreSQL<br/>dev profile: Neon (NEON_DB_*)<br/>default: localhost:5432/medchart_ehr")]
+    fs[("Local filesystem<br/>java.io.tmpdir reports<br/>target/interfaces/ie-prod/*.hl7, logs<br/>contract report")]
+    res[("Classpath fixtures<br/>interfaces/hr/export/*.csv<br/>cost_center_department_map.csv")]
+  end
+
+  web --> sec
+  ops --> sec
+  cron -->|"mvn test -Dgroups=interface-contract"| fhir
+  sec --> ctrl
+  authc --> repo
+  patc --> patsvc
+  encc --> encsvc
+  provc --> provsvc
+  expc --> legacy
+  ifc --> hr
+  ifc --> fhir
+  patsvc -.->|"intercepted"| audit
+  patsvc --> repo
+  encsvc --> repo
+  provsvc --> repo
+  audit --> repo
+  legacy --> pg
+  legacy --> fs
+  hr --> res
+  hr --> pg
+  hr --> fs
+  fhir --> res
+  fhir --> fs
+  repo --> pg
+
+  classDef off fill:#eee,stroke:#999,stroke-dasharray:4 3,color:#666
+  subgraph notused["Declared but not used by the running app"]
+    redis["Redis — starter on classpath,<br/>no RedisTemplate/@Cacheable;<br/>auto-config excluded in dev"]
+    rabbit["RabbitMQ — AMQP starter on classpath,<br/>no RabbitTemplate/listeners"]
+    kc["Keycloak · Elasticsearch · Kibana —<br/>docker-compose only, no client in pom.xml"]
+    hapi["HAPI FHIR server — commented out<br/>in docker-compose.yml"]
+  end
+  class redis,rabbit,kc,hapi off

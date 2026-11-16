@@ -2,222 +2,105 @@
 
 ## Architecture Overview
 
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                                 CLIENTS                                          │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐                  │
-│  │  Web Browser    │  │  Mobile App     │  │  HL7 Interface  │                  │
-│  │  (React)        │  │  (Future)       │  │  (Mirth)        │                  │
-│  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘                  │
-└───────────┼─────────────────────┼─────────────────────┼──────────────────────────┘
-            │                     │                     │
-            ▼                     ▼                     ▼
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                              API GATEWAY                                         │
-│                         (Spring Boot :8080)                                      │
-│  ┌─────────────────────────────────────────────────────────────────────────┐    │
-│  │  Authentication │ Rate Limiting │ Request Logging │ CORS │ Routing     │    │
-│  └─────────────────────────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────────────────────────┘
-            │
-            ▼
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                           IDENTITY & ACCESS                                      │
-│  ┌─────────────────────────────────────────────────────────────────────────┐    │
-│  │                    Keycloak (:8180)                                      │    │
-│  │  • OAuth 2.0 / OpenID Connect                                           │    │
-│  │  • Role-Based Access Control (RBAC)                                     │    │
-│  │  • Multi-Factor Authentication                                          │    │
-│  │  • Session Management                                                   │    │
-│  │  • Audit Logging                                                        │    │
-│  └─────────────────────────────────────────────────────────────────────────┘    │
-│                                                                                  │
-│  Roles: physician | nurse | medical_assistant | front_desk | billing | admin    │
-└─────────────────────────────────────────────────────────────────────────────────┘
-            │
-            ▼
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                          APPLICATION SERVICES                                    │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐           │
-│  │   Patient    │ │   Clinical   │ │  Medication  │ │   Billing    │           │
-│  │   Service    │ │   Service    │ │   Service    │ │   Service    │           │
-│  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘           │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐           │
-│  │  Scheduling  │ │   Chronic    │ │   Audit      │ │  Reporting   │           │
-│  │   Service    │ │   Care Svc   │ │   Service    │ │   Service    │           │
-│  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘           │
-└─────────────────────────────────────────────────────────────────────────────────┘
-            │
-            ▼
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                            DATA LAYER                                            │
-│                                                                                  │
-│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐              │
-│  │   PostgreSQL     │  │     Redis        │  │  Elasticsearch   │              │
-│  │   (:5432)        │  │    (:6379)       │  │    (:9200)       │              │
-│  │                  │  │                  │  │                  │              │
-│  │  • Patient data  │  │  • Session cache │  │  • Audit logs    │              │
-│  │  • Clinical data │  │  • API cache     │  │  • Search index  │              │
-│  │  • Orders        │  │  • Rate limiting │  │  • Analytics     │              │
-│  │  • Audit trail   │  │                  │  │                  │              │
-│  └──────────────────┘  └──────────────────┘  └──────────────────┘              │
-└─────────────────────────────────────────────────────────────────────────────────┘
-            │
-            ▼
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                         INTEGRATION LAYER                                        │
-│                                                                                  │
-│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐              │
-│  │    RabbitMQ      │  │    HAPI FHIR     │  │    Kibana        │              │
-│  │   (:5672/15672)  │  │    (:8090)       │  │    (:5601)       │              │
-│  │                  │  │                  │  │                  │              │
-│  │  • HL7 messages  │  │  • FHIR R4 API   │  │  • Log viewer    │              │
-│  │  • Async tasks   │  │  • Interop       │  │  • Dashboards    │              │
-│  │  • Notifications │  │  • Data exchange │  │  • Audit review  │              │
-│  └──────────────────┘  └──────────────────┘  └──────────────────┘              │
-└─────────────────────────────────────────────────────────────────────────────────┘
-```
+![CogHealth EHR architecture overview](docs/diagrams/architecture-overview.svg)
 
-## Quick Start
+Source: [`docs/diagrams/architecture-overview.mmd`](docs/diagrams/architecture-overview.mmd) (see [Regenerating diagrams](#regenerating-diagrams)).
+
+The backend is **one Spring Boot 2.7 application** (`com.medchart.ehr.MedchartEhrApplication`, Java 11) listening on `:8080` with context path `/api`. There are no separately deployed services: patients, encounters, providers, exports/reports, the HR PTO interface and FHIR R4 validation are packages inside the same JVM, sharing one PostgreSQL datasource.
+
+| Layer | What runs | Where in code |
+|-------|-----------|---------------|
+| Client | React SPA (Vite dev server on `:5173`), calls `VITE_API_URL` (default `http://localhost:8080/api`) | `frontend/src/api/` |
+| Security | Spring Security, stateless, CSRF off, CORS for `localhost:5173/5178/3000`. `JwtAuthenticationFilter` reads an optional `Bearer` token, but **every route is `permitAll`** — nothing is enforced today | `config/SecurityConfig.java`, `config/JwtAuthenticationFilter.java` |
+| Auth | Local users and roles (`PROVIDER`, `ADMIN`, `STAFF`) in the `users` / `user_roles` tables; JJWT tokens issued by `/api/auth/login` and `/api/auth/register` | `controller/AuthController.java`, `config/JwtTokenProvider.java` |
+| REST | `/v1/patients`, `/v1/encounters`, `/v1/providers`, `/v1/export`, `/interfaces`, `/auth` | `controller/` |
+| Services | `PatientService` (audited with `@AuditAccess`), `EncounterService`, `ProviderService`, legacy native-SQL exports/reports | `service/`, `legacy/` |
+| Audit | `AuditAspect` around `@AuditAccess` methods → `AuditService` writes `audit_events` asynchronously | `audit/` |
+| Interfaces | `HrPtoSyncJob` (nightly `02:00` via `@Scheduled`, on demand via `POST /api/interfaces/hr-pto-sync/run`) turns Workday PTO CSV fixtures into HL7 v2.5 SIU^S15 files; `interop/fhir` builds and validates FHIR R4 resources in-process with the HAPI FHIR libraries | `legacy/HrPtoSyncJob.java`, `interop/fhir/`, [`docs/interfaces/hr-pto-sync.md`](docs/interfaces/hr-pto-sync.md) |
+| Persistence | Spring Data JPA / Hibernate over HikariCP; schema by Flyway `V1`–`V4` on startup | `repository/`, `src/main/resources/db/migration/` |
+| Files | Reports in `java.io.tmpdir`; HL7 output and logs under `target/interfaces/ie-prod/` | `legacy/ReportGenerator.java`, `legacy/HrPtoSyncJob.java` |
+
+How patient data moves through these layers, and where it is or is not audited, is in [`docs/PHI_DATA_FLOW.md`](docs/PHI_DATA_FLOW.md).
+
+### Declared but not used by the running app
+
+These appear in `pom.xml`, `application.yml` or `docker-compose.yml`, but no code on `main` talks to them. Earlier versions of this document showed them as live services.
+
+| Component | Status on `main` |
+|-----------|------------------|
+| Keycloak | Container in `docker-compose.yml` only. No Keycloak client or OIDC config in the app; auth is the local JWT flow above. |
+| RabbitMQ | `spring-boot-starter-amqp` and `spring.rabbitmq.*` config, container in compose. No `RabbitTemplate`, queues or listeners. |
+| Redis | `spring-boot-starter-data-redis` and `spring.redis.*` config, container in compose. No `RedisTemplate` or `@Cacheable`; Redis auto-config is excluded in the `dev` profile. |
+| Elasticsearch / Kibana | Containers in compose only; no client dependency. |
+| HAPI FHIR server | Commented out in `docker-compose.yml`. FHIR work uses the HAPI libraries inside the app; no external FHIR server is called. |
+
+## Running
+
+### Dev profile (default for this repo)
 
 ```bash
-# Start all infrastructure
-./start-infrastructure.sh
-
-# Or manually with docker-compose
-docker-compose up -d
-
-# Stop everything
-docker-compose down
-
-# Stop and remove all data
-docker-compose down -v
+mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-## Service URLs
+Connects to the shared Neon PostgreSQL database using `NEON_DB_URL`, `NEON_DB_USERNAME`, `NEON_DB_PASSWORD`. Nothing else needs to be running.
 
-| Service | URL | Credentials |
-|---------|-----|-------------|
-| PostgreSQL | `localhost:5432` | `coghealth` / `coghealth_dev_2024` |
-| Redis | `localhost:6379` | No auth (dev mode) |
-| Keycloak Admin | http://localhost:8180 | `admin` / `admin` |
-| RabbitMQ Management | http://localhost:15672 | `coghealth` / `coghealth_dev_2024` |
-| Elasticsearch | http://localhost:9200 | No auth (dev mode) |
-| Kibana | http://localhost:5601 | No auth (dev mode) |
-| HAPI FHIR | http://localhost:8090/fhir | No auth (dev mode) |
+### Local PostgreSQL (default profile)
 
-## Demo Users
+The default profile reads `DB_URL` (default `jdbc:postgresql://localhost:5432/medchart_ehr`), `DB_USERNAME` (`medchart`) and `DB_PASSWORD`. The compose Postgres creates a `coghealth` database and user instead, so point the app at it explicitly:
 
-All users have password: `demo123` (except admin: `admin123`)
-
-| Username | Role | Access Level |
-|----------|------|--------------|
-| `dr.anderson` | Physician | Full clinical access, prescribing |
-| `nurse.johnson` | Nurse | Clinical access, limited prescribing |
-| `ma.smith` | Medical Assistant | Vitals, scheduling, limited charts |
-| `frontdesk.wilson` | Front Desk | Scheduling, demographics only |
-| `billing.garcia` | Billing | Claims, payments, limited PHI |
-| `compliance.lee` | Compliance Officer | Audit logs, reports, read-only |
-| `admin` | System Admin | Full system access |
-
-## Role-Based Access Control (RBAC)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                        ACCESS MATRIX                                         │
-├─────────────────┬──────┬───────┬─────┬───────┬─────────┬───────┬───────────┤
-│ Resource        │ Phys │ Nurse │ MA  │ Front │ Billing │ Compl │ Admin     │
-├─────────────────┼──────┼───────┼─────┼───────┼─────────┼───────┼───────────┤
-│ Patient Demo    │  RW  │  RW   │  R  │   RW  │    R    │   R   │    RW     │
-│ Clinical Notes  │  RW  │  RW   │  -  │   -   │    -    │   R   │    RW     │
-│ Medications     │  RW  │  R    │  R  │   -   │    R    │   R   │    RW     │
-│ Prescribe       │  ✓   │  ✗    │  ✗  │   ✗   │    ✗    │   ✗   │    ✗      │
-│ Controlled Rx   │  ✓*  │  ✗    │  ✗  │   ✗   │    ✗    │   ✗   │    ✗      │
-│ Lab Orders      │  RW  │  RW   │  R  │   -   │    R    │   R   │    RW     │
-│ Scheduling      │  RW  │  RW   │  RW │   RW  │    R    │   R   │    RW     │
-│ Billing/Claims  │  R   │  -    │  -  │   -   │    RW   │   R   │    RW     │
-│ Audit Logs      │  -   │  -    │  -  │   -   │    -    │   R   │    RW     │
-│ System Config   │  -   │  -    │  -  │   -   │    -    │   -   │    RW     │
-├─────────────────┴──────┴───────┴─────┴───────┴─────────┴───────┴───────────┤
-│ R = Read, W = Write, RW = Read/Write, - = No Access, * = Requires DEA      │
-└─────────────────────────────────────────────────────────────────────────────┘
+```bash
+docker-compose up -d postgres
+DB_URL=jdbc:postgresql://localhost:5432/coghealth DB_USERNAME=coghealth DB_PASSWORD=coghealth_dev_2024 \
+  mvn spring-boot:run
 ```
 
-## Data Flow
+The default profile also auto-configures Redis and RabbitMQ connection factories against `localhost`; they are not used by any code path.
 
-### Authentication Flow
-```
-User → Frontend → Keycloak → JWT Token → API → Validate Token → Process Request
-```
+### Optional containers
 
-### PHI Access Flow
-```
-Request → Auth Check → RBAC Check → Audit Log → Data Access → Response → Audit Log
-```
+`./start-infrastructure.sh` (or `docker-compose up -d`) starts every container in `docker-compose.yml`. Only PostgreSQL is needed by the application.
 
-### HL7/FHIR Integration Flow
-```
-External System → RabbitMQ → Message Processor → Validate → Transform → Store → Acknowledge
-```
+| Service | URL | Used by the app |
+|---------|-----|-----------------|
+| PostgreSQL | `localhost:5432` | Yes (default profile) |
+| Redis | `localhost:6379` | No |
+| Keycloak | http://localhost:8180 | No |
+| RabbitMQ | `localhost:5672`, http://localhost:15672 | No |
+| Elasticsearch | http://localhost:9200 | No |
+| Kibana | http://localhost:5601 | No |
 
 ## Environment Variables
 
-The API expects these environment variables (set in application.yml or docker-compose):
+| Variable | Profile | Purpose |
+|----------|---------|---------|
+| `NEON_DB_URL`, `NEON_DB_USERNAME`, `NEON_DB_PASSWORD` | `dev` | Shared Neon database |
+| `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | default | Local PostgreSQL |
+| `JWT_SECRET` | all | HMAC key for issued JWTs (dev default in `application.yml`) |
+| `VITE_API_URL` | frontend | API base URL (default `http://localhost:8080/api`) |
 
-```yaml
-# Database
-SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/coghealth
-SPRING_DATASOURCE_USERNAME: coghealth
-SPRING_DATASOURCE_PASSWORD: coghealth_dev_2024
+## Regenerating diagrams
 
-# Redis
-SPRING_REDIS_HOST: localhost
-SPRING_REDIS_PORT: 6379
+Diagrams are Mermaid sources in `docs/diagrams/*.mmd`, committed with their rendered SVGs. After editing a source:
 
-# Keycloak
-KEYCLOAK_AUTH_SERVER_URL: http://localhost:8180
-KEYCLOAK_REALM: coghealth
-KEYCLOAK_RESOURCE: coghealth-api
-KEYCLOAK_CREDENTIALS_SECRET: coghealth-api-secret-2024
-
-# RabbitMQ
-SPRING_RABBITMQ_HOST: localhost
-SPRING_RABBITMQ_PORT: 5672
-SPRING_RABBITMQ_USERNAME: coghealth
-SPRING_RABBITMQ_PASSWORD: coghealth_dev_2024
-
-# Elasticsearch
-ELASTICSEARCH_HOST: localhost
-ELASTICSEARCH_PORT: 9200
-
-# FHIR
-HAPI_FHIR_URL: http://localhost:8090/fhir
+```bash
+npx -y @mermaid-js/mermaid-cli -i docs/diagrams/architecture-overview.mmd -o docs/diagrams/architecture-overview.svg -b white
+npx -y @mermaid-js/mermaid-cli -i docs/diagrams/phi-data-flow.mmd -o docs/diagrams/phi-data-flow.svg -b white
 ```
 
 ## Troubleshooting
 
-### Services won't start
+### Containers won't start
 ```bash
-# Check Docker is running
-docker info
-
-# Check for port conflicts
-lsof -i :5432  # PostgreSQL
-lsof -i :6379  # Redis
-lsof -i :8180  # Keycloak
-
-# View logs
+docker info                         # Docker running?
+lsof -i :5432                       # port conflict on PostgreSQL
 docker-compose logs -f [service_name]
 ```
 
-### Reset everything
+### Reset local containers
 ```bash
 docker-compose down -v
-docker system prune -f
 ./start-infrastructure.sh
 ```
 
 ### Memory issues
-Elasticsearch needs at least 512MB. If Docker is constrained:
-1. Open Docker Desktop → Settings → Resources
-2. Increase Memory to at least 4GB
+Elasticsearch needs at least 512MB. It is not used by the app, so `docker-compose up -d postgres` avoids it entirely.
