@@ -11,7 +11,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Slf4j
@@ -113,22 +117,24 @@ public class ReportGenerator {
         report.append("Generated: ").append(LocalDateTime.now()).append(System.lineSeparator());
         report.append(System.lineSeparator());
 
+        @SuppressWarnings("unchecked")
+        List<Object[]> providerRows = entityManager.createNativeQuery(
+                "SELECT pr.department, pr.last_name, COALESCE(ec.encounter_count, 0) FROM providers pr "
+                        + "LEFT JOIN (SELECT attending_provider_id, COUNT(*) AS encounter_count FROM encounters "
+                        + "GROUP BY attending_provider_id) ec ON ec.attending_provider_id = pr.id "
+                        + "WHERE pr.active = true AND pr.department IS NOT NULL "
+                        + "ORDER BY pr.department, pr.last_name")
+                .getResultList();
+        Map<String, List<Object[]>> providersByDepartment = new HashMap<>();
+        for (Object[] row : providerRows) {
+            providersByDepartment.computeIfAbsent((String) row[0], d -> new ArrayList<>()).add(row);
+        }
+
         for (String department : departments) {
-            String sql = "SELECT pr.last_name, pr.id FROM providers pr "
-                    + "WHERE pr.active = true AND pr.department = '" + department + "' "
-                    + "ORDER BY pr.last_name";
-            @SuppressWarnings("unchecked")
-            List<Object[]> rows = entityManager.createNativeQuery(sql).getResultList();
             report.append("Department: ").append(department).append(System.lineSeparator());
-            for (Object[] row : rows) {
-                String providerName = String.valueOf(row[0]);
-                Number providerId = (Number) row[1];
-                Number encounterCount = (Number) entityManager.createNativeQuery(
-                        "SELECT COUNT(*) FROM encounters WHERE attending_provider_id = :pid")
-                        .setParameter("pid", providerId == null ? -1L : providerId.longValue())
-                        .getSingleResult();
-                report.append("  ").append(providerName).append(": ")
-                        .append(encounterCount).append(" encounters").append(System.lineSeparator());
+            for (Object[] row : providersByDepartment.getOrDefault(department, Collections.emptyList())) {
+                report.append("  ").append(row[1]).append(": ")
+                        .append(row[2]).append(" encounters").append(System.lineSeparator());
             }
             report.append(System.lineSeparator());
         }
