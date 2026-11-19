@@ -1,0 +1,47 @@
+digraph CogHealth {
+  graph [bgcolor="white", pad=0.25, nodesep=0.34, ranksep=0.47,
+         fontname="DejaVu Sans", fontsize=20, labelloc=t, label="CogHealth EHR on main"];
+  node [shape=box, style="rounded,filled", color="#64748b", fillcolor="#f8fafc",
+        fontcolor="#0f172a", fontname="DejaVu Sans", fontsize=14, margin="0.16,0.10"];
+  edge [color="#475569", fontcolor="#334155", fontname="DejaVu Sans", fontsize=11, arrowsize=0.75];
+
+  callers [label="REST clients / Swagger UI"];
+  frontend [label="Vite starter screen\nNo live EHR wiring", style="rounded,dashed,filled"];
+  hr [label="Dated Workday PTO CSV\n+ cost-center mapping CSV", fillcolor="#fef3c7"];
+  trigger [label="Actions / local script\nTagged JUnit tests"];
+
+  subgraph cluster_app {
+    label="Spring Boot application"; labeljust=l;
+    style="rounded,filled"; color="#93c5fd"; fillcolor="#eff6ff";
+    api [label="REST controllers · /api", fillcolor="#dbeafe"];
+    clinical [label="Clinical services\nJPA + selected audit events", fillcolor="#dbeafe"];
+    legacy [label="Legacy exports / reports\nNative SQL", fillcolor="#dbeafe"];
+    pto [label="hr-pto-sync\n02:00 daily / startup / HTTP", fillcolor="#dbeafe"];
+    { rank=same; clinical; legacy; pto; }
+    api -> clinical;
+    api -> legacy;
+    api -> pto;
+  }
+
+  pg [label="PostgreSQL · Flyway\nEHR, audit, OR blocks",
+      shape=cylinder, style=filled, fillcolor="#dcfce7"];
+  reports [label="HTTP reports\n+ JVM temp files", fillcolor="#fef3c7"];
+  outbound [label="IE-Prod file handoff\nHL7 SIU^S15 + logs", fillcolor="#fef3c7"];
+  fhir [label="FHIR R4 contract check\nHAPI + interface rules", fillcolor="#ede9fe"];
+  artifacts [label="Contract artifacts\nReports + FHIR resources", fillcolor="#ede9fe"];
+
+  { rank=same; frontend; callers; hr; trigger; }
+  { rank=same; pg; reports; outbound; artifacts; }
+  frontend -> callers [style=invis];
+  callers -> api [label="HTTP"];
+  clinical -> pg;
+  legacy -> pg;
+  legacy -> reports;
+  pto -> pg [label="OR block lookup"];
+  pto -> outbound;
+  hr -> pto;
+  hr -> fhir;
+  trigger -> fhir;
+  api -> fhir [style=dashed, label="Report endpoint", constraint=false];
+  fhir -> artifacts;
+}

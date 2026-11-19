@@ -64,7 +64,7 @@ Checks (one JUnit test each, `HrPtoInterfaceContractTest`, tag `interface-contra
 
 1. every cost center in the export resolves to a department
 2. FHIR R4 validation has zero errors
-3. no duplicate practitioners (same NPI or normalized name under several HR employee ids)
+3. no duplicate practitioners (grouped by normalized name)
 
 Run locally:
 

@@ -1,96 +1,95 @@
 # CogHealth EHR API
 
-Spring Boot REST API for the CogHealth EHR system.
+Spring Boot REST API for the CogHealth EHR demo, with a React/Vite frontend workspace.
+See the [architecture and infrastructure guide](INFRASTRUCTURE.md) for the runtime
+diagram, PostgreSQL and Flyway, HR PTO sync, FHIR contract checks, and legacy exports.
 
-> **Full setup instructions:** See the [main README](https://github.com/cogdeasy/demos-coghealth-ehr-data#readme) for complete setup with all three repos.
+## Quick start
 
-## Quick Start (Neon Cloud DB)
+Use JDK 11 and Maven for the API (the same Java version as CI). Use synthetic demo
+data only: the current API filter chain does not require authentication.
 
-No local database setup required. The `dev` profile connects to a shared Neon PostgreSQL instance with pre-seeded test data.
+### Shared Neon PostgreSQL (development)
 
-**Prerequisites:** Java 11 (required — later versions are incompatible)
+Use the `dev` profile for normal development, with the approved shared demo database
+described in [`AGENTS.md`](AGENTS.md#database). It disables Redis auto-configuration,
+runs Flyway, and validates the schema with Hibernate.
 
 ```bash
-# On macOS with Homebrew
-export JAVA_HOME=/opt/homebrew/opt/openjdk@11
-export PATH="$JAVA_HOME/bin:$PATH"
-
-# Set Neon credentials (get these from your team lead or .env file)
-export NEON_DB_URL="jdbc:postgresql://<neon-host>/neondb?sslmode=require"
-export NEON_DB_USERNAME="<username>"
-export NEON_DB_PASSWORD="<password>"
-
-# Run with dev profile
+export NEON_DB_URL='jdbc:postgresql://<neon-host>/neondb?sslmode=require'
+export NEON_DB_USERNAME='<username>'
+export NEON_DB_PASSWORD='<password>'
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-API runs at http://localhost:8080/api
+### Isolated local smoke test
 
-### Quick Start (Local DB)
-
-If you prefer a local PostgreSQL instance, use the default profile with Docker infrastructure from [demos-coghealth-ehr-data](https://github.com/COG-GTM/demos-coghealth-ehr-data).
+To verify the demo without touching shared data, use the default API profile with
+Docker Compose v2. From the repository root, start PostgreSQL and Redis and use the
+Compose database settings. The API runs on the host, not in Compose.
 
 ```bash
+docker compose up -d --wait postgres redis
+export DB_URL='jdbc:postgresql://localhost:5432/coghealth'
+export DB_USERNAME=coghealth
+export DB_PASSWORD="$(docker compose exec -T postgres printenv POSTGRES_PASSWORD)"
 mvn spring-boot:run
 ```
 
-## Tech Stack
+Flyway applies schema and seed migrations from [`src/main/resources/db/migration/`](src/main/resources/db/migration/).
+To use another PostgreSQL instance, set `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD`
+for that instance instead. If an isolated Redis is already running on `localhost:6379`,
+start only the Compose `postgres` service and reuse that Redis instance.
 
-- Java 11
-- Spring Boot 2.7.x
-- PostgreSQL (Neon cloud or local)
-- Flyway (schema migrations)
-- JJWT (authentication tokens)
+### API and frontend
 
-## Database
+- API base: [`http://localhost:8080/api`](http://localhost:8080/api)
+- Swagger UI: [`http://localhost:8080/api/swagger-ui/index.html`](http://localhost:8080/api/swagger-ui/index.html)
+- Health: [`http://localhost:8080/api/actuator/health`](http://localhost:8080/api/actuator/health)
 
-### Neon Cloud (dev profile)
-
-- Host: Neon cloud instance (see `.env` or ask your team lead for credentials)
-- Database: `neondb`
-- Region: EU Central (Frankfurt) — expect ~600-800ms latency from other regions
-- Connection: Direct (non-pooled), supports Flyway advisory locks
-- Schema managed by Flyway migrations in `src/main/resources/db/migration/`
-- Hibernate `ddl-auto: validate` — won't modify the schema, only checks it matches entities
-
-### Connection Pooling (HikariCP)
-
-The dev profile tunes HikariCP for a remote database:
-- `minimum-idle: 2` — keeps connections warm
-- `maximum-pool-size: 5` — small pool for remote DB
-- `keepalive-time: 60000` — pings every 60s to prevent Neon from dropping idle connections
-
-## API Documentation
-
-http://localhost:8080/api/swagger-ui/index.html
-
-## Project Structure
-
-```
-src/main/java/com/medchart/ehr/
-├── controller/      # REST controllers
-├── domain/          # JPA entities
-├── dto/             # Data transfer objects
-├── repository/      # JPA repositories
-├── service/         # Business logic
-├── config/          # Security & JWT configuration
-├── audit/           # HIPAA audit logging
-└── mapper/          # Entity/DTO mappers
-```
-
-## Security
-
-JWT-based authentication. CORS allows `localhost:5173`, `localhost:5178`, `localhost:3000`.
-
-## Useful Commands
+In a separate terminal, use Node.js 20.19+ on the 20.x line, or Node.js 22.12+:
 
 ```bash
-# Kill stuck API process
-lsof -i :8080 | grep LISTEN | awk '{print $2}' | xargs kill -9
-
-# Test API response time
-curl -w "Time: %{time_total}s\n" -s -o /dev/null "http://localhost:8080/api/v1/patients/search?q=a&page=0&size=20"
-
-# Connect to Neon directly
-PGPASSWORD=$NEON_DB_PASSWORD psql "postgresql://$NEON_DB_USERNAME@<neon-host>/neondb?sslmode=require"
+cd frontend
+npm ci
+npm run dev -- --host localhost --strictPort
 ```
+
+Open [`http://localhost:5173`](http://localhost:5173). The frontend currently renders
+the Vite starter screen; the EHR components are not wired into it. The API client
+code defaults to `http://localhost:8080/api` and supports `VITE_API_URL`.
+
+## Project structure
+
+```text
+src/main/java/com/medchart/ehr/
+├── controller/        REST endpoints, including interfaces and exports
+├── service/           Clinical and supporting services
+├── domain/            JPA entities
+├── repository/        Spring Data repositories
+├── dto/, mapper/      REST data and entity mapping
+├── config/, audit/    Security configuration, JWT code, and audit logging
+├── legacy/            Batch exports, reports, and the HR PTO sync
+└── interop/fhir/      FHIR R4 exporter and contract validator
+src/main/resources/
+├── application*.yml   Default and Neon dev profiles
+├── db/migration/      Flyway schema and seed migrations
+└── interfaces/hr/    Workday export fixtures and department mapping
+src/test/              Backend unit and tagged interface contract tests
+frontend/             Vite entry point, EHR components, hooks, and API client
+docker-compose.yml    Local infrastructure, not application containers
+docs/                 Architecture diagram, HR PTO runbook, migration baseline
+scripts/              Standalone interface contract check
+```
+
+## Build and test
+
+```bash
+mvn -B clean verify                   # default backend tests and executable JAR
+scripts/interface-contract.sh         # separate tagged suite; latest checked-in HR export
+# Or select one export: scripts/interface-contract.sh YYYYMMDD
+(cd frontend && npm ci && npm run build)
+```
+
+The frontend has no test script. See the [HR PTO runbook](docs/interfaces/hr-pto-sync.md)
+for the contract report and workflow.
