@@ -73,7 +73,7 @@ the API or frontend.
 
 | Service | Local address | Runtime role |
 |---|---|---|
-| PostgreSQL | `localhost:5432` | The default API profile uses the local datasource. Set `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD` to match Compose. The `dev` profile uses Neon via `NEON_DB_*` instead. |
+| PostgreSQL | `localhost:5432` | Normal development uses the `dev` profile with Neon via `NEON_DB_*`. For an isolated smoke test, run the default profile with `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD` matching the local database. |
 | Redis | `localhost:6379` | Auto-configured in the default profile, including its health check; disabled in `dev`. |
 | Keycloak | `localhost:8180` | Optional demo service; not wired into API authorization. |
 | RabbitMQ | `localhost:5672`, management at `:15672` | Optional demo service; the HR job's output is local files. |

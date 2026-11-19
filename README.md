@@ -6,14 +6,27 @@ diagram, PostgreSQL and Flyway, HR PTO sync, FHIR contract checks, and legacy ex
 
 ## Quick start
 
-Use JDK 11 and Maven for the API (the same Java version as CI). For the local profile,
-install Docker with Compose v2. Use synthetic demo data only: the current API filter
-chain does not require authentication.
+Use JDK 11 and Maven for the API (the same Java version as CI). Use synthetic demo
+data only: the current API filter chain does not require authentication.
 
-### Local PostgreSQL and Redis
+### Shared Neon PostgreSQL (development)
 
-From the repository root, start the two infrastructure services and use the Compose
-database settings. The API runs on the host, not in Compose.
+Use the `dev` profile for normal development, with the approved shared demo database
+described in [`AGENTS.md`](AGENTS.md#database). It disables Redis auto-configuration,
+runs Flyway, and validates the schema with Hibernate.
+
+```bash
+export NEON_DB_URL='jdbc:postgresql://<neon-host>/neondb?sslmode=require'
+export NEON_DB_USERNAME='<username>'
+export NEON_DB_PASSWORD='<password>'
+mvn spring-boot:run -Dspring-boot.run.profiles=dev
+```
+
+### Isolated local smoke test
+
+To verify the demo without touching shared data, use the default API profile with
+Docker Compose v2. From the repository root, start PostgreSQL and Redis and use the
+Compose database settings. The API runs on the host, not in Compose.
 
 ```bash
 docker compose up -d --wait postgres redis
@@ -25,19 +38,8 @@ mvn spring-boot:run
 
 Flyway applies schema and seed migrations from [`src/main/resources/db/migration/`](src/main/resources/db/migration/).
 To use another PostgreSQL instance, set `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD`
-for that instance instead. The default profile expects Redis on `localhost:6379`.
-
-### Shared Neon PostgreSQL (optional)
-
-Use the `dev` profile only if you have an approved shared demo database. It disables
-Redis auto-configuration, runs Flyway, and validates the schema with Hibernate.
-
-```bash
-export NEON_DB_URL='jdbc:postgresql://<neon-host>/neondb?sslmode=require'
-export NEON_DB_USERNAME='<username>'
-export NEON_DB_PASSWORD='<password>'
-mvn spring-boot:run -Dspring-boot.run.profiles=dev
-```
+for that instance instead. If an isolated Redis is already running on `localhost:6379`,
+start only the Compose `postgres` service and reuse that Redis instance.
 
 ### API and frontend
 
