@@ -31,7 +31,7 @@ API runs at http://localhost:8080/api
 
 If you prefer a local PostgreSQL instance, use the default profile with Docker infrastructure from [demos-coghealth-ehr-data](https://github.com/COG-GTM/demos-coghealth-ehr-data). This repo ships the same `docker-compose.yml`, so you can also start it from here.
 
-**Prerequisites:** Java 11 (set `JAVA_HOME` as above), Maven, Docker with Compose v2 (`docker compose`)
+**Prerequisites:** Java 11 (set `JAVA_HOME` as above), Maven, Docker with Compose v2.1.1 or later (`docker compose`, needed for `--wait`)
 
 ```bash
 # Start PostgreSQL and Redis (database coghealth, user coghealth)
@@ -46,7 +46,7 @@ export DB_PASSWORD="coghealth_dev_2024"
 mvn spring-boot:run
 ```
 
-Flyway creates the schema and loads the sample data (`V3__seed_data.sql`) on first start. Start from an empty database: don't load the data repo's `seed.sql` first, because it writes its own `flyway_schema_history` rows and startup then fails with `Migration checksum mismatch for migration version 1`. To reset only the database, run `docker compose rm -sf postgres`, then remove its volume (`docker volume ls -q --filter name=postgres_data` shows the name), and start again. Keycloak stores its data in the same database, so this clears it too.
+Flyway creates the schema and loads the sample data (`V3__seed_data.sql`) on first start. Start from an empty database: don't load the data repo's `seed.sql` first, because it writes its own `flyway_schema_history` rows and startup then fails with `Migration checksum mismatch for migration version 1`. Also start the API once before starting Keycloak or the full stack: Keycloak creates tables in the same database, and Flyway then baselines the non-empty schema and skips the first migration. To reset, run `docker compose down -v` (this deletes all of this project's volumes, including RabbitMQ, Elasticsearch and Keycloak data) and start again.
 
 ## Tech Stack
 
