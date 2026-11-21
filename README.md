@@ -13,7 +13,7 @@ No local database setup required. The `dev` profile connects to a shared Neon Po
 ```bash
 # Point JAVA_HOME at a Java 11 JDK (use the line for your OS)
 export JAVA_HOME=/opt/homebrew/opt/openjdk@11            # macOS with Homebrew
-# export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64    # Debian/Ubuntu (apt install openjdk-11-jdk maven); -arm64 on ARM
+# export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64    # Ubuntu (apt install openjdk-11-jdk maven); -arm64 on ARM
 export PATH="$JAVA_HOME/bin:$PATH"
 
 # Set Neon credentials (get these from your team lead or .env file)
