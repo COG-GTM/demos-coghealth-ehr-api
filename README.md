@@ -2,7 +2,7 @@
 
 Spring Boot REST API for the CogHealth EHR system.
 
-> **Full setup instructions:** See the [main README](https://github.com/cogdeasy/demos-coghealth-ehr-data#readme) for complete setup with all three repos.
+> **Full setup instructions:** See the [main README](https://github.com/COG-GTM/demos-coghealth-ehr-data#readme) for complete setup with all three repos.
 
 ## Quick Start (Neon Cloud DB)
 
@@ -13,6 +13,8 @@ No local database setup required. The `dev` profile connects to a shared Neon Po
 ```bash
 # On macOS with Homebrew
 export JAVA_HOME=/opt/homebrew/opt/openjdk@11
+# On Debian/Ubuntu (apt install openjdk-11-jdk maven)
+# export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 export PATH="$JAVA_HOME/bin:$PATH"
 
 # Set Neon credentials (get these from your team lead or .env file)
@@ -28,11 +30,24 @@ API runs at http://localhost:8080/api
 
 ### Quick Start (Local DB)
 
-If you prefer a local PostgreSQL instance, use the default profile with Docker infrastructure from [demos-coghealth-ehr-data](https://github.com/COG-GTM/demos-coghealth-ehr-data).
+If you prefer a local PostgreSQL instance, use the default profile with Docker infrastructure from [demos-coghealth-ehr-data](https://github.com/COG-GTM/demos-coghealth-ehr-data). This repo ships the same `docker-compose.yml`, so you can also start it from here.
+
+**Prerequisites:** Java 11 (set `JAVA_HOME` as above), Maven, Docker with Compose v2 (`docker compose`)
 
 ```bash
+# Start PostgreSQL and Redis (database coghealth, user coghealth)
+docker compose up -d postgres redis
+
+# Point the API at that database: the default profile otherwise expects
+# medchart_ehr / medchart / medchart_dev, which the compose file does not create
+export DB_URL="jdbc:postgresql://localhost:5432/coghealth"
+export DB_USERNAME="coghealth"
+export DB_PASSWORD="coghealth_dev_2024"
+
 mvn spring-boot:run
 ```
+
+Flyway creates the schema and loads the sample data (`V3__seed_data.sql`) on first start. Start from an empty database: don't load the data repo's `seed.sql` first, because it writes its own `flyway_schema_history` rows and startup then fails with `Migration checksum mismatch for migration version 1`. To reset, run `docker compose down -v` and start again.
 
 ## Tech Stack
 
