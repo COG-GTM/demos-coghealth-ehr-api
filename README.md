@@ -11,10 +11,9 @@ No local database setup required. The `dev` profile connects to a shared Neon Po
 **Prerequisites:** Java 11 (required — later versions are incompatible)
 
 ```bash
-# On macOS with Homebrew
-export JAVA_HOME=/opt/homebrew/opt/openjdk@11
-# On Debian/Ubuntu (apt install openjdk-11-jdk maven)
-# export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+# Point JAVA_HOME at a Java 11 JDK (use the line for your OS)
+export JAVA_HOME=/opt/homebrew/opt/openjdk@11            # macOS with Homebrew
+# export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64    # Debian/Ubuntu (apt install openjdk-11-jdk maven); -arm64 on ARM
 export PATH="$JAVA_HOME/bin:$PATH"
 
 # Set Neon credentials (get these from your team lead or .env file)
@@ -36,7 +35,7 @@ If you prefer a local PostgreSQL instance, use the default profile with Docker i
 
 ```bash
 # Start PostgreSQL and Redis (database coghealth, user coghealth)
-docker compose up -d postgres redis
+docker compose up -d --wait postgres redis
 
 # Point the API at that database: the default profile otherwise expects
 # medchart_ehr / medchart / medchart_dev, which the compose file does not create
@@ -47,7 +46,7 @@ export DB_PASSWORD="coghealth_dev_2024"
 mvn spring-boot:run
 ```
 
-Flyway creates the schema and loads the sample data (`V3__seed_data.sql`) on first start. Start from an empty database: don't load the data repo's `seed.sql` first, because it writes its own `flyway_schema_history` rows and startup then fails with `Migration checksum mismatch for migration version 1`. To reset, run `docker compose down -v` and start again.
+Flyway creates the schema and loads the sample data (`V3__seed_data.sql`) on first start. Start from an empty database: don't load the data repo's `seed.sql` first, because it writes its own `flyway_schema_history` rows and startup then fails with `Migration checksum mismatch for migration version 1`. To reset only the database, run `docker compose rm -sf postgres`, then `docker volume rm <project>_postgres_data` (`<project>` is the Compose project name, by default the checkout's folder name), and start again.
 
 ## Tech Stack
 
