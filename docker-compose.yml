@@ -47,11 +47,13 @@ services:
   # IDENTITY PROVIDER - Keycloak (SSO, RBAC, MFA)
   # =============================================================================
   keycloak:
-    image: quay.io/keycloak/keycloak:23.0
+    # Pinned by digest: bundles Red Hat OpenJDK 21.0.13.1 (fixed for CVE-2026-114938).
+    # scripts/check_jdk_cve_2026_114938.py verifies this in CI.
+    image: quay.io/keycloak/keycloak:26.8.2-3@sha256:7e66a96e4739239070aeaf72e4c5decf0f7f682cfc725b9f7ea2b336eaba38b3
     container_name: coghealth-keycloak
     environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/coghealth
       KC_DB_USERNAME: coghealth
@@ -120,7 +122,8 @@ services:
   # AUDIT LOG STORAGE - Elasticsearch (immutable audit trail)
   # =============================================================================
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    # Pinned by digest: bundles OpenJDK 27.0.1.1 (fixed for CVE-2026-114938).
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.26@sha256:d71769f4e1145dca3794a04ddcd67e12f1299048b3232025e55feda799904a5d
     container_name: coghealth-elasticsearch
     environment:
       - discovery.type=single-node
@@ -142,7 +145,8 @@ services:
   # AUDIT LOG UI - Kibana (for viewing audit logs)
   # =============================================================================
   kibana:
-    image: docker.elastic.co/kibana/kibana:8.11.0
+    # Must match the Elasticsearch version.
+    image: docker.elastic.co/kibana/kibana:8.19.26@sha256:3ff057f04ac13fae8eab48d6785b0635b076a064f672b64053252e2b2f42c13e
     container_name: coghealth-kibana
     environment:
       ELASTICSEARCH_HOSTS: http://elasticsearch:9200

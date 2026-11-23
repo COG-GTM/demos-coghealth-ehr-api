@@ -24,6 +24,9 @@ jobs:
           NEON_DB_USERNAME: ${{ secrets.NEON_DB_USERNAME }}
           NEON_DB_PASSWORD: ${{ secrets.NEON_DB_PASSWORD }}
 
+      - name: Check runtime JDK for CVE-2026-114938
+        run: python3 scripts/check_jdk_cve_2026_114938.py --java "$JAVA_HOME/bin/java"
+
       - name: Compile
         run: mvn compile -B
 
@@ -32,3 +35,16 @@ jobs:
 
       - name: Verify
         run: mvn verify -B -DskipTests
+
+  jdk-cve-check:
+    name: JDK CVE-2026-114938 check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version rules self-test
+        run: python3 scripts/check_jdk_cve_2026_114938.py --self-test
+
+      - name: Check JDKs bundled in docker-compose images
+        run: python3 scripts/check_jdk_cve_2026_114938.py
