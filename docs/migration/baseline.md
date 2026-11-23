@@ -71,7 +71,7 @@ Notes:
 |---|---|
 | Packaging | Executable fat jar via `spring-boot-maven-plugin` 2.7.18 `repackage` (Lombok excluded). `target/medchart-ehr-api-3.2.1.jar`, ~62 MB. |
 | Container image | **None.** No `Dockerfile`, no Jib, no buildpacks config. |
-| `docker-compose.yml` (this repo and `demos-coghealth-ehr-data`) | Infrastructure only: Postgres 14, Redis 7, Keycloak 23, RabbitMQ 3, Elasticsearch/Kibana 8.11. The API itself is not a compose service. |
+| `docker-compose.yml` (this repo and `demos-coghealth-ehr-data`) | Infrastructure only: Postgres 14, Redis 7, Keycloak 26.8.2-3, RabbitMQ 3, Elasticsearch/Kibana 8.19.26 (Keycloak and Elasticsearch pinned by digest to images bundling a JDK fixed for CVE-2026-114938). The API itself is not a compose service. |
 | Deployment target | **None defined in the repo.** No deploy workflow, manifests (k8s/Helm/Terraform) or platform config. The service is run from source with `mvn spring-boot:run` (see `start.sh`, README) or `java -jar`. |
 
 ## Runtime configuration sources
