@@ -1,5 +1,8 @@
 package com.medchart.ehr.legacy;
 
+import com.medchart.ehr.audit.AuditAccess;
+import com.medchart.ehr.audit.AuditAction;
+import com.medchart.ehr.audit.PatientAccessLogger;
 import com.medchart.ehr.domain.encounter.Encounter;
 import com.medchart.ehr.domain.patient.Patient;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +24,11 @@ public class EncounterExportService {
     @Autowired
     private EntityManager entityManager;
 
-    public byte[] exportEncountersForDateRange(LocalDate startDate, LocalDate endDate) {
+    @Autowired
+    private PatientAccessLogger accessLogger;
+
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Encounter", description = "Export encounters for date range")
+    public byte[] exportEncountersForDateRange(LocalDate startDate, LocalDate endDate, Long userId, String userRole, String ipAddress) {
         String sql = "SELECT e.id, e.encounter_number, e.encounter_type, e.status, e.encounter_date_time, " +
                      "p.mrn, p.first_name, p.last_name, p.date_of_birth " +
                      "FROM encounters e " +
@@ -48,11 +55,21 @@ public class EncounterExportService {
             csv.append(row[3]).append("\n");
         }
         
+        accessLogger.logBulkAccess(
+            userId,
+            userRole,
+            AuditAction.EXPORT,
+            "Encounter",
+            results.size(),
+            "Export encounters for date range " + startDate + " to " + endDate,
+            ipAddress);
+        
         log.info("Exported {} encounters for date range {} to {}", results.size(), startDate, endDate);
         return csv.toString().getBytes();
     }
 
-    public byte[] exportPatientEncounterHistory(Long patientId) {
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Patient", description = "Export patient encounter history")
+    public byte[] exportPatientEncounterHistory(Long patientId, Long userId, String userRole, String ipAddress, String sessionId) {
         Query patientQuery = entityManager.createNativeQuery(
             "SELECT mrn, first_name, last_name, ssn, date_of_birth FROM patients WHERE id = ?1");
         patientQuery.setParameter(1, patientId);
@@ -68,7 +85,9 @@ public class EncounterExportService {
         export.append("Generated: ").append(LocalDateTime.now()).append("\n\n");
         export.append("Patient: ").append(patientData[1]).append(" ").append(patientData[2]).append("\n");
         export.append("MRN: ").append(patientData[0]).append("\n");
-        export.append("SSN: ").append(patientData[3]).append("\n");
+        String ssn = patientData[3] != null ? String.valueOf(patientData[3]) : "";
+        String maskedSsn = ssn.length() >= 4 ? "XXX-XX-" + ssn.substring(ssn.length() - 4) : "N/A";
+        export.append("SSN: ").append(maskedSsn).append("\n");
         export.append("DOB: ").append(patientData[4]).append("\n\n");
         export.append("Encounters:\n");
         export.append("-".repeat(80)).append("\n");
@@ -81,10 +100,23 @@ public class EncounterExportService {
             export.append("-".repeat(40)).append("\n");
         }
         
+        String patientMrn = patientData[0] != null ? String.valueOf(patientData[0]) : null;
+        accessLogger.logAccess(
+            userId,
+            userRole,
+            patientId,
+            patientMrn,
+            AuditAction.EXPORT,
+            "Patient",
+            "Export patient encounter history",
+            ipAddress,
+            sessionId);
+        
         return export.toString().getBytes();
     }
 
-    public void exportAllPatientsToFile(String filePath) {
+    @AuditAccess(action = AuditAction.EXPORT, resourceType = "Patient", description = "Export all patients to file")
+    public void exportAllPatientsToFile(String filePath, Long userId, String userRole, String ipAddress) {
         Query query = entityManager.createNativeQuery(
             "SELECT id, mrn, first_name, last_name, date_of_birth, " +
             "email, phone_home, phone_mobile, street1, city, state, zip_code " +
@@ -101,6 +133,14 @@ public class EncounterExportService {
                     String.valueOf(p[6]), String.valueOf(p[7]), String.valueOf(p[8]),
                     String.valueOf(p[9]), String.valueOf(p[10]), String.valueOf(p[11])));
             }
+            accessLogger.logBulkAccess(
+                userId,
+                userRole,
+                AuditAction.EXPORT,
+                "Patient",
+                patients.size(),
+                "Export all patients to file: " + filePath,
+                ipAddress);
             log.info("Exported {} patients to file: {}", patients.size(), filePath);
         } catch (IOException e) {
             log.error("Failed to export patients to file", e);
